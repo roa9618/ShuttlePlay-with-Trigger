@@ -1,0 +1,28 @@
+.app {
+  width: min(100% - 32px, 960px);
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: 72px 0;
+}
+
+.app__eyebrow {
+  margin: 0 0 16px;
+  color: #0f766e;
+  font-weight: 700;
+}
+
+.app h1 {
+  max-width: 720px;
+  margin: 0;
+  color: #10201d;
+  font-size: 3rem;
+  line-height: 1.12;
+}
+
+.app__description {
+  max-width: 620px;
+  margin: 20px 0 0;
+  color: #4b5d59;
+  font-size: 1.1rem;
+  line-height: 1.7;
+}
