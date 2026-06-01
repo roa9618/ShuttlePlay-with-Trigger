@@ -51,12 +51,10 @@ Database
 
 ## Getting Started
 
-프론트엔드와 백엔드 프로젝트 생성 후 기준입니다.
-
 Frontend
 
 ```bash
-cd frontend/shuttle-play-client
+cd Frontend
 npm install
 npm run dev
 ```
@@ -68,14 +66,14 @@ http://localhost:5173
 Backend
 
 ```bash
-cd backend/shuttle-play-server
+cd Backend
 ./gradlew bootRun
 ```
 
 Windows
 
 ```bash
-cd backend/shuttle-play-server
+cd Backend
 gradlew bootRun
 ```
 
@@ -86,7 +84,7 @@ http://localhost:8080
 Database
 
 ```sql
-CREATE DATABASE shuttle_play
+CREATE DATABASE `ShuttlePlay_with_Trigger`
 CHARACTER SET utf8mb4
 COLLATE utf8mb4_unicode_ci;
 ```
@@ -96,26 +94,17 @@ COLLATE utf8mb4_unicode_ci;
 ```text
 ShuttlePlay-with-Trigger/
 ├── Frontend/
+│   ├── src/
+│   ├── package.json
+│   └── vite.config.ts
 ├── Backend/
+│   ├── src/
+│   ├── build.gradle
+│   ├── settings.gradle
+│   └── gradlew
 ├── Docs/
 ├── README.md
 ├── .gitignore
 ├── .gitattributes
 └── .editorconfig
-```
-
-문서상 실제 구현 기준 구조는 다음과 같습니다.
-
-```text
-frontend/
-└── shuttle-play-client/
-
-backend/
-└── shuttle-play-server/
-
-docs/
-├── planning/
-├── api/
-├── db/
-└── convention/
 ```
