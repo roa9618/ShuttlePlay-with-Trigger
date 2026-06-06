@@ -1,0 +1,276 @@
+@import './fonts.css';
+@import './tailwind.css';
+@import './theme.css';
+
+@layer components {
+  .app-mobile-admin-bar {
+    display: none;
+  }
+
+  .app-desktop-content {
+    min-width: 0;
+  }
+}
+
+@media (min-width: 1024px) {
+  .app-desktop-content > div {
+    min-height: 100vh;
+  }
+
+  .app-desktop-content > div > .max-w-7xl,
+  .app-desktop-content > div > .max-w-6xl,
+  .app-desktop-content > div > .max-w-5xl {
+    max-width: none;
+  }
+
+  .app-desktop-content > div > [class*="px-6"][class*="py-8"],
+  .app-desktop-content > div > [class*="p-6"] {
+    padding: 24px 28px;
+  }
+
+  .app-desktop-content h1 {
+    letter-spacing: 0;
+  }
+}
+
+@media (max-width: 1023px) {
+  .app-desktop-shell {
+    display: block !important;
+    min-height: 100vh;
+  }
+
+  .desktop-sidebar {
+    display: none !important;
+  }
+
+  .app-mobile-admin-bar {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    padding: 10px 14px;
+    background: color-mix(in srgb, var(--card) 92%, transparent);
+    backdrop-filter: blur(10px);
+  }
+
+  .app-mobile-admin-bar span {
+    color: var(--muted-foreground);
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .app-desktop-content {
+    overflow: visible;
+  }
+}
+
+@media (max-width: 767px) {
+  :root {
+    --font-size: 14px;
+    --radius: 0.625rem;
+  }
+
+  html,
+  body,
+  #root {
+    width: 100%;
+    overflow-x: hidden;
+  }
+
+  body {
+    word-break: keep-all;
+  }
+
+  h1 {
+    font-size: 1.375rem !important;
+    line-height: 1.25 !important;
+  }
+
+  h2 {
+    font-size: 1.125rem !important;
+    line-height: 1.3 !important;
+  }
+
+  h3 {
+    font-size: 1rem !important;
+    line-height: 1.35 !important;
+  }
+
+  p,
+  span,
+  label,
+  input,
+  button {
+    letter-spacing: 0;
+  }
+
+  [data-slot="button"] {
+    min-height: 48px;
+    height: auto;
+    padding: 11px 14px;
+    border-radius: 12px;
+    font-size: 14px;
+    line-height: 1.25;
+    white-space: normal;
+  }
+
+  [data-slot="button"] svg {
+    width: 17px;
+    height: 17px;
+  }
+
+  [data-slot="badge"] {
+    max-width: 100%;
+    white-space: normal;
+    line-height: 1.2;
+  }
+
+  [data-slot="input"],
+  [data-slot="select-trigger"] {
+    min-height: 46px;
+    height: auto;
+    border-radius: 10px;
+    font-size: 14px;
+  }
+
+  .app-mobile-shell > div,
+  .app-desktop-content > div {
+    min-height: 100svh;
+  }
+
+  .app-mobile-shell [class*="max-w-"],
+  .app-desktop-content [class*="max-w-"] {
+    max-width: 100% !important;
+  }
+
+  .app-mobile-shell [class*="px-4"],
+  .app-desktop-content [class*="px-4"],
+  .app-mobile-shell [class*="px-6"],
+  .app-desktop-content [class*="px-6"] {
+    padding-left: 14px !important;
+    padding-right: 14px !important;
+  }
+
+  .app-mobile-shell [class*="py-12"],
+  .app-desktop-content [class*="py-12"] {
+    padding-top: 28px !important;
+    padding-bottom: 28px !important;
+  }
+
+  .app-mobile-shell [class*="py-8"],
+  .app-desktop-content [class*="py-8"],
+  .app-mobile-shell [class*="p-8"],
+  .app-desktop-content [class*="p-8"],
+  .app-mobile-shell [class*="p-10"],
+  .app-desktop-content [class*="p-10"] {
+    padding: 16px !important;
+  }
+
+  .app-mobile-shell [class*="p-6"],
+  .app-desktop-content [class*="p-6"] {
+    padding: 14px !important;
+  }
+
+  .app-mobile-shell [class*="space-y-8"] > :not([hidden]) ~ :not([hidden]),
+  .app-desktop-content [class*="space-y-8"] > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 16px !important;
+  }
+
+  .app-mobile-shell [class*="space-y-6"] > :not([hidden]) ~ :not([hidden]),
+  .app-desktop-content [class*="space-y-6"] > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 12px !important;
+  }
+
+  .app-mobile-shell [class*="rounded-3xl"],
+  .app-desktop-content [class*="rounded-3xl"] {
+    border-radius: 14px !important;
+  }
+
+  .app-mobile-shell [class*="rounded-2xl"],
+  .app-desktop-content [class*="rounded-2xl"] {
+    border-radius: 12px !important;
+  }
+
+  .app-mobile-shell [class*="text-6xl"],
+  .app-mobile-shell [class*="text-5xl"],
+  .app-mobile-shell [class*="text-4xl"],
+  .app-desktop-content [class*="text-6xl"],
+  .app-desktop-content [class*="text-5xl"],
+  .app-desktop-content [class*="text-4xl"] {
+    font-size: 1.75rem !important;
+    line-height: 1.18 !important;
+  }
+
+  .app-mobile-shell [class*="text-3xl"],
+  .app-desktop-content [class*="text-3xl"] {
+    font-size: 1.375rem !important;
+    line-height: 1.25 !important;
+  }
+
+  .app-mobile-shell [class*="text-2xl"],
+  .app-desktop-content [class*="text-2xl"] {
+    font-size: 1.125rem !important;
+  }
+
+  .app-mobile-shell [class*="text-xl"],
+  .app-desktop-content [class*="text-xl"],
+  .app-mobile-shell [class*="text-lg"],
+  .app-desktop-content [class*="text-lg"] {
+    font-size: 0.975rem !important;
+  }
+
+  .app-desktop-content h1,
+  .app-desktop-content h1[class*="text-lg"] {
+    font-size: 1.15rem !important;
+    line-height: 1.28 !important;
+  }
+
+  .app-mobile-shell [class*="w-24"],
+  .app-mobile-shell [class*="h-24"],
+  .app-desktop-content [class*="w-24"],
+  .app-desktop-content [class*="h-24"] {
+    width: 56px !important;
+    height: 56px !important;
+  }
+
+  .app-mobile-shell [class*="w-20"],
+  .app-mobile-shell [class*="h-20"],
+  .app-desktop-content [class*="w-20"],
+  .app-desktop-content [class*="h-20"] {
+    width: 48px !important;
+    height: 48px !important;
+  }
+
+  .app-mobile-shell [class*="grid-cols-5"],
+  .app-mobile-shell [class*="grid-cols-4"],
+  .app-mobile-shell [class*="grid-cols-3"],
+  .app-desktop-content [class*="grid-cols-5"],
+  .app-desktop-content [class*="grid-cols-4"],
+  .app-desktop-content [class*="grid-cols-3"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .app-mobile-shell [class*="grid-cols-2"],
+  .app-desktop-content [class*="grid-cols-2"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  .app-mobile-shell [class*="col-span-2"],
+  .app-desktop-content [class*="col-span-2"] {
+    grid-column: auto !important;
+  }
+
+  .app-mobile-shell .fixed.bottom-0,
+  .app-desktop-content .fixed.bottom-0 {
+    padding: 10px 12px calc(10px + env(safe-area-inset-bottom)) !important;
+  }
+
+  .app-mobile-shell .fixed.bottom-0 [data-slot="button"] {
+    min-height: 36px;
+    padding: 7px 10px;
+    font-size: 12px;
+  }
+}
