@@ -3,7 +3,7 @@ import Logo from '../components/Logo';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import { Check, Clock, X, Calendar, Users, MapPin } from 'lucide-react';
-import { useActionFeedback } from '../hooks/useActionFeedback';
+import { useActionFeedback } from '../utils/useActionFeedback';
 
 export default function AttendancePage() {
   const { sessionId } = useParams();

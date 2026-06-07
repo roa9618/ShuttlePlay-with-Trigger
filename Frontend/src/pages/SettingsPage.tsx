@@ -7,7 +7,7 @@ import { Label } from '../components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Switch } from '../components/ui/switch';
 import { ArrowLeft, User, Bell, Palette, LogOut, Wifi, Smartphone } from 'lucide-react';
-import { useActionFeedback } from '../hooks/useActionFeedback';
+import { useActionFeedback } from '../utils/useActionFeedback';
 
 export default function SettingsPage() {
   const { message, showMessage } = useActionFeedback();

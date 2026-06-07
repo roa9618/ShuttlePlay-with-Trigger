@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import logoImg from '../../imports/______12.png';
+import logoImg from '../assets/shuttleplay-logo.png';
 
 interface LogoProps {
   size?: 'sm' | 'md' | 'lg';

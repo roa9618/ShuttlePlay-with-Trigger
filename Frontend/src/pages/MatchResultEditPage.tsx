@@ -7,7 +7,7 @@ import { Label } from '../components/ui/label';
 import { Textarea } from '../components/ui/textarea';
 import { Badge } from '../components/ui/badge';
 import { ArrowLeft, AlertCircle, History, RotateCcw } from 'lucide-react';
-import { useActionFeedback } from '../hooks/useActionFeedback';
+import { useActionFeedback } from '../utils/useActionFeedback';
 
 export default function MatchResultEditPage() {
   const { sessionId } = useParams();

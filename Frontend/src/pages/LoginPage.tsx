@@ -6,10 +6,10 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { ArrowLeft, Sparkles } from 'lucide-react';
 import { useState } from 'react';
-import { useActionFeedback } from '../hooks/useActionFeedback';
-import googleLogo from '../../assets/social/google_logo.svg';
-import kakaoLogo from '../../assets/social/kakao_logo.png';
-import naverLogo from '../../assets/social/naver_logo.svg';
+import { useActionFeedback } from '../utils/useActionFeedback';
+import googleLogo from '../assets/social/google_logo.svg';
+import kakaoLogo from '../assets/social/kakao_logo.png';
+import naverLogo from '../assets/social/naver_logo.svg';
 
 function AppleLogo() {
   return (

@@ -5,7 +5,7 @@ import { Input } from '../components/ui/input';
 import { Badge } from '../components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { ArrowLeft, Search, Filter, Users, Trophy, Calendar } from 'lucide-react';
-import { useActionFeedback } from '../hooks/useActionFeedback';
+import { useActionFeedback } from '../utils/useActionFeedback';
 
 export default function GroupMembersPage() {
   const { groupId } = useParams();

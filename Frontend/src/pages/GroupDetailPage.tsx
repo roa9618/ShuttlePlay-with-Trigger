@@ -1,7 +1,7 @@
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { MapPin, Users, Calendar, Share2, Settings, ArrowLeft, QrCode } from 'lucide-react';
-import { useActionFeedback } from '../hooks/useActionFeedback';
+import { useActionFeedback } from '../utils/useActionFeedback';
 
 export default function GroupDetailPage() {
   const { groupId } = useParams();
