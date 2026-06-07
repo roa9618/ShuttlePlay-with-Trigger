@@ -28,6 +28,7 @@ import ParticipantSessionReportPage from "./pages/ParticipantSessionReportPage";
 import DisplayBoardPage from "./pages/DisplayBoardPage";
 import SettingsPage from "./pages/SettingsPage";
 import GalleryPage from "./pages/GalleryPage";
+import NotFoundPage from "./pages/NotFoundPage";
 
 export const router = createBrowserRouter([
   {
@@ -68,6 +69,7 @@ export const router = createBrowserRouter([
       { path: "sessions/:sessionId/my-report", Component: ParticipantSessionReportPage },
       { path: "settings", Component: SettingsPage },
       { path: "gallery", Component: GalleryPage },
+      { path: "*", Component: NotFoundPage },
     ],
   },
 ]);

@@ -26,6 +26,7 @@ export default function GalleryPage() {
     { name: '내 기록', path: '/my-record', description: '개인 경기 기록 및 월별 캘린더' },
     { name: '설정', path: '/settings', description: '프로필 및 알림 설정' },
     { name: '페이지 갤러리', path: '/gallery', description: '전체 화면 목록과 테스트 진입점' },
+    { name: '404', path: '/not-found-preview', description: '존재하지 않는 경로 안내 화면' },
   ];
 
   const mobilePages = [
@@ -49,57 +50,54 @@ export default function GalleryPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-secondary/20">
-      <div className="border-b border-border bg-card">
-        <div className="max-w-7xl mx-auto px-6 py-6">
-          <Logo size="md" className="justify-center" />
+    <div className = "min-h-screen bg-gradient-to-b from-background to-secondary/20">
+      <div className = "border-b border-border bg-card">
+        <div className = "max-w-7xl mx-auto px-6 py-6">
+          <Logo size = "md" className = "justify-center" />
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-6 py-12">
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-medium mb-4">셔틀플레이 페이지 갤러리</h1>
-          <p className="text-xl text-muted-foreground">
+      <div className = "max-w-7xl mx-auto px-6 py-12">
+        <div className = "text-center mb-12">
+          <h1 className = "text-4xl font-medium mb-4">셔틀플레이 페이지 갤러리</h1>
+          <p className = "text-xl text-muted-foreground">
             전체 화면 구조를 확인하고 테스트하세요
           </p>
         </div>
 
-        <div className="space-y-12">
+        <div className = "space-y-12">
           {/* Desktop Pages */}
           <div>
-            <div className="flex items-center gap-4 mb-8">
-              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
-                <Monitor className="w-6 h-6 text-primary" />
+            <div className = "flex items-center gap-4 mb-8">
+              <div className = "w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                <Monitor className = "w-6 h-6 text-primary" />
               </div>
               <div>
-                <h2 className="text-3xl font-medium">데스크탑 화면</h2>
-                <p className="text-muted-foreground">운영자 및 관리 기능 중심</p>
+                <h2 className = "text-3xl font-medium">데스크탑 화면</h2>
+                <p className = "text-muted-foreground">운영자 및 관리 기능 중심</p>
               </div>
-              <Badge className="ml-auto bg-primary text-primary-foreground">
+              <Badge className = "ml-auto bg-primary text-primary-foreground">
                 {desktopPages.length}개
               </Badge>
             </div>
 
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className = "grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               {desktopPages.map((page, idx) => (
-                <Link key={idx} to={page.path}>
-                  <div className="bg-card border-2 border-border rounded-2xl p-6 hover:border-primary transition-all hover:shadow-xl group">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex-1">
-                        <h3 className="text-xl font-medium mb-2 group-hover:text-primary transition-colors">
+                <Link key = {idx} to = {page.path}>
+                  <div className = "bg-card border-2 border-border rounded-2xl p-6 hover:border-primary transition-all hover:shadow-xl group">
+                    <div className = "flex items-start justify-between mb-4">
+                      <div className = "flex-1">
+                        <h3 className = "text-xl font-medium mb-2 group-hover:text-primary transition-colors">
                           {page.name}
                         </h3>
-                        <p className="text-sm text-muted-foreground line-clamp-2">
+                        <p className = "text-sm text-muted-foreground line-clamp-2">
                           {page.description}
                         </p>
                       </div>
-                      <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors ml-2 flex-shrink-0" />
+                      <ChevronRight className = "w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors ml-2 flex-shrink-0" />
                     </div>
-                    <div className="pt-4 border-t border-border">
-                      <Button
-                        size="sm"
-                        className="w-full rounded-full"
-                        onClick={(e) => {
+                    <div className = "pt-4 border-t border-border">
+                      <Button size = "sm" className = "w-full rounded-full" onClick = {(e) => {
                           e.preventDefault();
                           window.location.href = page.path;
                         }}
@@ -115,40 +113,36 @@ export default function GalleryPage() {
 
           {/* Mobile Pages */}
           <div>
-            <div className="flex items-center gap-4 mb-8">
-              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
-                <Smartphone className="w-6 h-6 text-primary" />
+            <div className = "flex items-center gap-4 mb-8">
+              <div className = "w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                <Smartphone className = "w-6 h-6 text-primary" />
               </div>
               <div>
-                <h2 className="text-3xl font-medium">모바일 화면</h2>
-                <p className="text-muted-foreground">참가자 경험 중심</p>
+                <h2 className = "text-3xl font-medium">모바일 화면</h2>
+                <p className = "text-muted-foreground">참가자 경험 중심</p>
               </div>
-              <Badge className="ml-auto bg-primary text-primary-foreground">
+              <Badge className = "ml-auto bg-primary text-primary-foreground">
                 {mobilePages.length}개
               </Badge>
             </div>
 
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className = "grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               {mobilePages.map((page, idx) => (
-                <Link key={idx} to={page.path}>
-                  <div className="bg-card border-2 border-border rounded-2xl p-6 hover:border-primary transition-all hover:shadow-xl group">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex-1">
-                        <h3 className="text-xl font-medium mb-2 group-hover:text-primary transition-colors">
+                <Link key = {idx} to = {page.path}>
+                  <div className = "bg-card border-2 border-border rounded-2xl p-6 hover:border-primary transition-all hover:shadow-xl group">
+                    <div className = "flex items-start justify-between mb-4">
+                      <div className = "flex-1">
+                        <h3 className = "text-xl font-medium mb-2 group-hover:text-primary transition-colors">
                           {page.name}
                         </h3>
-                        <p className="text-sm text-muted-foreground line-clamp-2">
+                        <p className = "text-sm text-muted-foreground line-clamp-2">
                           {page.description}
                         </p>
                       </div>
-                      <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors ml-2 flex-shrink-0" />
+                      <ChevronRight className = "w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors ml-2 flex-shrink-0" />
                     </div>
-                    <div className="pt-4 border-t border-border">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="w-full rounded-full"
-                        onClick={(e) => {
+                    <div className = "pt-4 border-t border-border">
+                      <Button size = "sm" variant = "outline" className = "w-full rounded-full" onClick = {(e) => {
                           e.preventDefault();
                           window.location.href = page.path;
                         }}
@@ -164,40 +158,36 @@ export default function GalleryPage() {
 
           {/* Large Display */}
           <div>
-            <div className="flex items-center gap-4 mb-8">
-              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
-                <Tv className="w-6 h-6 text-primary" />
+            <div className = "flex items-center gap-4 mb-8">
+              <div className = "w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                <Tv className = "w-6 h-6 text-primary" />
               </div>
               <div>
-                <h2 className="text-3xl font-medium">큰 화면</h2>
-                <p className="text-muted-foreground">체육관 대형 디스플레이</p>
+                <h2 className = "text-3xl font-medium">큰 화면</h2>
+                <p className = "text-muted-foreground">체육관 대형 디스플레이</p>
               </div>
-              <Badge className="ml-auto bg-primary text-primary-foreground">
+              <Badge className = "ml-auto bg-primary text-primary-foreground">
                 {largeDisplayPages.length}개
               </Badge>
             </div>
 
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className = "grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               {largeDisplayPages.map((page, idx) => (
-                <Link key={idx} to={page.path}>
-                  <div className="bg-card border-2 border-border rounded-2xl p-6 hover:border-primary transition-all hover:shadow-xl group">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex-1">
-                        <h3 className="text-xl font-medium mb-2 group-hover:text-primary transition-colors">
+                <Link key = {idx} to = {page.path}>
+                  <div className = "bg-card border-2 border-border rounded-2xl p-6 hover:border-primary transition-all hover:shadow-xl group">
+                    <div className = "flex items-start justify-between mb-4">
+                      <div className = "flex-1">
+                        <h3 className = "text-xl font-medium mb-2 group-hover:text-primary transition-colors">
                           {page.name}
                         </h3>
-                        <p className="text-sm text-muted-foreground line-clamp-2">
+                        <p className = "text-sm text-muted-foreground line-clamp-2">
                           {page.description}
                         </p>
                       </div>
-                      <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors ml-2 flex-shrink-0" />
+                      <ChevronRight className = "w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors ml-2 flex-shrink-0" />
                     </div>
-                    <div className="pt-4 border-t border-border">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="w-full rounded-full"
-                        onClick={(e) => {
+                    <div className = "pt-4 border-t border-border">
+                      <Button size = "sm" variant = "outline" className = "w-full rounded-full" onClick = {(e) => {
                           e.preventDefault();
                           window.location.href = page.path;
                         }}
@@ -212,13 +202,13 @@ export default function GalleryPage() {
           </div>
         </div>
 
-        <div className="mt-12 bg-gradient-to-br from-secondary/50 to-transparent rounded-3xl p-8 border border-border text-center">
-          <h3 className="text-xl font-medium mb-3">총 {desktopPages.length + mobilePages.length + largeDisplayPages.length}개 화면</h3>
-          <p className="text-muted-foreground mb-6">
+        <div className = "mt-12 bg-gradient-to-br from-secondary/50 to-transparent rounded-3xl p-8 border border-border text-center">
+          <h3 className = "text-xl font-medium mb-3">총 {desktopPages.length + mobilePages.length + largeDisplayPages.length}개 화면</h3>
+          <p className = "text-muted-foreground mb-6">
             데스크탑, 모바일, 큰 화면용 레이아웃이 각각 구현되었습니다
           </p>
-          <Link to="/">
-            <Button className="rounded-full">
+          <Link to = "/">
+            <Button className = "rounded-full">
               메인으로 돌아가기
             </Button>
           </Link>

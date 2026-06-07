@@ -25,13 +25,13 @@ export default function Layout() {
 
   if (showDesktopLayout) {
     return (
-      <div className="app-desktop-shell flex min-h-screen bg-background">
+      <div className = "app-desktop-shell flex min-h-screen bg-background">
         <DesktopSidebar />
-        <header className="app-mobile-admin-bar">
-          <Logo size="sm" />
+        <header className = "app-mobile-admin-bar">
+          <Logo size = "sm" />
           <span>운영</span>
         </header>
-        <div className="app-desktop-content flex-1 overflow-auto">
+        <div className = "app-desktop-content flex-1 overflow-auto">
           <Outlet />
         </div>
       </div>
@@ -39,7 +39,7 @@ export default function Layout() {
   }
 
   return (
-    <div className="app-mobile-shell min-h-screen bg-background">
+    <div className = "app-mobile-shell min-h-screen bg-background">
       <Outlet />
     </div>
   );

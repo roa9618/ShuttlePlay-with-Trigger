@@ -38,66 +38,64 @@ export default function DisplayBoardPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-secondary/10 to-primary/5 p-8">
-      <div className="max-w-[1920px] mx-auto space-y-8">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-6">
-            <Logo size="lg" />
+    <div className = "min-h-screen bg-gradient-to-br from-background via-secondary/10 to-primary/5 p-8">
+      <div className = "max-w-[1920px] mx-auto space-y-8">
+        <div className = "flex items-center justify-between">
+          <div className = "flex items-center gap-6">
+            <Logo size = "lg" />
             <div>
-              <h1 className="text-3xl mb-1">6월 3일 (화) 운동</h1>
-              <p className="text-xl text-muted-foreground">19:00 - 22:00</p>
+              <h1 className = "text-3xl mb-1">6월 3일 (화) 운동</h1>
+              <p className = "text-xl text-muted-foreground">19:00 - 22:00</p>
             </div>
           </div>
-          <div className="text-right">
-            <p className="text-5xl font-medium text-primary">21:24</p>
-            <p className="text-lg text-muted-foreground">현재 시간</p>
+          <div className = "text-right">
+            <p className = "text-5xl font-medium text-primary">21:24</p>
+            <p className = "text-lg text-muted-foreground">현재 시간</p>
           </div>
         </div>
 
         <div>
-          <div className="flex items-center gap-3 mb-6">
-            <h2 className="text-4xl">현재 경기</h2>
-            <Badge className="bg-primary text-primary-foreground text-lg px-4 py-2">
+          <div className = "flex items-center gap-3 mb-6">
+            <h2 className = "text-4xl">현재 경기</h2>
+            <Badge className = "bg-primary text-primary-foreground text-lg px-4 py-2">
               진행 중
             </Badge>
           </div>
 
-          <div className="grid grid-cols-2 gap-6">
+          <div className = "grid grid-cols-2 gap-6">
             {currentMatches.map((match) => (
-              <div
-                key={match.court}
-                className="bg-card border-2 border-border rounded-3xl p-8 shadow-lg"
+              <div key = {match.court} className = "bg-card border-2 border-border rounded-3xl p-8 shadow-lg"
               >
-                <div className="flex items-center gap-4 mb-8">
-                  <div className="w-20 h-20 rounded-2xl bg-primary flex items-center justify-center">
-                    <span className="text-4xl font-medium text-primary-foreground">
+                <div className = "flex items-center gap-4 mb-8">
+                  <div className = "w-20 h-20 rounded-2xl bg-primary flex items-center justify-center">
+                    <span className = "text-4xl font-medium text-primary-foreground">
                       {match.court}
                     </span>
                   </div>
-                  <p className="text-3xl font-medium">번 코트</p>
+                  <p className = "text-3xl font-medium">번 코트</p>
                 </div>
 
-                <div className="space-y-6">
-                  <div className="bg-secondary rounded-2xl p-6">
-                    <p className="text-lg text-muted-foreground mb-4">A팀</p>
-                    <div className="space-y-3">
+                <div className = "space-y-6">
+                  <div className = "bg-secondary rounded-2xl p-6">
+                    <p className = "text-lg text-muted-foreground mb-4">A팀</p>
+                    <div className = "space-y-3">
                       {match.teamA.map((player, idx) => (
-                        <p key={idx} className="text-3xl font-medium">
+                        <p key = {idx} className = "text-3xl font-medium">
                           {player}
                         </p>
                       ))}
                     </div>
                   </div>
 
-                  <div className="text-center py-2">
-                    <span className="text-4xl font-medium text-muted-foreground">vs</span>
+                  <div className = "text-center py-2">
+                    <span className = "text-4xl font-medium text-muted-foreground">vs</span>
                   </div>
 
-                  <div className="bg-secondary rounded-2xl p-6">
-                    <p className="text-lg text-muted-foreground mb-4">B팀</p>
-                    <div className="space-y-3">
+                  <div className = "bg-secondary rounded-2xl p-6">
+                    <p className = "text-lg text-muted-foreground mb-4">B팀</p>
+                    <div className = "space-y-3">
                       {match.teamB.map((player, idx) => (
-                        <p key={idx} className="text-3xl font-medium">
+                        <p key = {idx} className = "text-3xl font-medium">
                           {player}
                         </p>
                       ))}
@@ -110,33 +108,31 @@ export default function DisplayBoardPage() {
         </div>
 
         <div>
-          <h2 className="text-4xl mb-6">다음 경기</h2>
+          <h2 className = "text-4xl mb-6">다음 경기</h2>
 
-          <div className="grid grid-cols-2 gap-6">
+          <div className = "grid grid-cols-2 gap-6">
             {nextMatches.map((match, idx) => (
-              <div
-                key={idx}
-                className="bg-card/50 border border-border rounded-3xl p-8"
+              <div key = {idx} className = "bg-card/50 border border-border rounded-3xl p-8"
               >
-                <div className="grid grid-cols-3 gap-4 items-center">
-                  <div className="bg-secondary/50 rounded-xl p-4">
-                    <div className="space-y-2">
+                <div className = "grid grid-cols-3 gap-4 items-center">
+                  <div className = "bg-secondary/50 rounded-xl p-4">
+                    <div className = "space-y-2">
                       {match.teamA.map((player, pIdx) => (
-                        <p key={pIdx} className="text-xl font-medium">
+                        <p key = {pIdx} className = "text-xl font-medium">
                           {player}
                         </p>
                       ))}
                     </div>
                   </div>
 
-                  <div className="text-center">
-                    <span className="text-3xl font-medium text-muted-foreground">vs</span>
+                  <div className = "text-center">
+                    <span className = "text-3xl font-medium text-muted-foreground">vs</span>
                   </div>
 
-                  <div className="bg-secondary/50 rounded-xl p-4">
-                    <div className="space-y-2">
+                  <div className = "bg-secondary/50 rounded-xl p-4">
+                    <div className = "space-y-2">
                       {match.teamB.map((player, pIdx) => (
-                        <p key={pIdx} className="text-xl font-medium">
+                        <p key = {pIdx} className = "text-xl font-medium">
                           {player}
                         </p>
                       ))}
@@ -148,21 +144,21 @@ export default function DisplayBoardPage() {
           </div>
         </div>
 
-        <div className="bg-accent/20 border-2 border-accent rounded-3xl p-8">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-6">
-              <QrCode className="w-16 h-16 text-accent-foreground" />
+        <div className = "bg-accent/20 border-2 border-accent rounded-3xl p-8">
+          <div className = "flex items-center justify-between">
+            <div className = "flex items-center gap-6">
+              <QrCode className = "w-16 h-16 text-accent-foreground" />
               <div>
-                <h3 className="text-3xl font-medium text-accent-foreground mb-2">
+                <h3 className = "text-3xl font-medium text-accent-foreground mb-2">
                   참여하기
                 </h3>
-                <p className="text-xl text-accent-foreground/80">
+                <p className = "text-xl text-accent-foreground/80">
                   QR 코드를 스캔하여 오늘 운동에 참여하세요
                 </p>
               </div>
             </div>
-            <div className="w-32 h-32 bg-card rounded-2xl flex items-center justify-center">
-              <QrCode className="w-20 h-20 text-muted-foreground" />
+            <div className = "w-32 h-32 bg-card rounded-2xl flex items-center justify-center">
+              <QrCode className = "w-20 h-20 text-muted-foreground" />
             </div>
           </div>
         </div>

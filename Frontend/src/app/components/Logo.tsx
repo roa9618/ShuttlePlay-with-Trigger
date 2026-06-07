@@ -14,11 +14,8 @@ export default function Logo({ size = 'md', className = '' }: LogoProps) {
   };
 
   return (
-    <Link to="/" className={`inline-block ${className}`}>
-      <img
-        src={logoImg}
-        alt="ShuttlePlay"
-        className={`${sizeClasses[size]} w-auto object-contain`}
+    <Link to = "/" className = {`inline-block ${className}`}>
+      <img src = {logoImg} alt = "ShuttlePlay" className = {`${sizeClasses[size]} w-auto object-contain`}
       />
     </Link>
   );
