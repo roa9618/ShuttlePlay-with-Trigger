@@ -9,7 +9,7 @@ import { usePwaInstall } from '../utils/usePwaInstall';
 import { styles } from './HomePage.styles';
 
 export default function HomePage() {
-  const { install, isInstalled } = usePwaInstall();
+  const { install, isInstalled, installGuide } = usePwaInstall();
   const [toastMessage, setToastMessage] = useState('');
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -60,7 +60,7 @@ export default function HomePage() {
 
   const handleInstall = async () => {
     if (isInstalled) {
-      showToast('이미 홈 화면에 설치되어 있습니다.');
+      showToast('이미 앱으로 설치되어 있습니다.');
       return;
     }
 
@@ -72,7 +72,7 @@ export default function HomePage() {
     }
 
     if (result === 'unavailable') {
-      showToast('주소창 오른쪽 설치 아이콘이나 브라우저 메뉴에서 설치해 주세요.');
+      showToast(installGuide);
     }
   };
 

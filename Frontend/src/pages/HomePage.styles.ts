@@ -34,7 +34,7 @@ export const styles = {
   installButton: 'h-full rounded-2xl border border-border bg-secondary/30 p-4 text-left hover:border-primary transition-colors',
   iconIcon2: 'w-5 h-5 text-primary mb-3',
   summaryText: 'font-medium',
-  toast: 'fixed left-1/2 bottom-6 z-50 -translate-x-1/2 rounded-full bg-foreground px-5 py-3 text-sm font-medium text-background shadow-lg',
+  toast: 'fixed left-1/2 bottom-6 z-50 w-max max-w-[calc(100vw-2rem)] -translate-x-1/2 rounded-2xl bg-foreground px-5 py-3 text-center text-sm font-medium text-background shadow-lg',
   actionCard: (tone: string) => [
     'min-h-48 rounded-3xl border-2 p-6 md:p-8 transition-all hover:shadow-xl',
     tone === 'accent'
