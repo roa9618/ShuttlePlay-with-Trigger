@@ -3,7 +3,8 @@ export const styles = {
   header: 'border-b border-border bg-card',
   headerInner: 'w-full px-4 py-2 md:px-8 md:py-4 flex items-center justify-between',
   row: 'flex gap-2',
-  roundButton: 'rounded-full',
+  loginButton: 'cursor-pointer rounded-full px-4 text-muted-foreground hover:bg-primary/10 hover:text-primary md:px-5',
+  signupButton: 'cursor-pointer rounded-full bg-indigo-600 px-4 text-white shadow-sm shadow-indigo-600/20 hover:bg-indigo-700 hover:shadow-md hover:shadow-indigo-600/25 md:px-5',
   logInIcon: 'w-4 h-4 mr-2',
   mainArea: 'relative flex min-h-0 flex-1 items-center overflow-hidden',
   decorations: 'pointer-events-none absolute inset-0 text-primary',
@@ -22,7 +23,6 @@ export const styles = {
   cardLink: 'block',
   betweenRow: 'flex items-start justify-between gap-4',
   row2: 'w-9 h-9 rounded-xl bg-card flex items-center justify-center md:w-16 md:h-16 md:rounded-2xl',
-  iconIcon: 'w-5 h-5 text-primary md:w-8 md:h-8',
   betweenRow2: 'mt-4 flex items-end justify-between gap-2 md:mt-8 md:gap-4',
   sectionTitle: 'text-lg font-medium mb-1 md:text-3xl md:mb-2',
   descriptionText2: 'text-xs leading-5 text-muted-foreground md:text-base',
@@ -45,5 +45,10 @@ export const styles = {
     tone === 'accent'
       ? 'bg-indigo-500 text-white'
       : 'bg-primary text-primary-foreground'
+  ),
+  iconIcon: (tone: string) => (
+    tone === 'accent'
+      ? 'w-5 h-5 text-indigo-600 md:w-8 md:h-8'
+      : 'w-5 h-5 text-primary md:w-8 md:h-8'
   ),
 } as const;
