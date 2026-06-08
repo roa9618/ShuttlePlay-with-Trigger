@@ -1,25 +1,37 @@
+import { useState } from 'react';
+import FooterModal from './FooterModal';
+import { footerDocuments, footerMenuItems, type FooterDocumentKey } from '../utils/footerContent';
 import { styles } from './Footer.styles';
 
-const footerLinks = ['서비스 소개', '이용약관', '개인정보 처리방침', '운영 정책', '문의'];
-
 export default function Footer() {
-  return (
-    <footer className = {styles.footer}>
-      <div className = {styles.inner}>
-        <nav className = {styles.links} aria-label = "푸터 메뉴">
-          {footerLinks.map(label => (
-            <button
-              key = {label}
-              type = "button"
-              className = {styles.link}
-            >
-              {label}
-            </button>
-          ))}
-        </nav>
+  const [selectedDocument, setSelectedDocument] = useState<FooterDocumentKey | null>(null);
 
-        <p className = {styles.copyright}>© 2026 셔틀플레이. All rights reserved.</p>
-      </div>
-    </footer>
+  return (
+    <>
+      <footer className = {styles.footer}>
+        <div className = {styles.inner}>
+          <nav className = {styles.links} aria-label = "푸터 메뉴">
+            {footerMenuItems.map(item => (
+              <button
+                key = {item.key}
+                type = "button"
+                className = {styles.link}
+                onClick = {() => setSelectedDocument(item.key)}
+              >
+                {item.label}
+              </button>
+            ))}
+          </nav>
+
+          <p className = {styles.copyright}>© 2026 셔틀플레이. All rights reserved.</p>
+        </div>
+      </footer>
+
+      <FooterModal
+        documentKey = {selectedDocument}
+        document = {selectedDocument ? footerDocuments[selectedDocument] : null}
+        onClose = {() => setSelectedDocument(null)}
+      />
+    </>
   );
 }

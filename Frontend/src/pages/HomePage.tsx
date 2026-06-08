@@ -83,13 +83,13 @@ export default function HomePage() {
           <Logo size = "md" />
           <div className = {styles.row}>
             <Link to = "/login">
-              <Button variant = "outline" className = {styles.roundButton}>
+              <Button variant = "ghost" className = {styles.loginButton}>
                 <LogIn className = {styles.logInIcon} />
                 로그인
               </Button>
             </Link>
             <Link to = "/signup">
-              <Button className = {styles.roundButton}>
+              <Button className = {styles.signupButton}>
                 <UserPlus className = {styles.logInIcon} />
                 가입
               </Button>
@@ -125,7 +125,7 @@ export default function HomePage() {
                   <div className = {styles.actionCard(action.tone)}>
                     <div className = {styles.betweenRow}>
                       <div className = {styles.row2}>
-                        <Icon className = {styles.iconIcon} />
+                        <Icon className = {styles.iconIcon(action.tone)} />
                       </div>
                       <Badge className = {styles.actionBadge(action.tone)}>
                         {action.badge}
