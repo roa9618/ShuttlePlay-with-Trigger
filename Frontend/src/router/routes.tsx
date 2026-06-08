@@ -4,6 +4,7 @@ import HomePage from "../pages/HomePage";
 import LoginPage from "../pages/LoginPage";
 import SignupPage from "../pages/SignupPage";
 import PasswordResetPage from "../pages/PasswordResetPage";
+import PasswordResetConfirmPage from "../pages/PasswordResetConfirmPage";
 import GroupListPage from "../pages/GroupListPage";
 import GroupNewPage from "../pages/GroupNewPage";
 import GroupDetailPage from "../pages/GroupDetailPage";
@@ -39,6 +40,7 @@ export const router = createBrowserRouter([
       { path: "login", Component: LoginPage, handle: { title: "로그인" } },
       { path: "signup", Component: SignupPage, handle: { title: "회원가입" } },
       { path: "password-reset", Component: PasswordResetPage, handle: { title: "비밀번호 재설정" } },
+      { path: "password-reset/confirm", Component: PasswordResetConfirmPage, handle: { title: "새 비밀번호 설정" } },
 
       // Mobile-optimized pages (no sidebar)
       { path: "sessions/:sessionId/join", Component: JoinSessionPage, handle: { title: "세션 참가" } },
