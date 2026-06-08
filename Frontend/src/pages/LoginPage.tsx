@@ -24,7 +24,7 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const { message, showMessage } = useActionFeedback();
   const [formData, setFormData] = useState({
-    email: '',
+    loginId: '',
     password: '',
   });
 
@@ -75,8 +75,8 @@ export default function LoginPage() {
         <div className = {styles.header}>
           <form onSubmit = {handleSubmit} className = {styles.form}>
             <div className = {styles.stack3}>
-              <Label htmlFor = "email">이메일</Label>
-              <Input id = "email" type = "email" placeholder = "이메일을 입력하세요" className = {styles.input} value = {formData.email} onChange = {(e) => setFormData({ ...formData, email: e.target.value })}
+              <Label htmlFor = "loginId">아이디</Label>
+              <Input id = "loginId" type = "text" placeholder = "아이디를 입력하세요" className = {styles.input} value = {formData.loginId} onChange = {(e) => setFormData({ ...formData, loginId: e.target.value })}
                 required
               />
             </div>
