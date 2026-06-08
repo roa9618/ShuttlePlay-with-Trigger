@@ -1,12 +1,18 @@
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Logo from '../components/Logo';
 import ShuttlecockIcon from '../components/ShuttlecockIcon';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
-import { Calendar, ChevronRight, ClipboardCheck, LogIn, QrCode, Settings, UserPlus, Users } from 'lucide-react';
+import { Calendar, ChevronRight, ClipboardCheck, Download, LogIn, QrCode, Settings, UserPlus, Users } from 'lucide-react';
+import { usePwaInstall } from '../utils/usePwaInstall';
 import { styles } from './HomePage.styles';
 
 export default function HomePage() {
+  const { install, isInstalled } = usePwaInstall();
+  const [toastMessage, setToastMessage] = useState('');
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const mainActions = [
     {
       title: '모임 참여',
@@ -32,6 +38,43 @@ export default function HomePage() {
     { title: '내 기록', path: '/my-record', icon: ClipboardCheck },
     { title: '설정', path: '/settings', icon: Settings },
   ];
+
+  useEffect(() => () => {
+    if (toastTimer.current) {
+      clearTimeout(toastTimer.current);
+    }
+  }, []);
+
+  const showToast = (message: string) => {
+    setToastMessage(message);
+
+    if (toastTimer.current) {
+      clearTimeout(toastTimer.current);
+    }
+
+    toastTimer.current = setTimeout(() => {
+      setToastMessage('');
+      toastTimer.current = null;
+    }, 3000);
+  };
+
+  const handleInstall = async () => {
+    if (isInstalled) {
+      showToast('이미 홈 화면에 설치되어 있습니다.');
+      return;
+    }
+
+    const result = await install();
+
+    if (result === 'installed') {
+      showToast('셔틀플레이 설치를 시작했습니다.');
+      return;
+    }
+
+    if (result === 'unavailable') {
+      showToast('주소창 오른쪽 설치 아이콘이나 브라우저 메뉴에서 설치해 주세요.');
+    }
+  };
 
   return (
     <div className = {styles.page}>
@@ -115,10 +158,20 @@ export default function HomePage() {
                   </Link>
                 );
               })}
+              <button type = "button" className = {styles.installButton} onClick = {handleInstall}>
+                <Download className = {styles.iconIcon2} />
+                <p className = {styles.summaryText}>앱 설치</p>
+              </button>
             </div>
           </div>
         </div>
       </main>
+
+      {toastMessage && (
+        <div className = {styles.toast} role = "status">
+          {toastMessage}
+        </div>
+      )}
     </div>
   );
 }

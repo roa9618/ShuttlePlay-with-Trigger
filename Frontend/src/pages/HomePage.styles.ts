@@ -29,10 +29,12 @@ export const styles = {
   chevronRightIcon: 'w-7 h-7 text-muted-foreground flex-shrink-0',
   header2: 'bg-card border border-border rounded-3xl p-5 md:p-6',
   sectionTitle2: 'text-xl font-medium mb-4',
-  cardGrid2: 'grid grid-cols-2 md:grid-cols-4 gap-3',
+  cardGrid2: 'grid grid-cols-2 md:grid-cols-5 gap-3',
   summaryBox: 'h-full rounded-2xl border border-border bg-secondary/30 p-4 hover:border-primary transition-colors',
+  installButton: 'h-full rounded-2xl border border-border bg-secondary/30 p-4 text-left hover:border-primary transition-colors',
   iconIcon2: 'w-5 h-5 text-primary mb-3',
   summaryText: 'font-medium',
+  toast: 'fixed left-1/2 bottom-6 z-50 -translate-x-1/2 rounded-full bg-foreground px-5 py-3 text-sm font-medium text-background shadow-lg',
   actionCard: (tone: string) => [
     'min-h-48 rounded-3xl border-2 p-6 md:p-8 transition-all hover:shadow-xl',
     tone === 'accent'
