@@ -5,7 +5,7 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
-import { ArrowLeft, Award, Heart } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 import { useState } from 'react';
 import { useActionFeedback } from '../utils/useActionFeedback';
 import { styles } from './SignupPage.styles';
@@ -39,21 +39,16 @@ export default function SignupPage() {
 
       {/* Decorative Elements */}
       <div className = {styles.decorativeShape2}>
-        <Award className = {styles.awardIcon} />
+        <ShuttlecockIcon size = {120} className = {styles.shuttlecockIcon} />
       </div>
       <div className = {styles.decorativeShape3}>
-        <Heart className = {styles.heartIcon} />
+        <ShuttlecockIcon size = {80} className = {styles.shuttlecockIcon} />
       </div>
       <div className = {styles.decorativeShape4}>
-        <ShuttlecockIcon size = {100} className = {styles.shuttlecockIcon} />
+        <Sparkles className = {styles.sparklesIcon} />
       </div>
 
       <div className = {styles.stack}>
-        <Link to = "/" className = {styles.backLink}>
-          <ArrowLeft className = {styles.arrowLeftIcon} />
-          돌아가기
-        </Link>
-
         <div className = {styles.stack2}>
           <div className = {styles.row}>
             <Logo size = "lg" />
@@ -61,39 +56,43 @@ export default function SignupPage() {
           <div className = {styles.stack3}>
             <h1 className = {styles.pageTitle}>회원가입</h1>
             <p className = {styles.descriptionText}>
-              ShuttlePlay와 함께 시작하세요
+              셔틀플레이와 함께 시작하세요
             </p>
           </div>
         </div>
 
         <div className = {styles.header}>
           <form onSubmit = {handleSubmit} className = {styles.form}>
-            <div className = {styles.stack3}>
-              <Label htmlFor = "name">이름</Label>
-              <Input id = "name" type = "text" placeholder = "이름을 입력하세요" className = {styles.input} value = {formData.name} onChange = {(e) => setFormData({ ...formData, name: e.target.value })}
-                required
-              />
+            <div className = {styles.cardGrid}>
+              <div className = {styles.stack3}>
+                <Label htmlFor = "name">이름</Label>
+                <Input id = "name" type = "text" placeholder = "이름을 입력하세요" className = {styles.input} value = {formData.name} onChange = {(e) => setFormData({ ...formData, name: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div className = {styles.stack3}>
+                <Label htmlFor = "email">이메일</Label>
+                <Input id = "email" type = "email" placeholder = "이메일을 입력하세요" className = {styles.input} value = {formData.email} onChange = {(e) => setFormData({ ...formData, email: e.target.value })}
+                  required
+                />
+              </div>
             </div>
 
-            <div className = {styles.stack3}>
-              <Label htmlFor = "email">이메일</Label>
-              <Input id = "email" type = "email" placeholder = "이메일을 입력하세요" className = {styles.input} value = {formData.email} onChange = {(e) => setFormData({ ...formData, email: e.target.value })}
-                required
-              />
-            </div>
+            <div className = {styles.cardGrid}>
+              <div className = {styles.stack3}>
+                <Label htmlFor = "password">비밀번호</Label>
+                <Input id = "password" type = "password" placeholder = "비밀번호를 입력하세요" className = {styles.input} value = {formData.password} onChange = {(e) => setFormData({ ...formData, password: e.target.value })}
+                  required
+                />
+              </div>
 
-            <div className = {styles.stack3}>
-              <Label htmlFor = "password">비밀번호</Label>
-              <Input id = "password" type = "password" placeholder = "비밀번호를 입력하세요" className = {styles.input} value = {formData.password} onChange = {(e) => setFormData({ ...formData, password: e.target.value })}
-                required
-              />
-            </div>
-
-            <div className = {styles.stack3}>
-              <Label htmlFor = "password-confirm">비밀번호 확인</Label>
-              <Input id = "password-confirm" type = "password" placeholder = "비밀번호를 다시 입력하세요" className = {styles.input} value = {formData.passwordConfirm} onChange = {(e) => setFormData({ ...formData, passwordConfirm: e.target.value })}
-                required
-              />
+              <div className = {styles.stack3}>
+                <Label htmlFor = "password-confirm">비밀번호 확인</Label>
+                <Input id = "password-confirm" type = "password" placeholder = "다시 입력하세요" className = {styles.input} value = {formData.passwordConfirm} onChange = {(e) => setFormData({ ...formData, passwordConfirm: e.target.value })}
+                  required
+                />
+              </div>
             </div>
 
             <div className = {styles.cardGrid}>
@@ -140,7 +139,7 @@ export default function SignupPage() {
                   <SelectItem value = "B">B</SelectItem>
                   <SelectItem value = "A">A</SelectItem>
                   <SelectItem value = "S">S</SelectItem>
-                    <SelectItem value = "SS">SS</SelectItem>
+                  <SelectItem value = "SS">SS</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -163,15 +162,6 @@ export default function SignupPage() {
           </Link>
         </div>
 
-        {/* Decorative Badge */}
-        <div className = {styles.row}>
-          <div className = {styles.pill}>
-            <div className = {styles.row2}>
-              <ShuttlecockIcon size = {16} className = {styles.shuttlecockIcon} />
-              <span className = {styles.mutedText}>함께하는 배드민턴의 즐거움</span>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   );
