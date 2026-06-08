@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import logoImg from '../assets/shuttleplay-logo.png';
+import { styles } from './Logo.styles';
 
 interface LogoProps {
   size?: 'sm' | 'md' | 'lg';
@@ -7,15 +8,9 @@ interface LogoProps {
 }
 
 export default function Logo({ size = 'md', className = '' }: LogoProps) {
-  const sizeClasses = {
-    sm: 'h-8',
-    md: 'h-12',
-    lg: 'h-16',
-  };
-
   return (
-    <Link to = "/" className = {`inline-block ${className}`}>
-      <img src = {logoImg} alt = "ShuttlePlay" className = {`${sizeClasses[size]} w-auto object-contain`}
+    <Link to = "/" className = {styles.link(className)}>
+      <img src = {logoImg} alt = "ShuttlePlay" className = {styles.image(size)}
       />
     </Link>
   );

@@ -8,65 +8,66 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Switch } from '../components/ui/switch';
 import { ArrowLeft, User, Bell, Palette, LogOut, Wifi, Smartphone } from 'lucide-react';
 import { useActionFeedback } from '../utils/useActionFeedback';
+import { styles } from './SettingsPage.styles';
 
 export default function SettingsPage() {
   const { message, showMessage } = useActionFeedback();
   const [installGuideOpen, setInstallGuideOpen] = useState(false);
 
   return (
-    <div className = "min-h-screen bg-gradient-to-b from-background to-secondary/20">
-      <div className = "px-4 py-6">
-        <Logo size = "sm" className = "justify-center" />
+    <div className = {styles.page}>
+      <div className = {styles.emptyState}>
+        <Logo size = "sm" className = {styles.logoWrapper} />
       </div>
 
-      <div className = "max-w-3xl mx-auto px-4 pb-12 space-y-8">
-        <Link to = "/" className = "inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
-          <ArrowLeft className = "w-4 h-4" />
+      <div className = {styles.content}>
+        <Link to = "/" className = {styles.backLink}>
+          <ArrowLeft className = {styles.arrowLeftIcon} />
           홈으로
         </Link>
 
-        <div className = "text-center space-y-2">
-          <h1 className = "text-4xl font-medium mb-3">설정</h1>
-          <p className = "text-muted-foreground">
+        <div className = {styles.stack}>
+          <h1 className = {styles.pageTitle}>설정</h1>
+          <p className = {styles.descriptionText}>
             프로필과 서비스 설정을 관리하세요
           </p>
         </div>
 
-        <div className = "bg-card border border-border rounded-3xl p-8 space-y-8">
-          <div className = "space-y-6">
-            <div className = "flex items-center gap-3 pb-4 border-b border-border">
-              <User className = "w-5 h-5 text-primary" />
-              <h2 className = "text-2xl font-medium">프로필 설정</h2>
+        <div className = {styles.header}>
+          <div className = {styles.stack2}>
+            <div className = {styles.row}>
+              <User className = {styles.userIcon} />
+              <h2 className = {styles.sectionTitle}>프로필 설정</h2>
             </div>
 
-            <div className = "space-y-4">
-              <div className = "flex items-center justify-center mb-6">
-                <div className = "w-24 h-24 rounded-full bg-primary/20 flex items-center justify-center">
-                  <span className = "text-4xl font-medium text-primary">김</span>
+            <div className = {styles.stack3}>
+              <div className = {styles.row2}>
+                <div className = {styles.row3}>
+                  <span className = {styles.labelText}>김</span>
                 </div>
               </div>
 
-              <div className = "space-y-2">
+              <div className = {styles.stack4}>
                 <Label htmlFor = "name">이름</Label>
-                <Input id = "name" defaultValue = "김민수" className = "rounded-xl"
+                <Input id = "name" defaultValue = "김민수" className = {styles.input}
                 />
               </div>
 
-              <div className = "space-y-2">
+              <div className = {styles.stack4}>
                 <Label htmlFor = "email">이메일</Label>
-                <Input id = "email" type = "email" defaultValue = "minsu@example.com" className = "rounded-xl"
+                <Input id = "email" type = "email" defaultValue = "minsu@example.com" className = {styles.input}
                   disabled
                 />
-                <p className = "text-sm text-muted-foreground">
+                <p className = {styles.descriptionText2}>
                   이메일은 변경할 수 없습니다
                 </p>
               </div>
 
-              <div className = "grid grid-cols-2 gap-4">
-                <div className = "space-y-2">
+              <div className = {styles.cardGrid}>
+                <div className = {styles.stack4}>
                   <Label htmlFor = "gender">성별</Label>
                   <Select defaultValue = "male">
-                    <SelectTrigger id = "gender" className = "rounded-xl">
+                    <SelectTrigger id = "gender" className = {styles.input}>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -76,10 +77,10 @@ export default function SettingsPage() {
                   </Select>
                 </div>
 
-                <div className = "space-y-2">
+                <div className = {styles.stack4}>
                   <Label htmlFor = "age">나이대</Label>
                   <Select defaultValue = "30s">
-                    <SelectTrigger id = "age" className = "rounded-xl">
+                    <SelectTrigger id = "age" className = {styles.input}>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -93,10 +94,10 @@ export default function SettingsPage() {
                 </div>
               </div>
 
-              <div className = "space-y-2">
+              <div className = {styles.stack4}>
                 <Label htmlFor = "level">급수</Label>
                 <Select defaultValue = "B">
-                  <SelectTrigger id = "level" className = "rounded-xl">
+                  <SelectTrigger id = "level" className = {styles.input}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -113,47 +114,47 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          <div className = "space-y-6 pt-8 border-t border-border">
-            <div className = "flex items-center gap-3 pb-4 border-b border-border">
-              <Bell className = "w-5 h-5 text-primary" />
-              <h2 className = "text-2xl font-medium">알림 설정</h2>
+          <div className = {styles.footerActions}>
+            <div className = {styles.row}>
+              <Bell className = {styles.userIcon} />
+              <h2 className = {styles.sectionTitle}>알림 설정</h2>
             </div>
 
-            <div className = "space-y-4">
-              <div className = "flex items-center justify-between">
+            <div className = {styles.stack3}>
+              <div className = {styles.betweenRow}>
                 <div>
-                  <p className = "font-medium">다음 경기 알림</p>
-                  <p className = "text-sm text-muted-foreground">
+                  <p className = {styles.summaryText}>다음 경기 알림</p>
+                  <p className = {styles.descriptionText2}>
                     내 차례가 되면 알림을 받습니다
                   </p>
                 </div>
                 <Switch defaultChecked />
               </div>
 
-              <div className = "flex items-center justify-between">
+              <div className = {styles.betweenRow}>
                 <div>
-                  <p className = "font-medium">세션 시작 알림</p>
-                  <p className = "text-sm text-muted-foreground">
+                  <p className = {styles.summaryText}>세션 시작 알림</p>
+                  <p className = {styles.descriptionText2}>
                     오늘 세션이 시작될 때 알림을 받습니다
                   </p>
                 </div>
                 <Switch defaultChecked />
               </div>
 
-              <div className = "flex items-center justify-between">
+              <div className = {styles.betweenRow}>
                 <div>
-                  <p className = "font-medium">결과 입력 알림</p>
-                  <p className = "text-sm text-muted-foreground">
+                  <p className = {styles.summaryText}>결과 입력 알림</p>
+                  <p className = {styles.descriptionText2}>
                     경기 결과 입력이 필요할 때 알림을 받습니다
                   </p>
                 </div>
                 <Switch />
               </div>
 
-              <div className = "grid sm:grid-cols-2 gap-3 pt-2">
+              <div className = {styles.cardGrid2}>
                 {['상단 배너', '토스트', '모달', '소리', '진동', '다음 경기 카드 강조'].map((item) => (
-                  <div key = {item} className = "flex items-center justify-between rounded-xl border border-border p-3">
-                    <span className = "text-sm">{item}</span>
+                  <div key = {item} className = {styles.betweenRow2}>
+                    <span className = {styles.inlineText}>{item}</span>
                     <Switch defaultChecked />
                   </div>
                 ))}
@@ -161,69 +162,69 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          <div className = "space-y-6 pt-8 border-t border-border">
-            <div className = "flex items-center gap-3 pb-4 border-b border-border">
-              <Smartphone className = "w-5 h-5 text-primary" />
-              <h2 className = "text-2xl font-medium">PWA·푸시 설정</h2>
+          <div className = {styles.footerActions}>
+            <div className = {styles.row}>
+              <Smartphone className = {styles.userIcon} />
+              <h2 className = {styles.sectionTitle}>PWA·푸시 설정</h2>
             </div>
 
-            <div className = "grid sm:grid-cols-2 gap-4">
-              <div className = "rounded-2xl bg-secondary/40 p-5">
-                <p className = "font-medium mb-1">홈 화면 설치</p>
-                <p className = "text-sm text-muted-foreground mb-4">앱 설치 없이 홈 화면에서 바로 실행합니다.</p>
-                <Button variant = "outline" className = "rounded-full" onClick = {() => setInstallGuideOpen((open) => !open)}>
+            <div className = {styles.cardGrid3}>
+              <div className = {styles.summaryBox}>
+                <p className = {styles.summaryText2}>홈 화면 설치</p>
+                <p className = {styles.descriptionText3}>앱 설치 없이 홈 화면에서 바로 실행합니다.</p>
+                <Button variant = "outline" className = {styles.roundButton} onClick = {() => setInstallGuideOpen((open) => !open)}>
                   설치 안내 보기
                 </Button>
                 {installGuideOpen && (
-                  <p className = "text-sm text-muted-foreground mt-3">
+                  <p className = {styles.descriptionText4}>
                     브라우저 공유 메뉴에서 홈 화면에 추가를 선택하면 바로 실행할 수 있습니다.
                   </p>
                 )}
               </div>
-              <div className = "rounded-2xl bg-secondary/40 p-5">
-                <p className = "font-medium mb-1">푸시 알림 권한</p>
-                <p className = "text-sm text-muted-foreground mb-4">다음 경기, 경기 시작, 출석 요청을 받습니다.</p>
-                <Button className = "rounded-full" onClick = {() => showMessage('푸시 알림 권한을 요청했습니다.')}>
+              <div className = {styles.summaryBox}>
+                <p className = {styles.summaryText2}>푸시 알림 권한</p>
+                <p className = {styles.descriptionText3}>다음 경기, 경기 시작, 출석 요청을 받습니다.</p>
+                <Button className = {styles.roundButton} onClick = {() => showMessage('푸시 알림 권한을 요청했습니다.')}>
                   권한 요청
                 </Button>
               </div>
             </div>
           </div>
 
-          <div className = "space-y-6 pt-8 border-t border-border">
-            <div className = "flex items-center gap-3 pb-4 border-b border-border">
-              <Wifi className = "w-5 h-5 text-primary" />
-              <h2 className = "text-2xl font-medium">실시간 동기화</h2>
+          <div className = {styles.footerActions}>
+            <div className = {styles.row}>
+              <Wifi className = {styles.userIcon} />
+              <h2 className = {styles.sectionTitle}>실시간 동기화</h2>
             </div>
 
-            <div className = "space-y-3">
+            <div className = {styles.stack5}>
               {[
                 ['초기 데이터', 'REST로 최근 세션 상태를 불러옴', '정상'],
                 ['WebSocket', '출석, 상태, 매칭 큐, 결과 변경 이벤트 수신', '연결됨'],
                 ['재연결', '연결이 끊기면 REST 재동기화 후 재구독', '대기'],
                 ['폴링 대체', 'WebSocket 장애 시 주기적으로 상태 갱신', '꺼짐'],
               ].map(([title, desc, status]) => (
-                <div key = {title} className = "flex items-center justify-between rounded-xl border border-border p-4">
+                <div key = {title} className = {styles.betweenRow3}>
                   <div>
-                    <p className = "font-medium">{title}</p>
-                    <p className = "text-sm text-muted-foreground">{desc}</p>
+                    <p className = {styles.summaryText}>{title}</p>
+                    <p className = {styles.descriptionText2}>{desc}</p>
                   </div>
-                  <span className = "text-sm font-medium text-primary">{status}</span>
+                  <span className = {styles.labelText2}>{status}</span>
                 </div>
               ))}
             </div>
           </div>
 
-          <div className = "space-y-6 pt-8 border-t border-border">
-            <div className = "flex items-center gap-3 pb-4 border-b border-border">
-              <Palette className = "w-5 h-5 text-primary" />
-              <h2 className = "text-2xl font-medium">테마 설정</h2>
+          <div className = {styles.footerActions}>
+            <div className = {styles.row}>
+              <Palette className = {styles.userIcon} />
+              <h2 className = {styles.sectionTitle}>테마 설정</h2>
             </div>
 
-            <div className = "space-y-2">
+            <div className = {styles.stack4}>
               <Label htmlFor = "theme">테마</Label>
               <Select defaultValue = "light">
-                <SelectTrigger id = "theme" className = "rounded-xl">
+                <SelectTrigger id = "theme" className = {styles.input}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -235,19 +236,19 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          <div className = "pt-8 border-t border-border space-y-4">
+          <div className = {styles.footerActions2}>
             {message && (
-              <div className = "rounded-xl border border-primary/30 bg-primary/5 p-3 text-center text-sm text-primary">
+              <div className = {styles.contentBox}>
                 {message}
               </div>
             )}
-            <Button className = "w-full rounded-full" size = "lg" onClick = {() => showMessage('변경사항을 저장했습니다.')}>
+            <Button className = {styles.fullWidthButton} size = "lg" onClick = {() => showMessage('변경사항을 저장했습니다.')}>
               변경사항 저장
             </Button>
 
-            <Button variant = "outline" className = "w-full rounded-full gap-2 text-destructive hover:text-destructive" size = "lg" onClick = {() => showMessage('로그아웃했습니다.')}
+            <Button variant = "outline" className = {styles.fullWidthButton2} size = "lg" onClick = {() => showMessage('로그아웃했습니다.')}
             >
-              <LogOut className = "w-5 h-5" />
+              <LogOut className = {styles.logOutIcon} />
               로그아웃
             </Button>
           </div>

@@ -5,6 +5,7 @@ import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import { Users, Play, CheckCircle, Clock, QrCode, Monitor, Sparkles, AlertCircle, UserCheck, UserX } from 'lucide-react';
 import { useActionFeedback } from '../utils/useActionFeedback';
+import { styles } from './OrganizerDashboardPage.styles';
 
 export default function OrganizerDashboardPage() {
   const { sessionId } = useParams();
@@ -32,37 +33,37 @@ export default function OrganizerDashboardPage() {
   ];
 
   return (
-    <div className = "min-h-screen bg-background">
+    <div className = {styles.page}>
       {/* Sticky Header */}
-      <div className = "border-b border-border bg-card sticky top-0 z-10 shadow-sm">
-        <div className = "px-6 py-4 flex items-center justify-between">
-          <div className = "flex items-center gap-4">
+      <div className = {styles.header}>
+        <div className = {styles.betweenRow}>
+          <div className = {styles.row}>
             <Logo size = "sm" />
-            <div className = "h-6 w-px bg-border" />
+            <div className = {styles.verticalDivider} />
             <div>
-              <h1 className = "text-lg font-medium">6월 3일 (화) 저녁 운동</h1>
-              <p className = "text-sm text-muted-foreground">19:00 - 22:00</p>
+              <h1 className = {styles.pageTitle}>6월 3일 (화) 저녁 운동</h1>
+              <p className = {styles.descriptionText}>19:00 - 22:00</p>
             </div>
           </div>
-          <div className = "flex items-center gap-2">
+          <div className = {styles.row2}>
             <Link to = {`/sessions/${sessionId}/display`}>
-              <Button variant = "outline" size = "sm" className = "rounded-full gap-2">
-                <Monitor className = "w-4 h-4" />
+              <Button variant = "outline" size = "sm" className = {styles.roundButton}>
+                <Monitor className = {styles.monitorIcon} />
                 큰 화면
               </Button>
             </Link>
-          <Button variant = "outline" size = "sm" className = "rounded-full gap-2" onClick = {() => showMessage('초대 QR을 준비했습니다.')}
+          <Button variant = "outline" size = "sm" className = {styles.roundButton} onClick = {() => showMessage('초대 QR을 준비했습니다.')}
           >
-              <QrCode className = "w-4 h-4" />
+              <QrCode className = {styles.monitorIcon} />
               초대 QR
             </Button>
-            <Button variant = "destructive" size = "sm" className = "rounded-full" onClick = {() => showMessage('세션 종료 전 확인이 필요합니다.')}>
+            <Button variant = "destructive" size = "sm" className = {styles.roundButton2} onClick = {() => showMessage('세션 종료 전 확인이 필요합니다.')}>
               종료
             </Button>
           </div>
         </div>
 
-        <div className = "grid grid-cols-3 md:grid-cols-6 gap-3 mb-6">
+        <div className = {styles.statsGrid}>
           {[
             ['미출석', '1명'],
             ['불참', '1명'],
@@ -71,175 +72,175 @@ export default function OrganizerDashboardPage() {
             ['퇴장', '0명'],
             ['결과 미입력', '2경기'],
           ].map(([label, value]) => (
-            <div key = {label} className = "bg-card border border-border rounded-xl p-4">
-              <p className = "text-xs text-muted-foreground">{label}</p>
-              <p className = "text-xl font-medium mt-1">{value}</p>
+            <div key = {label} className = {styles.header2}>
+              <p className = {styles.descriptionText2}>{label}</p>
+              <p className = {styles.summaryText}>{value}</p>
             </div>
           ))}
         </div>
       </div>
 
-      <div className = "p-6">
-        <div className = "bg-card border-2 border-primary/20 rounded-3xl p-6 mb-6">
-          <div className = "flex items-center justify-between gap-4 mb-5">
+      <div className = {styles.contentBox}>
+        <div className = {styles.panel}>
+          <div className = {styles.betweenRow2}>
             <div>
-              <h2 className = "text-2xl font-medium">오늘 운영</h2>
-              <p className = "text-muted-foreground">왼쪽부터 차례대로 진행합니다.</p>
+              <h2 className = {styles.sectionTitle}>오늘 운영</h2>
+              <p className = {styles.descriptionText3}>왼쪽부터 차례대로 진행합니다.</p>
             </div>
-            <Badge className = "bg-primary text-primary-foreground">진행 중</Badge>
+            <Badge className = {styles.badge}>진행 중</Badge>
           </div>
-          <div className = "grid md:grid-cols-3 gap-4">
+          <div className = {styles.statsGrid2}>
             <Link to = {`/sessions/${sessionId}/participants`}>
-              <div className = "h-full rounded-2xl border border-border bg-secondary/30 p-5 hover:border-primary transition-colors">
-                <div className = "w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-medium mb-4">1</div>
-                <h3 className = "text-xl font-medium mb-2">출석 확인</h3>
-                <p className = "text-sm text-muted-foreground">도착, 지각, 휴식 상태를 정리합니다.</p>
+              <div className = {styles.summaryBox}>
+                <div className = {styles.row3}>1</div>
+                <h3 className = {styles.cardTitle}>출석 확인</h3>
+                <p className = {styles.descriptionText}>도착, 지각, 휴식 상태를 정리합니다.</p>
               </div>
             </Link>
             <Link to = {`/sessions/${sessionId}/queue`}>
-              <div className = "h-full rounded-2xl border border-border bg-secondary/30 p-5 hover:border-primary transition-colors">
-                <div className = "w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-medium mb-4">2</div>
-                <h3 className = "text-xl font-medium mb-2">경기 만들기</h3>
-                <p className = "text-sm text-muted-foreground">후보를 확인하고 코트에 배정합니다.</p>
+              <div className = {styles.summaryBox}>
+                <div className = {styles.row3}>2</div>
+                <h3 className = {styles.cardTitle}>경기 만들기</h3>
+                <p className = {styles.descriptionText}>후보를 확인하고 코트에 배정합니다.</p>
               </div>
             </Link>
             <Link to = {`/sessions/${sessionId}/result/new`}>
-              <div className = "h-full rounded-2xl border border-border bg-secondary/30 p-5 hover:border-primary transition-colors">
-                <div className = "w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-medium mb-4">3</div>
-                <h3 className = "text-xl font-medium mb-2">결과 입력</h3>
-                <p className = "text-sm text-muted-foreground">끝난 경기의 승패와 점수를 저장합니다.</p>
+              <div className = {styles.summaryBox}>
+                <div className = {styles.row3}>3</div>
+                <h3 className = {styles.cardTitle}>결과 입력</h3>
+                <p className = {styles.descriptionText}>끝난 경기의 승패와 점수를 저장합니다.</p>
               </div>
             </Link>
           </div>
         </div>
 
         {/* 1. 세션 상태 요약 - 가장 먼저 */}
-        <div className = "grid grid-cols-5 gap-4 mb-6">
-          <div className = "bg-card border-2 border-primary/30 rounded-2xl p-5">
-            <div className = "flex items-center gap-3 mb-3">
-              <UserCheck className = "w-5 h-5 text-primary" />
-              <p className = "text-sm font-medium">출석</p>
+        <div className = {styles.grid}>
+          <div className = {styles.card}>
+            <div className = {styles.row4}>
+              <UserCheck className = {styles.userCheckIcon} />
+              <p className = {styles.summaryText2}>출석</p>
             </div>
-            <p className = "text-3xl font-medium">14명</p>
-            <p className = "text-xs text-muted-foreground mt-1">전체 16명</p>
+            <p className = {styles.summaryText3}>14명</p>
+            <p className = {styles.descriptionText4}>전체 16명</p>
           </div>
 
-          <div className = "bg-card border border-border rounded-2xl p-5">
-            <div className = "flex items-center gap-3 mb-3">
-              <Play className = "w-5 h-5 text-primary" />
-              <p className = "text-sm font-medium">경기 중</p>
+          <div className = {styles.header3}>
+            <div className = {styles.row4}>
+              <Play className = {styles.userCheckIcon} />
+              <p className = {styles.summaryText2}>경기 중</p>
             </div>
-            <p className = "text-3xl font-medium">8명</p>
-            <p className = "text-xs text-muted-foreground mt-1">4개 코트</p>
+            <p className = {styles.summaryText3}>8명</p>
+            <p className = {styles.descriptionText4}>4개 코트</p>
           </div>
 
-          <div className = "bg-card border border-border rounded-2xl p-5">
-            <div className = "flex items-center gap-3 mb-3">
-              <Clock className = "w-5 h-5 text-muted-foreground" />
-              <p className = "text-sm font-medium">대기 중</p>
+          <div className = {styles.header3}>
+            <div className = {styles.row4}>
+              <Clock className = {styles.clockIcon} />
+              <p className = {styles.summaryText2}>대기 중</p>
             </div>
-            <p className = "text-3xl font-medium">6명</p>
-            <p className = "text-xs text-muted-foreground mt-1">다음 순서</p>
+            <p className = {styles.summaryText3}>6명</p>
+            <p className = {styles.descriptionText4}>다음 순서</p>
           </div>
 
-          <div className = "bg-card border border-border rounded-2xl p-5">
-            <div className = "flex items-center gap-3 mb-3">
-              <UserX className = "w-5 h-5 text-accent-foreground" />
-              <p className = "text-sm font-medium">지각</p>
+          <div className = {styles.header3}>
+            <div className = {styles.row4}>
+              <UserX className = {styles.userXIcon} />
+              <p className = {styles.summaryText2}>지각</p>
             </div>
-            <p className = "text-3xl font-medium">2명</p>
-            <p className = "text-xs text-muted-foreground mt-1">10분 내 도착</p>
+            <p className = {styles.summaryText3}>2명</p>
+            <p className = {styles.descriptionText4}>10분 내 도착</p>
           </div>
 
-          <div className = "bg-card border border-border rounded-2xl p-5">
-            <div className = "flex items-center gap-3 mb-3">
-              <CheckCircle className = "w-5 h-5 text-primary" />
-              <p className = "text-sm font-medium">완료 경기</p>
+          <div className = {styles.header3}>
+            <div className = {styles.row4}>
+              <CheckCircle className = {styles.userCheckIcon} />
+              <p className = {styles.summaryText2}>완료 경기</p>
             </div>
-            <p className = "text-3xl font-medium">12개</p>
-            <p className = "text-xs text-muted-foreground mt-1">평균 3회/명</p>
+            <p className = {styles.summaryText3}>12개</p>
+            <p className = {styles.descriptionText4}>평균 3회/명</p>
           </div>
         </div>
 
         {/* 2. 빠른 액션 바 */}
-        <div className = "bg-secondary/30 rounded-2xl p-4 mb-6 flex items-center gap-3">
-          <p className = "text-sm font-medium mr-2">빠른 작업:</p>
+        <div className = {styles.row5}>
+          <p className = {styles.summaryText4}>빠른 작업:</p>
           <Link to = {`/sessions/${sessionId}/queue`}>
-            <Button className = "rounded-full gap-2">
-              <Sparkles className = "w-4 h-4" />
+            <Button className = {styles.roundButton}>
+              <Sparkles className = {styles.monitorIcon} />
               자동 매칭 생성
             </Button>
           </Link>
           <Link to = {`/sessions/${sessionId}/participants`}>
-            <Button variant = "outline" className = "rounded-full">
+            <Button variant = "outline" className = {styles.roundButton2}>
               출석 처리
             </Button>
           </Link>
           <Link to = {`/sessions/${sessionId}/participants`}>
-            <Button variant = "outline" className = "rounded-full">
+            <Button variant = "outline" className = {styles.roundButton2}>
               지각자 확인
             </Button>
           </Link>
           <Link to = {`/sessions/${sessionId}/queue`}>
-            <Button variant = "outline" className = "rounded-full">
+            <Button variant = "outline" className = {styles.roundButton2}>
               후보 수정
             </Button>
           </Link>
           <Link to = {`/sessions/${sessionId}/report`}>
-            <Button variant = "outline" className = "rounded-full">
+            <Button variant = "outline" className = {styles.roundButton2}>
               세션 리포트
             </Button>
           </Link>
           <Link to = {`/sessions/${sessionId}/participants`}>
-            <Button variant = "outline" className = "rounded-full gap-2">
-              <Users className = "w-4 h-4" />
+            <Button variant = "outline" className = {styles.roundButton}>
+              <Users className = {styles.monitorIcon} />
               참가자 관리
             </Button>
           </Link>
         </div>
 
-        <div className = "grid grid-cols-3 gap-6">
+        <div className = {styles.statsGrid3}>
           {/* Left: 현재 경기 + 다음 큐 */}
-          <div className = "col-span-2 space-y-6">
+          <div className = {styles.stack}>
             {/* 3. 현재 진행 중 경기 */}
             <div>
-              <div className = "flex items-center justify-between mb-4">
-                <h2 className = "text-xl font-medium">현재 경기</h2>
+              <div className = {styles.betweenRow3}>
+                <h2 className = {styles.sectionTitle2}>현재 경기</h2>
                 <Link to = {`/sessions/${sessionId}/current`}>
-                  <Button variant = "ghost" size = "sm" className = "text-primary">
+                  <Button variant = "ghost" size = "sm" className = {styles.actionButton}>
                     상세보기
                   </Button>
                 </Link>
               </div>
 
-              <div className = "grid grid-cols-2 gap-4">
+              <div className = {styles.cardGrid}>
                 {currentMatches.map((match) => (
-                  <div key = {match.court} className = "bg-card border border-border rounded-2xl p-5">
-                    <div className = "flex items-center justify-between mb-4">
-                      <Badge className = "bg-primary text-primary-foreground">
+                  <div key = {match.court} className = {styles.header3}>
+                    <div className = {styles.betweenRow3}>
+                      <Badge className = {styles.badge}>
                         {match.court}번 코트
                       </Badge>
-                      <Badge variant = "outline" className = "text-xs">복식</Badge>
+                      <Badge variant = "outline" className = {styles.badge2}>복식</Badge>
                     </div>
 
-                    <div className = "space-y-2 mb-4">
-                      <div className = "text-sm">
-                        <p className = "font-medium">{match.teamA.join(' · ')}</p>
+                    <div className = {styles.stack2}>
+                      <div className = {styles.smallText}>
+                        <p className = {styles.summaryText5}>{match.teamA.join(' · ')}</p>
                       </div>
-                      <p className = "text-center text-xs text-muted-foreground">vs</p>
-                      <div className = "text-sm">
-                        <p className = "font-medium">{match.teamB.join(' · ')}</p>
+                      <p className = {styles.descriptionText5}>vs</p>
+                      <div className = {styles.smallText}>
+                        <p className = {styles.summaryText5}>{match.teamB.join(' · ')}</p>
                       </div>
                     </div>
 
-                    <div className = "grid grid-cols-2 gap-2">
+                    <div className = {styles.cardGrid2}>
                       <Link to = {`/sessions/${sessionId}/result/new`}>
-                        <Button size = "sm" variant = "outline" className = "w-full rounded-lg">
+                        <Button size = "sm" variant = "outline" className = {styles.fullWidthButton}>
                           결과 입력
                         </Button>
                       </Link>
                       <Link to = {`/sessions/${sessionId}/result/${match.court}/edit`}>
-                        <Button size = "sm" variant = "ghost" className = "w-full rounded-lg">
+                        <Button size = "sm" variant = "ghost" className = {styles.fullWidthButton}>
                           수정
                         </Button>
                       </Link>
@@ -251,43 +252,43 @@ export default function OrganizerDashboardPage() {
 
             {/* 4. 다음 경기 후보 큐 */}
             <div>
-              <div className = "flex items-center justify-between mb-4">
-                <h2 className = "text-xl font-medium">다음 경기 후보</h2>
-                <div className = "flex gap-2">
+              <div className = {styles.betweenRow3}>
+                <h2 className = {styles.sectionTitle2}>다음 경기 후보</h2>
+                <div className = {styles.row6}>
                   <Link to = {`/sessions/${sessionId}/queue`}>
-                    <Button variant = "ghost" size = "sm" className = "text-primary">
+                    <Button variant = "ghost" size = "sm" className = {styles.actionButton}>
                       전체보기
                     </Button>
                   </Link>
                   <Link to = {`/sessions/${sessionId}/queue`}>
-                    <Button size = "sm" className = "rounded-full gap-2">
-                    <Sparkles className = "w-4 h-4" />
+                    <Button size = "sm" className = {styles.roundButton}>
+                    <Sparkles className = {styles.monitorIcon} />
                     자동 생성
                     </Button>
                   </Link>
                 </div>
               </div>
 
-              <div className = "space-y-3">
+              <div className = {styles.stack3}>
                 {matchQueue.map((match, idx) => (
-                  <div key = {idx} className = "bg-card border border-border rounded-2xl p-4">
-                    <div className = "flex items-center justify-between">
-                      <div className = "flex items-center gap-3 flex-1">
+                  <div key = {idx} className = {styles.header4}>
+                    <div className = {styles.betweenRow4}>
+                      <div className = {styles.row7}>
                         <Badge variant = "outline">후보 {idx + 1}</Badge>
-                        <div className = "text-sm">
-                          <span className = "font-medium">{match.teamA.join(' · ')}</span>
-                          <span className = "text-muted-foreground mx-2">vs</span>
-                          <span className = "font-medium">{match.teamB.join(' · ')}</span>
+                        <div className = {styles.smallText}>
+                          <span className = {styles.summaryText5}>{match.teamA.join(' · ')}</span>
+                          <span className = {styles.mutedText}>vs</span>
+                          <span className = {styles.summaryText5}>{match.teamB.join(' · ')}</span>
                         </div>
-                        <Badge variant = "outline" className = "text-xs">MMR +{match.mmr}</Badge>
+                        <Badge variant = "outline" className = {styles.badge2}>MMR +{match.mmr}</Badge>
                       </div>
                       <Link to = {`/sessions/${sessionId}/current`}>
-                        <Button size = "sm" className = "rounded-full">
+                        <Button size = "sm" className = {styles.roundButton2}>
                           시작
                         </Button>
                       </Link>
                       <Link to = {`/sessions/${sessionId}/queue`}>
-                        <Button size = "sm" variant = "outline" className = "rounded-full">
+                        <Button size = "sm" variant = "outline" className = {styles.roundButton2}>
                           교체
                         </Button>
                       </Link>
@@ -296,11 +297,11 @@ export default function OrganizerDashboardPage() {
                 ))}
 
                 {matchQueue.length === 0 && (
-                  <div className = "bg-secondary/20 rounded-2xl p-8 text-center">
-                    <p className = "text-muted-foreground mb-3">경기 후보가 없습니다</p>
+                  <div className = {styles.summaryBox2}>
+                    <p className = {styles.descriptionText6}>경기 후보가 없습니다</p>
                     <Link to = {`/sessions/${sessionId}/queue`}>
-                      <Button size = "sm" className = "rounded-full gap-2">
-                      <Sparkles className = "w-4 h-4" />
+                      <Button size = "sm" className = {styles.roundButton}>
+                      <Sparkles className = {styles.monitorIcon} />
                       자동 매칭 생성
                       </Button>
                     </Link>
@@ -311,29 +312,29 @@ export default function OrganizerDashboardPage() {
           </div>
 
           {/* Right: 결과 입력 대기 + 참가자 */}
-          <div className = "space-y-6">
+          <div className = {styles.stack4}>
             {/* 5. 결과 입력 대기 (눈에 띄게) */}
             {pendingResults.length > 0 && (
-              <div className = "bg-gradient-to-br from-accent/20 to-accent/10 border-2 border-accent/40 rounded-2xl p-6">
-                <div className = "flex items-center gap-3 mb-4">
-                  <AlertCircle className = "w-6 h-6 text-accent-foreground" />
+              <div className = {styles.contentBox2}>
+                <div className = {styles.row8}>
+                  <AlertCircle className = {styles.alertCircleIcon} />
                   <div>
-                    <h3 className = "font-medium text-accent-foreground">결과 입력 대기</h3>
-                    <p className = "text-sm text-accent-foreground/80">{pendingResults.length}개 경기</p>
+                    <h3 className = {styles.cardTitle2}>결과 입력 대기</h3>
+                    <p className = {styles.paragraphText}>{pendingResults.length}개 경기</p>
                   </div>
                 </div>
 
-                <div className = "space-y-2 mb-4">
+                <div className = {styles.stack2}>
                   {pendingResults.map((result, idx) => (
-                    <div key = {idx} className = "text-sm bg-card/50 rounded-lg p-3">
-                      <Badge variant = "outline" className = "mb-1">{result.court}번 코트</Badge>
-                      <p className = "text-xs text-muted-foreground">{result.players}</p>
+                    <div key = {idx} className = {styles.contentBox3}>
+                      <Badge variant = "outline" className = {styles.badge3}>{result.court}번 코트</Badge>
+                      <p className = {styles.descriptionText2}>{result.players}</p>
                     </div>
                   ))}
                 </div>
 
                 <Link to = {`/sessions/${sessionId}/result/new`}>
-                  <Button className = "w-full rounded-full bg-accent text-accent-foreground hover:bg-accent/90">
+                  <Button className = {styles.fullWidthButton2}>
                     지금 입력하기
                   </Button>
                 </Link>
@@ -341,17 +342,17 @@ export default function OrganizerDashboardPage() {
             )}
 
             {/* 6. 참가자 간단 목록 */}
-            <div className = "bg-card border border-border rounded-2xl p-5">
-              <div className = "flex items-center justify-between mb-4">
-                <h3 className = "font-medium">참가자</h3>
+            <div className = {styles.header3}>
+              <div className = {styles.betweenRow3}>
+                <h3 className = {styles.summaryText5}>참가자</h3>
                 <Link to = {`/sessions/${sessionId}/participants`}>
-                  <Button variant = "ghost" size = "sm" className = "text-primary -mr-2">
+                  <Button variant = "ghost" size = "sm" className = {styles.actionButton2}>
                     관리
                   </Button>
                 </Link>
               </div>
 
-              <div className = "space-y-2 max-h-[500px] overflow-y-auto">
+              <div className = {styles.stack5}>
                 {[
                   { name: '김민수', status: 'playing', court: 1 },
                   { name: '박지영', status: 'playing', court: 1 },
@@ -360,48 +361,48 @@ export default function OrganizerDashboardPage() {
                   { name: '정민재', status: 'late' },
                   { name: '강수진', status: 'waiting' },
                 ].map((p, idx) => (
-                  <div key = {idx} className = "flex items-center justify-between py-2">
-                    <div className = "flex items-center gap-2">
-                      <div className = "w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                        <span className = "text-xs font-medium text-primary">{p.name[0]}</span>
+                  <div key = {idx} className = {styles.betweenRow5}>
+                    <div className = {styles.row2}>
+                      <div className = {styles.row9}>
+                        <span className = {styles.labelText}>{p.name[0]}</span>
                       </div>
-                      <span className = "text-sm">{p.name}</span>
+                      <span className = {styles.smallText}>{p.name}</span>
                     </div>
                     {p.status === 'playing' && (
-                      <Badge className = "bg-primary text-primary-foreground text-xs">
+                      <Badge className = {styles.badge4}>
                         {p.court}번
                       </Badge>
                     )}
                     {p.status === 'waiting' && (
-                      <Badge variant = "outline" className = "text-xs">대기</Badge>
+                      <Badge variant = "outline" className = {styles.badge2}>대기</Badge>
                     )}
                     {p.status === 'late' && (
-                      <Badge variant = "outline" className = "text-xs border-accent">지각</Badge>
+                      <Badge variant = "outline" className = {styles.badge5}>지각</Badge>
                     )}
                   </div>
                 ))}
               </div>
             </div>
 
-            <div className = "bg-card border border-border rounded-2xl p-5">
-              <h3 className = "font-medium mb-4">지각 예정</h3>
-              <div className = "space-y-3">
+            <div className = {styles.header3}>
+              <h3 className = {styles.cardTitle3}>지각 예정</h3>
+              <div className = {styles.stack3}>
                 {lateParticipants.map((late) => (
-                  <div key = {late.name} className = "rounded-xl bg-secondary/40 p-4">
-                    <div className = "flex items-center justify-between mb-2">
-                      <p className = "font-medium">{late.name}</p>
+                  <div key = {late.name} className = {styles.summaryBox3}>
+                    <div className = {styles.betweenRow6}>
+                      <p className = {styles.summaryText5}>{late.name}</p>
                       <Badge variant = "outline">{late.status === '지각 예정' ? `${late.eta} 도착` : late.status}</Badge>
                     </div>
-                    <p className = "text-sm text-muted-foreground mb-3">{late.reason}</p>
-                    <div className = "flex gap-2">
-                      <Button size = "sm" variant = "outline" className = "rounded-full" onClick = {() => {
+                    <p className = {styles.descriptionText7}>{late.reason}</p>
+                    <div className = {styles.row6}>
+                      <Button size = "sm" variant = "outline" className = {styles.roundButton2} onClick = {() => {
                           setLateParticipants((prev) => prev.map((item) => item.name === late.name ? { ...item, status: '도착 완료' } : item));
                           showMessage(`${late.name} 도착 처리했습니다.`);
                         }}
                       >
                         도착 처리
                       </Button>
-                      <Button size = "sm" className = "rounded-full" onClick = {() => {
+                      <Button size = "sm" className = {styles.roundButton2} onClick = {() => {
                           setLateParticipants((prev) => prev.map((item) => item.name === late.name ? { ...item, status: '경기 가능' } : item));
                           showMessage(`${late.name}님을 경기 가능 상태로 변경했습니다.`);
                         }}
@@ -417,7 +418,7 @@ export default function OrganizerDashboardPage() {
         </div>
       </div>
       {message && (
-        <div className = "fixed bottom-6 left-1/2 -translate-x-1/2 bg-card border border-border rounded-full px-5 py-3 shadow-xl text-sm font-medium z-50">
+        <div className = {styles.floatingNotice}>
           {message}
         </div>
       )}

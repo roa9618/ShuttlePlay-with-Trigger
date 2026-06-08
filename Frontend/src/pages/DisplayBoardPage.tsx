@@ -1,6 +1,7 @@
 import Logo from '../components/Logo';
 import { Badge } from '../components/ui/badge';
 import { QrCode } from 'lucide-react';
+import { styles } from './DisplayBoardPage.styles';
 
 export default function DisplayBoardPage() {
   const currentMatches = [
@@ -38,64 +39,64 @@ export default function DisplayBoardPage() {
   ];
 
   return (
-    <div className = "min-h-screen bg-gradient-to-br from-background via-secondary/10 to-primary/5 p-8">
-      <div className = "max-w-[1920px] mx-auto space-y-8">
-        <div className = "flex items-center justify-between">
-          <div className = "flex items-center gap-6">
+    <div className = {styles.page}>
+      <div className = {styles.content}>
+        <div className = {styles.betweenRow}>
+          <div className = {styles.row}>
             <Logo size = "lg" />
             <div>
-              <h1 className = "text-3xl mb-1">6월 3일 (화) 운동</h1>
-              <p className = "text-xl text-muted-foreground">19:00 - 22:00</p>
+              <h1 className = {styles.pageTitle}>6월 3일 (화) 운동</h1>
+              <p className = {styles.descriptionText}>19:00 - 22:00</p>
             </div>
           </div>
-          <div className = "text-right">
-            <p className = "text-5xl font-medium text-primary">21:24</p>
-            <p className = "text-lg text-muted-foreground">현재 시간</p>
+          <div className = {styles.rightAlignedBlock}>
+            <p className = {styles.summaryText}>21:24</p>
+            <p className = {styles.descriptionText2}>현재 시간</p>
           </div>
         </div>
 
         <div>
-          <div className = "flex items-center gap-3 mb-6">
-            <h2 className = "text-4xl">현재 경기</h2>
-            <Badge className = "bg-primary text-primary-foreground text-lg px-4 py-2">
+          <div className = {styles.row2}>
+            <h2 className = {styles.sectionTitle}>현재 경기</h2>
+            <Badge className = {styles.badge}>
               진행 중
             </Badge>
           </div>
 
-          <div className = "grid grid-cols-2 gap-6">
+          <div className = {styles.cardGrid}>
             {currentMatches.map((match) => (
-              <div key = {match.court} className = "bg-card border-2 border-border rounded-3xl p-8 shadow-lg"
+              <div key = {match.court} className = {styles.header}
               >
-                <div className = "flex items-center gap-4 mb-8">
-                  <div className = "w-20 h-20 rounded-2xl bg-primary flex items-center justify-center">
-                    <span className = "text-4xl font-medium text-primary-foreground">
+                <div className = {styles.row3}>
+                  <div className = {styles.row4}>
+                    <span className = {styles.labelText}>
                       {match.court}
                     </span>
                   </div>
-                  <p className = "text-3xl font-medium">번 코트</p>
+                  <p className = {styles.summaryText2}>번 코트</p>
                 </div>
 
-                <div className = "space-y-6">
-                  <div className = "bg-secondary rounded-2xl p-6">
-                    <p className = "text-lg text-muted-foreground mb-4">A팀</p>
-                    <div className = "space-y-3">
+                <div className = {styles.stack}>
+                  <div className = {styles.summaryBox}>
+                    <p className = {styles.descriptionText3}>A팀</p>
+                    <div className = {styles.stack2}>
                       {match.teamA.map((player, idx) => (
-                        <p key = {idx} className = "text-3xl font-medium">
+                        <p key = {idx} className = {styles.summaryText2}>
                           {player}
                         </p>
                       ))}
                     </div>
                   </div>
 
-                  <div className = "text-center py-2">
-                    <span className = "text-4xl font-medium text-muted-foreground">vs</span>
+                  <div className = {styles.centeredBlock}>
+                    <span className = {styles.mutedText}>vs</span>
                   </div>
 
-                  <div className = "bg-secondary rounded-2xl p-6">
-                    <p className = "text-lg text-muted-foreground mb-4">B팀</p>
-                    <div className = "space-y-3">
+                  <div className = {styles.summaryBox}>
+                    <p className = {styles.descriptionText3}>B팀</p>
+                    <div className = {styles.stack2}>
                       {match.teamB.map((player, idx) => (
-                        <p key = {idx} className = "text-3xl font-medium">
+                        <p key = {idx} className = {styles.summaryText2}>
                           {player}
                         </p>
                       ))}
@@ -108,31 +109,31 @@ export default function DisplayBoardPage() {
         </div>
 
         <div>
-          <h2 className = "text-4xl mb-6">다음 경기</h2>
+          <h2 className = {styles.sectionTitle2}>다음 경기</h2>
 
-          <div className = "grid grid-cols-2 gap-6">
+          <div className = {styles.cardGrid}>
             {nextMatches.map((match, idx) => (
-              <div key = {idx} className = "bg-card/50 border border-border rounded-3xl p-8"
+              <div key = {idx} className = {styles.header2}
               >
-                <div className = "grid grid-cols-3 gap-4 items-center">
-                  <div className = "bg-secondary/50 rounded-xl p-4">
-                    <div className = "space-y-2">
+                <div className = {styles.statsGrid}>
+                  <div className = {styles.summaryBox2}>
+                    <div className = {styles.stack3}>
                       {match.teamA.map((player, pIdx) => (
-                        <p key = {pIdx} className = "text-xl font-medium">
+                        <p key = {pIdx} className = {styles.summaryText3}>
                           {player}
                         </p>
                       ))}
                     </div>
                   </div>
 
-                  <div className = "text-center">
-                    <span className = "text-3xl font-medium text-muted-foreground">vs</span>
+                  <div className = {styles.centeredBlock2}>
+                    <span className = {styles.mutedText2}>vs</span>
                   </div>
 
-                  <div className = "bg-secondary/50 rounded-xl p-4">
-                    <div className = "space-y-2">
+                  <div className = {styles.summaryBox2}>
+                    <div className = {styles.stack3}>
                       {match.teamB.map((player, pIdx) => (
-                        <p key = {pIdx} className = "text-xl font-medium">
+                        <p key = {pIdx} className = {styles.summaryText3}>
                           {player}
                         </p>
                       ))}
@@ -144,21 +145,21 @@ export default function DisplayBoardPage() {
           </div>
         </div>
 
-        <div className = "bg-accent/20 border-2 border-accent rounded-3xl p-8">
-          <div className = "flex items-center justify-between">
-            <div className = "flex items-center gap-6">
-              <QrCode className = "w-16 h-16 text-accent-foreground" />
+        <div className = {styles.contentBox}>
+          <div className = {styles.betweenRow}>
+            <div className = {styles.row}>
+              <QrCode className = {styles.qrCodeIcon} />
               <div>
-                <h3 className = "text-3xl font-medium text-accent-foreground mb-2">
+                <h3 className = {styles.cardTitle}>
                   참여하기
                 </h3>
-                <p className = "text-xl text-accent-foreground/80">
+                <p className = {styles.paragraphText}>
                   QR 코드를 스캔하여 오늘 운동에 참여하세요
                 </p>
               </div>
             </div>
-            <div className = "w-32 h-32 bg-card rounded-2xl flex items-center justify-center">
-              <QrCode className = "w-20 h-20 text-muted-foreground" />
+            <div className = {styles.row5}>
+              <QrCode className = {styles.qrCodeIcon2} />
             </div>
           </div>
         </div>

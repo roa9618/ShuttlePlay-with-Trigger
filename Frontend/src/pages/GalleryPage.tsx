@@ -3,6 +3,7 @@ import Logo from '../components/Logo';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import { Monitor, Smartphone, Tv, ChevronRight } from 'lucide-react';
+import { styles } from './GalleryPage.styles';
 
 export default function GalleryPage() {
   const desktopPages = [
@@ -50,54 +51,54 @@ export default function GalleryPage() {
   ];
 
   return (
-    <div className = "min-h-screen bg-gradient-to-b from-background to-secondary/20">
-      <div className = "border-b border-border bg-card">
-        <div className = "max-w-7xl mx-auto px-6 py-6">
-          <Logo size = "md" className = "justify-center" />
+    <div className = {styles.page}>
+      <div className = {styles.header}>
+        <div className = {styles.content}>
+          <Logo size = "md" className = {styles.logoWrapper} />
         </div>
       </div>
 
-      <div className = "max-w-7xl mx-auto px-6 py-12">
-        <div className = "text-center mb-12">
-          <h1 className = "text-4xl font-medium mb-4">셔틀플레이 페이지 갤러리</h1>
-          <p className = "text-xl text-muted-foreground">
+      <div className = {styles.content2}>
+        <div className = {styles.sectionHeader}>
+          <h1 className = {styles.pageTitle}>셔틀플레이 페이지 갤러리</h1>
+          <p className = {styles.descriptionText}>
             전체 화면 구조를 확인하고 테스트하세요
           </p>
         </div>
 
-        <div className = "space-y-12">
+        <div className = {styles.stack}>
           {/* Desktop Pages */}
           <div>
-            <div className = "flex items-center gap-4 mb-8">
-              <div className = "w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
-                <Monitor className = "w-6 h-6 text-primary" />
+            <div className = {styles.row}>
+              <div className = {styles.row2}>
+                <Monitor className = {styles.monitorIcon} />
               </div>
               <div>
-                <h2 className = "text-3xl font-medium">데스크탑 화면</h2>
-                <p className = "text-muted-foreground">운영자 및 관리 기능 중심</p>
+                <h2 className = {styles.sectionTitle}>데스크탑 화면</h2>
+                <p className = {styles.descriptionText2}>운영자 및 관리 기능 중심</p>
               </div>
-              <Badge className = "ml-auto bg-primary text-primary-foreground">
+              <Badge className = {styles.badge}>
                 {desktopPages.length}개
               </Badge>
             </div>
 
-            <div className = "grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className = {styles.statsGrid}>
               {desktopPages.map((page, idx) => (
                 <Link key = {idx} to = {page.path}>
-                  <div className = "bg-card border-2 border-border rounded-2xl p-6 hover:border-primary transition-all hover:shadow-xl group">
-                    <div className = "flex items-start justify-between mb-4">
-                      <div className = "flex-1">
-                        <h3 className = "text-xl font-medium mb-2 group-hover:text-primary transition-colors">
+                  <div className = {styles.header2}>
+                    <div className = {styles.betweenRow}>
+                      <div className = {styles.row3}>
+                        <h3 className = {styles.cardTitle}>
                           {page.name}
                         </h3>
-                        <p className = "text-sm text-muted-foreground line-clamp-2">
+                        <p className = {styles.descriptionText3}>
                           {page.description}
                         </p>
                       </div>
-                      <ChevronRight className = "w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors ml-2 flex-shrink-0" />
+                      <ChevronRight className = {styles.chevronRightIcon} />
                     </div>
-                    <div className = "pt-4 border-t border-border">
-                      <Button size = "sm" className = "w-full rounded-full" onClick = {(e) => {
+                    <div className = {styles.footerActions}>
+                      <Button size = "sm" className = {styles.fullWidthButton} onClick = {(e) => {
                           e.preventDefault();
                           window.location.href = page.path;
                         }}
@@ -113,36 +114,36 @@ export default function GalleryPage() {
 
           {/* Mobile Pages */}
           <div>
-            <div className = "flex items-center gap-4 mb-8">
-              <div className = "w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
-                <Smartphone className = "w-6 h-6 text-primary" />
+            <div className = {styles.row}>
+              <div className = {styles.row2}>
+                <Smartphone className = {styles.monitorIcon} />
               </div>
               <div>
-                <h2 className = "text-3xl font-medium">모바일 화면</h2>
-                <p className = "text-muted-foreground">참가자 경험 중심</p>
+                <h2 className = {styles.sectionTitle}>모바일 화면</h2>
+                <p className = {styles.descriptionText2}>참가자 경험 중심</p>
               </div>
-              <Badge className = "ml-auto bg-primary text-primary-foreground">
+              <Badge className = {styles.badge}>
                 {mobilePages.length}개
               </Badge>
             </div>
 
-            <div className = "grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className = {styles.statsGrid}>
               {mobilePages.map((page, idx) => (
                 <Link key = {idx} to = {page.path}>
-                  <div className = "bg-card border-2 border-border rounded-2xl p-6 hover:border-primary transition-all hover:shadow-xl group">
-                    <div className = "flex items-start justify-between mb-4">
-                      <div className = "flex-1">
-                        <h3 className = "text-xl font-medium mb-2 group-hover:text-primary transition-colors">
+                  <div className = {styles.header2}>
+                    <div className = {styles.betweenRow}>
+                      <div className = {styles.row3}>
+                        <h3 className = {styles.cardTitle}>
                           {page.name}
                         </h3>
-                        <p className = "text-sm text-muted-foreground line-clamp-2">
+                        <p className = {styles.descriptionText3}>
                           {page.description}
                         </p>
                       </div>
-                      <ChevronRight className = "w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors ml-2 flex-shrink-0" />
+                      <ChevronRight className = {styles.chevronRightIcon} />
                     </div>
-                    <div className = "pt-4 border-t border-border">
-                      <Button size = "sm" variant = "outline" className = "w-full rounded-full" onClick = {(e) => {
+                    <div className = {styles.footerActions}>
+                      <Button size = "sm" variant = "outline" className = {styles.fullWidthButton} onClick = {(e) => {
                           e.preventDefault();
                           window.location.href = page.path;
                         }}
@@ -158,36 +159,36 @@ export default function GalleryPage() {
 
           {/* Large Display */}
           <div>
-            <div className = "flex items-center gap-4 mb-8">
-              <div className = "w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
-                <Tv className = "w-6 h-6 text-primary" />
+            <div className = {styles.row}>
+              <div className = {styles.row2}>
+                <Tv className = {styles.monitorIcon} />
               </div>
               <div>
-                <h2 className = "text-3xl font-medium">큰 화면</h2>
-                <p className = "text-muted-foreground">체육관 대형 디스플레이</p>
+                <h2 className = {styles.sectionTitle}>큰 화면</h2>
+                <p className = {styles.descriptionText2}>체육관 대형 디스플레이</p>
               </div>
-              <Badge className = "ml-auto bg-primary text-primary-foreground">
+              <Badge className = {styles.badge}>
                 {largeDisplayPages.length}개
               </Badge>
             </div>
 
-            <div className = "grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className = {styles.statsGrid}>
               {largeDisplayPages.map((page, idx) => (
                 <Link key = {idx} to = {page.path}>
-                  <div className = "bg-card border-2 border-border rounded-2xl p-6 hover:border-primary transition-all hover:shadow-xl group">
-                    <div className = "flex items-start justify-between mb-4">
-                      <div className = "flex-1">
-                        <h3 className = "text-xl font-medium mb-2 group-hover:text-primary transition-colors">
+                  <div className = {styles.header2}>
+                    <div className = {styles.betweenRow}>
+                      <div className = {styles.row3}>
+                        <h3 className = {styles.cardTitle}>
                           {page.name}
                         </h3>
-                        <p className = "text-sm text-muted-foreground line-clamp-2">
+                        <p className = {styles.descriptionText3}>
                           {page.description}
                         </p>
                       </div>
-                      <ChevronRight className = "w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors ml-2 flex-shrink-0" />
+                      <ChevronRight className = {styles.chevronRightIcon} />
                     </div>
-                    <div className = "pt-4 border-t border-border">
-                      <Button size = "sm" variant = "outline" className = "w-full rounded-full" onClick = {(e) => {
+                    <div className = {styles.footerActions}>
+                      <Button size = "sm" variant = "outline" className = {styles.fullWidthButton} onClick = {(e) => {
                           e.preventDefault();
                           window.location.href = page.path;
                         }}
@@ -202,13 +203,13 @@ export default function GalleryPage() {
           </div>
         </div>
 
-        <div className = "mt-12 bg-gradient-to-br from-secondary/50 to-transparent rounded-3xl p-8 border border-border text-center">
-          <h3 className = "text-xl font-medium mb-3">총 {desktopPages.length + mobilePages.length + largeDisplayPages.length}개 화면</h3>
-          <p className = "text-muted-foreground mb-6">
+        <div className = {styles.contentBox}>
+          <h3 className = {styles.cardTitle2}>총 {desktopPages.length + mobilePages.length + largeDisplayPages.length}개 화면</h3>
+          <p className = {styles.descriptionText4}>
             데스크탑, 모바일, 큰 화면용 레이아웃이 각각 구현되었습니다
           </p>
           <Link to = "/">
-            <Button className = "rounded-full">
+            <Button className = {styles.roundButton}>
               메인으로 돌아가기
             </Button>
           </Link>

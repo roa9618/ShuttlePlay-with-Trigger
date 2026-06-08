@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import { MapPin, Users, Calendar, PlusCircle, TrendingUp, Play, Award } from 'lucide-react';
+import { styles } from './GroupListPage.styles';
 
 export default function GroupListPage() {
   const groups = [
@@ -14,19 +15,19 @@ export default function GroupListPage() {
   ];
 
   return (
-    <div className = "p-8">
+    <div className = {styles.contentBox}>
       {/* Header */}
-      <div className = "mb-8">
-        <div className = "flex items-center justify-between mb-4">
+      <div className = {styles.sectionHeader}>
+        <div className = {styles.betweenRow}>
           <div>
-            <h1 className = "text-3xl mb-2">내 모임</h1>
-            <p className = "text-muted-foreground text-lg">
+            <h1 className = {styles.pageTitle}>내 모임</h1>
+            <p className = {styles.descriptionText}>
               참여 중인 배드민턴 모임을 관리하세요
             </p>
           </div>
           <Link to = "/groups/new">
-            <Button className = "rounded-full gap-2 h-12 px-6 shadow-lg shadow-primary/20">
-              <PlusCircle className = "w-5 h-5" />
+            <Button className = {styles.roundButton}>
+              <PlusCircle className = {styles.plusCircleIcon} />
               모임 만들기
             </Button>
           </Link>
@@ -34,43 +35,43 @@ export default function GroupListPage() {
       </div>
 
       {/* Stats Summary */}
-      <div className = "grid grid-cols-3 gap-6 mb-8">
-        <div className = "bg-gradient-to-br from-card to-card/50 border-2 border-primary/20 rounded-2xl p-6">
-          <div className = "flex items-start justify-between mb-4">
-            <div className = "w-14 h-14 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
-              <Users className = "w-7 h-7 text-primary" />
+      <div className = {styles.statsGrid}>
+        <div className = {styles.contentBox2}>
+          <div className = {styles.betweenRow2}>
+            <div className = {styles.row}>
+              <Users className = {styles.usersIcon} />
             </div>
-            <TrendingUp className = "w-5 h-5 text-primary" />
+            <TrendingUp className = {styles.trendingUpIcon} />
           </div>
           <div>
-            <p className = "text-sm text-muted-foreground mb-1">참여 중인 모임</p>
-            <p className = "text-4xl font-medium">{groups.length}개</p>
+            <p className = {styles.descriptionText2}>참여 중인 모임</p>
+            <p className = {styles.summaryText}>{groups.length}개</p>
           </div>
         </div>
 
-        <div className = "bg-card border border-border rounded-2xl p-6">
-          <div className = "flex items-start justify-between mb-4">
-            <div className = "w-14 h-14 rounded-2xl bg-secondary flex items-center justify-center">
-              <Play className = "w-7 h-7 text-primary" />
+        <div className = {styles.header}>
+          <div className = {styles.betweenRow2}>
+            <div className = {styles.row2}>
+              <Play className = {styles.usersIcon} />
             </div>
           </div>
           <div>
-            <p className = "text-sm text-muted-foreground mb-1">총 세션</p>
-            <p className = "text-4xl font-medium">
+            <p className = {styles.descriptionText2}>총 세션</p>
+            <p className = {styles.summaryText}>
               {groups.reduce((sum, g) => sum + g.sessions, 0)}회
             </p>
           </div>
         </div>
 
-        <div className = "bg-card border border-border rounded-2xl p-6">
-          <div className = "flex items-start justify-between mb-4">
-            <div className = "w-14 h-14 rounded-2xl bg-secondary flex items-center justify-center">
-              <Award className = "w-7 h-7 text-primary" />
+        <div className = {styles.header}>
+          <div className = {styles.betweenRow2}>
+            <div className = {styles.row2}>
+              <Award className = {styles.usersIcon} />
             </div>
           </div>
           <div>
-            <p className = "text-sm text-muted-foreground mb-1">총 멤버</p>
-            <p className = "text-4xl font-medium">
+            <p className = {styles.descriptionText2}>총 멤버</p>
+            <p className = {styles.summaryText}>
               {groups.reduce((sum, g) => sum + g.members, 0)}명
             </p>
           </div>
@@ -78,66 +79,66 @@ export default function GroupListPage() {
       </div>
 
       {/* Groups Grid */}
-      <div className = "grid grid-cols-2 gap-6">
+      <div className = {styles.cardGrid}>
         {groups.map((group) => (
-          <Link key = {group.id} to = {`/groups/${group.id}`} className = "block group"
+          <Link key = {group.id} to = {`/groups/${group.id}`} className = {styles.cardLink}
           >
-            <div className = "bg-card border border-border rounded-3xl overflow-hidden hover:border-primary transition-all hover:shadow-xl">
+            <div className = {styles.header2}>
               {/* Card Header */}
-              <div className = "bg-gradient-to-r from-secondary/50 to-transparent p-6 border-b border-border">
-                <div className = "flex items-start justify-between mb-4">
-                  <div className = "flex-1">
-                    <h3 className = "text-xl font-medium mb-2 group-hover:text-primary transition-colors">
+              <div className = {styles.contentBox3}>
+                <div className = {styles.betweenRow2}>
+                  <div className = {styles.row3}>
+                    <h3 className = {styles.cardTitle}>
                       {group.name}
                     </h3>
-                    <div className = "flex items-center gap-4 text-sm text-muted-foreground">
-                      <div className = "flex items-center gap-1.5">
-                        <MapPin className = "w-4 h-4" />
+                    <div className = {styles.row4}>
+                      <div className = {styles.row5}>
+                        <MapPin className = {styles.mapPinIcon} />
                         <span>{group.location}</span>
                       </div>
                     </div>
                   </div>
-                  <div className = "w-14 h-14 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <Users className = "w-7 h-7 text-primary" />
+                  <div className = {styles.row6}>
+                    <Users className = {styles.usersIcon} />
                   </div>
                 </div>
               </div>
 
               {/* Card Body */}
-              <div className = "p-6">
-                <div className = "grid grid-cols-3 gap-4 mb-6">
-                  <div className = "text-center">
-                    <p className = "text-2xl font-medium text-primary">{group.members}</p>
-                    <p className = "text-xs text-muted-foreground mt-1">총 멤버</p>
+              <div className = {styles.contentBox4}>
+                <div className = {styles.statsGrid2}>
+                  <div className = {styles.centeredBlock}>
+                    <p className = {styles.summaryText2}>{group.members}</p>
+                    <p className = {styles.descriptionText3}>총 멤버</p>
                   </div>
-                  <div className = "text-center border-x border-border">
-                    <p className = "text-2xl font-medium text-primary">{group.activeMembers}</p>
-                    <p className = "text-xs text-muted-foreground mt-1">활동 멤버</p>
+                  <div className = {styles.centeredBlock2}>
+                    <p className = {styles.summaryText2}>{group.activeMembers}</p>
+                    <p className = {styles.descriptionText3}>활동 멤버</p>
                   </div>
-                  <div className = "text-center">
-                    <p className = "text-2xl font-medium text-primary">{group.sessions}</p>
-                    <p className = "text-xs text-muted-foreground mt-1">총 세션</p>
+                  <div className = {styles.centeredBlock}>
+                    <p className = {styles.summaryText2}>{group.sessions}</p>
+                    <p className = {styles.descriptionText3}>총 세션</p>
                   </div>
                 </div>
 
-                <div className = "flex items-center justify-between mb-4 pb-4 border-b border-border">
-                  <div className = "flex items-center gap-2 text-sm">
-                    <Calendar className = "w-4 h-4 text-muted-foreground" />
-                    <span className = "text-muted-foreground">최근 운동</span>
+                <div className = {styles.betweenRow3}>
+                  <div className = {styles.row7}>
+                    <Calendar className = {styles.calendarIcon} />
+                    <span className = {styles.mutedText}>최근 운동</span>
                   </div>
                   <Badge variant = "outline">{group.lastSession}</Badge>
                 </div>
 
                 {/* Action Buttons */}
-                <div className = "grid grid-cols-2 gap-3">
-                  <Button size = "sm" className = "rounded-full" onClick = {(e) => {
+                <div className = {styles.cardGrid2}>
+                  <Button size = "sm" className = {styles.roundButton2} onClick = {(e) => {
                       e.preventDefault();
                       window.location.href = `/groups/${group.id}/create-session`;
                     }}
                   >
                     세션 만들기
                   </Button>
-                  <Button size = "sm" variant = "outline" className = "rounded-full" onClick = {(e) => {
+                  <Button size = "sm" variant = "outline" className = {styles.roundButton2} onClick = {(e) => {
                       e.preventDefault();
                       window.location.href = `/groups/${group.id}`;
                     }}
@@ -151,19 +152,19 @@ export default function GroupListPage() {
         ))}
 
         {/* Add New Group Card */}
-        <Link to = "/groups/new" className = "block">
-          <div className = "bg-gradient-to-br from-secondary/50 to-secondary/20 border-2 border-dashed border-border rounded-3xl p-8 flex flex-col items-center justify-center text-center space-y-6 hover:border-primary transition-colors cursor-pointer">
-            <div className = "w-20 h-20 rounded-full bg-card flex items-center justify-center">
-              <PlusCircle className = "w-10 h-10 text-primary" />
+        <Link to = "/groups/new" className = {styles.cardLink2}>
+          <div className = {styles.stack}>
+            <div className = {styles.row8}>
+              <PlusCircle className = {styles.plusCircleIcon2} />
             </div>
             <div>
-              <h3 className = "text-xl font-medium mb-2">새로운 모임 만들기</h3>
-              <p className = "text-muted-foreground">
+              <h3 className = {styles.cardTitle2}>새로운 모임 만들기</h3>
+              <p className = {styles.mutedText}>
                 친구들과 함께 배드민턴 모임을 시작하세요
               </p>
             </div>
-            <Button className = "rounded-full gap-2">
-              <PlusCircle className = "w-4 h-4" />
+            <Button className = {styles.roundButton3}>
+              <PlusCircle className = {styles.mapPinIcon} />
               모임 만들기
             </Button>
           </div>

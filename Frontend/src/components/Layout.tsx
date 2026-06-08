@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { Outlet, useLocation, useMatches } from 'react-router-dom';
 import DesktopSidebar from './DesktopSidebar';
 import Logo from './Logo';
+import { styles } from './Layout.styles';
 
 const defaultDocumentTitle = '셔틀플레이 | 배드민턴 모임 관리';
 
@@ -42,13 +43,13 @@ export default function Layout() {
 
   if (showDesktopLayout) {
     return (
-      <div className = "app-desktop-shell flex min-h-screen bg-background">
+      <div className = {styles.desktopShell}>
         <DesktopSidebar />
-        <header className = "app-mobile-admin-bar">
+        <header className = {styles.mobileAdminBar}>
           <Logo size = "sm" />
           <span>운영</span>
         </header>
-        <div className = "app-desktop-content flex-1 overflow-auto">
+        <div className = {styles.desktopContent}>
           <Outlet />
         </div>
       </div>
@@ -56,7 +57,7 @@ export default function Layout() {
   }
 
   return (
-    <div className = "app-mobile-shell min-h-screen bg-background">
+    <div className = {styles.mobileShell}>
       <Outlet />
     </div>
   );

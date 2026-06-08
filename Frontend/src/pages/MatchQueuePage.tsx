@@ -8,6 +8,7 @@ import { Label } from '../components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { ArrowLeft, Sparkles, RefreshCw, Edit, Plus, ShieldAlert, Users } from 'lucide-react';
 import { useActionFeedback } from '../utils/useActionFeedback';
+import { styles } from './MatchQueuePage.styles';
 
 export default function MatchQueuePage() {
   const { sessionId } = useParams();
@@ -43,45 +44,45 @@ export default function MatchQueuePage() {
   ];
 
   return (
-    <div className = "min-h-screen bg-background">
-      <div className = "border-b border-border bg-card">
-        <div className = "max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className = "flex items-center gap-6">
-            <Link to = {`/sessions/${sessionId}/dashboard`} className = "inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
-              <ArrowLeft className = "w-4 h-4" />
+    <div className = {styles.page}>
+      <div className = {styles.header}>
+        <div className = {styles.headerInner}>
+          <div className = {styles.row}>
+            <Link to = {`/sessions/${sessionId}/dashboard`} className = {styles.backLink}>
+              <ArrowLeft className = {styles.arrowLeftIcon} />
               대시보드
             </Link>
             <Logo size = "sm" />
           </div>
-          <div className = "flex gap-2">
-            <Button className = "rounded-full gap-2" onClick = {() => showMessage('자동 매칭 후보를 다시 생성했습니다.')}
+          <div className = {styles.row2}>
+            <Button className = {styles.roundButton} onClick = {() => showMessage('자동 매칭 후보를 다시 생성했습니다.')}
             >
-              <Sparkles className = "w-4 h-4" />
+              <Sparkles className = {styles.arrowLeftIcon} />
               자동 매칭 생성
             </Button>
           </div>
         </div>
       </div>
 
-      <div className = "max-w-7xl mx-auto px-6 py-8">
-        <div className = "mb-8">
-          <h1 className = "text-4xl font-medium mb-2">경기 후보 큐</h1>
-          <p className = "text-muted-foreground">
+      <div className = {styles.content}>
+        <div className = {styles.sectionHeader}>
+          <h1 className = {styles.pageTitle}>경기 후보 큐</h1>
+          <p className = {styles.descriptionText}>
             다음 경기 후보를 확인하고 시작하세요
           </p>
         </div>
 
-        <div className = "grid lg:grid-cols-[0.9fr_1.1fr] gap-6 mb-8">
-          <div className = "bg-card border border-border rounded-3xl p-6 space-y-5">
-            <div className = "flex items-center gap-3">
-              <Sparkles className = "w-5 h-5 text-primary" />
-              <h2 className = "text-2xl font-medium">생성 조건</h2>
+        <div className = {styles.grid}>
+          <div className = {styles.header2}>
+            <div className = {styles.row3}>
+              <Sparkles className = {styles.sparklesIcon} />
+              <h2 className = {styles.sectionTitle}>생성 조건</h2>
             </div>
-            <div className = "grid sm:grid-cols-2 gap-4">
-              <div className = "space-y-2">
+            <div className = {styles.cardGrid}>
+              <div className = {styles.stack}>
                 <Label>경기 유형</Label>
                 <Select defaultValue = "mixed">
-                  <SelectTrigger className = "rounded-xl">
+                  <SelectTrigger className = {styles.selectTrigger}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -92,10 +93,10 @@ export default function MatchQueuePage() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className = "space-y-2">
+              <div className = {styles.stack}>
                 <Label>운영 성향</Label>
                 <Select defaultValue = "competitive">
-                  <SelectTrigger className = "rounded-xl">
+                  <SelectTrigger className = {styles.selectTrigger}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -105,46 +106,46 @@ export default function MatchQueuePage() {
                 </Select>
               </div>
             </div>
-            <div className = "grid sm:grid-cols-3 gap-3">
-              <Input className = "rounded-xl" defaultValue = "연속 경기 2회 제한" />
-              <Input className = "rounded-xl" defaultValue = "중복 조합 회피" />
-              <Input className = "rounded-xl" defaultValue = "신규 참가자 보호" />
+            <div className = {styles.statsGrid}>
+              <Input className = {styles.selectTrigger} defaultValue = "연속 경기 2회 제한" />
+              <Input className = {styles.selectTrigger} defaultValue = "중복 조합 회피" />
+              <Input className = {styles.selectTrigger} defaultValue = "신규 참가자 보호" />
             </div>
-            <div className = "flex flex-wrap gap-2">
-              <Button className = "rounded-full gap-2" onClick = {() => showMessage('전체 후보를 생성했습니다.')}>
-                <Sparkles className = "w-4 h-4" />
+            <div className = {styles.wrapRow}>
+              <Button className = {styles.roundButton} onClick = {() => showMessage('전체 후보를 생성했습니다.')}>
+                <Sparkles className = {styles.arrowLeftIcon} />
                 전체 후보 생성
               </Button>
-              <Button variant = "outline" className = "rounded-full gap-2" onClick = {() => showMessage('선택 후보를 재생성했습니다.')}>
-                <RefreshCw className = "w-4 h-4" />
+              <Button variant = "outline" className = {styles.roundButton} onClick = {() => showMessage('선택 후보를 재생성했습니다.')}>
+                <RefreshCw className = {styles.arrowLeftIcon} />
                 선택 후보만 재생성
               </Button>
             </div>
           </div>
 
-          <div className = "bg-card border border-border rounded-3xl p-6 space-y-5">
-            <div className = "flex items-center gap-3">
-              <Users className = "w-5 h-5 text-primary" />
-              <h2 className = "text-2xl font-medium">수동 조정</h2>
+          <div className = {styles.header2}>
+            <div className = {styles.row3}>
+              <Users className = {styles.sparklesIcon} />
+              <h2 className = {styles.sectionTitle}>수동 조정</h2>
             </div>
-            <div className = "grid sm:grid-cols-2 gap-3">
+            <div className = {styles.cardGrid2}>
               {['강제 포함', '강제 제외', '고정 파트너', '회피 조합'].map((label) => (
-                <Button key = {label} variant = "outline" className = {`rounded-xl justify-start gap-2 h-12 ${selectedAdjustments.includes(label) ? 'border-primary bg-primary/5' : ''}`} onClick = {() => {
+                <Button key = {label} variant = "outline" className = {styles.adjustmentButton(selectedAdjustments.includes(label))} onClick = {() => {
                     setSelectedAdjustments((prev) => prev.includes(label) ? prev.filter((item) => item !== label) : [...prev, label]);
                     showMessage(`${label} 조건을 ${selectedAdjustments.includes(label) ? '해제했습니다.' : '추가했습니다.'}`);
                   }}
                 >
-                  <Plus className = "w-4 h-4" />
+                  <Plus className = {styles.arrowLeftIcon} />
                   {label} 추가
                 </Button>
               ))}
             </div>
-            <div className = "rounded-2xl bg-secondary/40 p-4">
-              <div className = "flex items-start gap-3">
-                <ShieldAlert className = "w-5 h-5 text-primary mt-0.5" />
+            <div className = {styles.summaryBox}>
+              <div className = {styles.mediaRow}>
+                <ShieldAlert className = {styles.shieldAlertIcon} />
                 <div>
-                  <p className = "font-medium">매칭 실패 없음</p>
-                  <p className = "text-sm text-muted-foreground">
+                  <p className = {styles.summaryText}>매칭 실패 없음</p>
+                  <p className = {styles.descriptionText2}>
                     조건이 맞지 않는 참가자는 실패 처리하지 않고 대기 상태로 남기며, 다음 코트가 열릴 때 다시 후보에 넣습니다.
                   </p>
                 </div>
@@ -153,13 +154,13 @@ export default function MatchQueuePage() {
           </div>
         </div>
 
-        <div className = "space-y-4">
+        <div className = {styles.stack2}>
           {queue.map((match, idx) => (
-            <div key = {idx} className = "bg-card border border-border rounded-2xl p-6">
-              <div className = "flex items-start justify-between mb-6">
-                <div className = "flex-1">
-                  <div className = "flex items-center gap-4 mb-4">
-                    <Badge className = "bg-primary text-primary-foreground">
+            <div key = {idx} className = {styles.header3}>
+              <div className = {styles.betweenRow}>
+                <div className = {styles.row4}>
+                  <div className = {styles.row5}>
+                    <Badge className = {styles.badge}>
                       후보 {idx + 1}
                     </Badge>
                     <Badge variant = "outline" className = {
@@ -174,49 +175,49 @@ export default function MatchQueuePage() {
                     </Badge>
                   </div>
 
-                  <div className = "grid grid-cols-3 gap-6 items-center">
-                    <div className = "bg-secondary rounded-xl p-4">
-                      <p className = "text-xs text-muted-foreground mb-2">A팀</p>
-                      <div className = "space-y-2">
+                  <div className = {styles.statsGrid2}>
+                    <div className = {styles.summaryBox2}>
+                      <p className = {styles.descriptionText3}>A팀</p>
+                      <div className = {styles.stack}>
                         {match.teamA.map((player, pIdx) => (
-                          <div key = {pIdx} className = "flex items-center gap-2">
-                            <div className = "w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
-                              <span className = "text-xs font-medium text-primary">
+                          <div key = {pIdx} className = {styles.row6}>
+                            <div className = {styles.row7}>
+                              <span className = {styles.labelText}>
                                 {player[0]}
                               </span>
                             </div>
-                            <span className = "font-medium">{player}</span>
+                            <span className = {styles.summaryText}>{player}</span>
                           </div>
                         ))}
                       </div>
                     </div>
 
-                    <div className = "text-center">
-                      <span className = "text-2xl font-medium text-muted-foreground">vs</span>
+                    <div className = {styles.centeredBlock}>
+                      <span className = {styles.mutedText}>vs</span>
                     </div>
 
-                    <div className = "bg-secondary rounded-xl p-4">
-                      <p className = "text-xs text-muted-foreground mb-2">B팀</p>
-                      <div className = "space-y-2">
+                    <div className = {styles.summaryBox2}>
+                      <p className = {styles.descriptionText3}>B팀</p>
+                      <div className = {styles.stack}>
                         {match.teamB.map((player, pIdx) => (
-                          <div key = {pIdx} className = "flex items-center gap-2">
-                            <div className = "w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
-                              <span className = "text-xs font-medium text-primary">
+                          <div key = {pIdx} className = {styles.row6}>
+                            <div className = {styles.row7}>
+                              <span className = {styles.labelText}>
                                 {player[0]}
                               </span>
                             </div>
-                            <span className = "font-medium">{player}</span>
+                            <span className = {styles.summaryText}>{player}</span>
                           </div>
                         ))}
                       </div>
                     </div>
                   </div>
 
-                  <div className = "mt-4 bg-secondary/50 rounded-xl p-4">
-                    <p className = "text-sm text-muted-foreground">
-                      <span className = "font-medium text-foreground">매칭 설명:</span> {match.reason}
+                  <div className = {styles.summaryBox3}>
+                    <p className = {styles.descriptionText2}>
+                      <span className = {styles.labelText2}>매칭 설명:</span> {match.reason}
                     </p>
-                    <div className = "flex flex-wrap gap-2 mt-3">
+                    <div className = {styles.wrapRow2}>
                       {match.details.map((detail) => (
                         <Badge key = {detail} variant = "outline">{detail}</Badge>
                       ))}
@@ -224,25 +225,25 @@ export default function MatchQueuePage() {
                   </div>
                 </div>
 
-                <div className = "flex flex-col gap-3 ml-6">
-                  <Button className = "rounded-full whitespace-nowrap" onClick = {() => {
+                <div className = {styles.stack3}>
+                  <Button className = {styles.roundButton2} onClick = {() => {
                       navigate(`/sessions/${sessionId}/current`);
                     }}
                   >
                     경기 시작
                   </Button>
-                  <Button variant = "outline" size = "sm" className = "rounded-full gap-2" onClick = {() => showMessage(`후보 ${idx + 1} 참가자 교체 모드를 열었습니다.`)}
+                  <Button variant = "outline" size = "sm" className = {styles.roundButton} onClick = {() => showMessage(`후보 ${idx + 1} 참가자 교체 모드를 열었습니다.`)}
                   >
-                    <Edit className = "w-4 h-4" />
+                    <Edit className = {styles.arrowLeftIcon} />
                     참가자 교체
                   </Button>
-                  <Button variant = "outline" size = "sm" className = "rounded-full gap-2" onClick = {() => showMessage(`후보 ${idx + 1}의 A/B팀을 교체했습니다.`)}
+                  <Button variant = "outline" size = "sm" className = {styles.roundButton} onClick = {() => showMessage(`후보 ${idx + 1}의 A/B팀을 교체했습니다.`)}
                   >
                     팀 교체
                   </Button>
-                  <Button variant = "outline" size = "sm" className = "rounded-full gap-2" onClick = {() => showMessage(`후보 ${idx + 1}을 재생성했습니다.`)}
+                  <Button variant = "outline" size = "sm" className = {styles.roundButton} onClick = {() => showMessage(`후보 ${idx + 1}을 재생성했습니다.`)}
                   >
-                    <RefreshCw className = "w-4 h-4" />
+                    <RefreshCw className = {styles.arrowLeftIcon} />
                     재생성
                   </Button>
                 </div>
@@ -252,21 +253,21 @@ export default function MatchQueuePage() {
         </div>
 
         {queue.length === 0 && (
-          <div className = "bg-secondary rounded-2xl p-12 text-center">
-            <Sparkles className = "w-16 h-16 text-primary mx-auto mb-4" />
-            <h3 className = "font-medium mb-2">경기 후보가 없습니다</h3>
-            <p className = "text-muted-foreground mb-6">
+          <div className = {styles.summaryBox4}>
+            <Sparkles className = {styles.sparklesIcon2} />
+            <h3 className = {styles.cardTitle}>경기 후보가 없습니다</h3>
+            <p className = {styles.descriptionText4}>
               자동 매칭을 사용하여 새로운 경기를 생성하세요
             </p>
-            <Button className = "rounded-full gap-2" onClick = {() => showMessage('자동 매칭 후보를 생성했습니다.')}
+            <Button className = {styles.roundButton} onClick = {() => showMessage('자동 매칭 후보를 생성했습니다.')}
             >
-              <Sparkles className = "w-4 h-4" />
+              <Sparkles className = {styles.arrowLeftIcon} />
               자동 매칭 생성
             </Button>
           </div>
         )}
         {message && (
-          <div className = "fixed bottom-6 left-1/2 -translate-x-1/2 bg-card border border-border rounded-full px-5 py-3 shadow-xl text-sm font-medium">
+          <div className = {styles.floatingNotice}>
             {message}
           </div>
         )}

@@ -6,6 +6,7 @@ import { Badge } from '../components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { ArrowLeft, Search, Filter, Users, Trophy, Calendar } from 'lucide-react';
 import { useActionFeedback } from '../utils/useActionFeedback';
+import { styles } from './GroupMembersPage.styles';
 
 export default function GroupMembersPage() {
   const { groupId } = useParams();
@@ -30,12 +31,12 @@ export default function GroupMembersPage() {
   ];
 
   return (
-    <div className = "min-h-screen bg-background">
-      <div className = "border-b border-border bg-card">
-        <div className = "max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className = "flex items-center gap-6">
-            <Link to = {`/groups/${groupId}`} className = "inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
-              <ArrowLeft className = "w-4 h-4" />
+    <div className = {styles.page}>
+      <div className = {styles.header}>
+        <div className = {styles.headerInner}>
+          <div className = {styles.row}>
+            <Link to = {`/groups/${groupId}`} className = {styles.backLink}>
+              <ArrowLeft className = {styles.arrowLeftIcon} />
               모임 상세
             </Link>
             <Logo size = "sm" />
@@ -43,45 +44,45 @@ export default function GroupMembersPage() {
         </div>
       </div>
 
-      <div className = "max-w-7xl mx-auto px-6 py-8">
-        <div className = "mb-6">
-          <h1 className = "text-4xl font-medium mb-2">전체 멤버</h1>
-          <p className = "text-muted-foreground">
+      <div className = {styles.content}>
+        <div className = {styles.sectionHeader}>
+          <h1 className = {styles.pageTitle}>전체 멤버</h1>
+          <p className = {styles.descriptionText}>
             강남 배드민턴 클럽의 모든 멤버를 확인하세요
           </p>
         </div>
 
         {/* Stats */}
-        <div className = "grid grid-cols-4 gap-4 mb-6">
-          <div className = "bg-card border-2 border-primary/30 rounded-xl p-5 text-center">
-            <p className = "text-3xl font-medium text-primary mb-1">{allMembers.length}</p>
-            <p className = "text-sm text-muted-foreground">전체 멤버</p>
+        <div className = {styles.grid}>
+          <div className = {styles.card}>
+            <p className = {styles.summaryText}>{allMembers.length}</p>
+            <p className = {styles.descriptionText2}>전체 멤버</p>
           </div>
-          <div className = "bg-card border border-border rounded-xl p-5 text-center">
-            <p className = "text-3xl font-medium text-primary mb-1">{allMembers.filter(m => m.gender === '남').length}</p>
-            <p className = "text-sm text-muted-foreground">남성</p>
+          <div className = {styles.header2}>
+            <p className = {styles.summaryText}>{allMembers.filter(m => m.gender === '남').length}</p>
+            <p className = {styles.descriptionText2}>남성</p>
           </div>
-          <div className = "bg-card border border-border rounded-xl p-5 text-center">
-            <p className = "text-3xl font-medium text-primary mb-1">{allMembers.filter(m => m.gender === '여').length}</p>
-            <p className = "text-sm text-muted-foreground">여성</p>
+          <div className = {styles.header2}>
+            <p className = {styles.summaryText}>{allMembers.filter(m => m.gender === '여').length}</p>
+            <p className = {styles.descriptionText2}>여성</p>
           </div>
-          <div className = "bg-card border border-border rounded-xl p-5 text-center">
-            <p className = "text-3xl font-medium mb-1">{Math.round(allMembers.reduce((sum, m) => sum + m.sessions, 0) / allMembers.length)}</p>
-            <p className = "text-sm text-muted-foreground">평균 참여</p>
+          <div className = {styles.header2}>
+            <p className = {styles.summaryText2}>{Math.round(allMembers.reduce((sum, m) => sum + m.sessions, 0) / allMembers.length)}</p>
+            <p className = {styles.descriptionText2}>평균 참여</p>
           </div>
         </div>
 
         {/* Search and Filter */}
-        <div className = "bg-card border border-border rounded-2xl p-6 mb-6">
-          <div className = "flex gap-4">
-            <div className = "flex-1 relative">
-              <Search className = "absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input placeholder = "멤버 이름으로 검색" className = "pl-10 rounded-full"
+        <div className = {styles.header3}>
+          <div className = {styles.row2}>
+            <div className = {styles.row3}>
+              <Search className = {styles.searchIcon} />
+              <Input placeholder = "멤버 이름으로 검색" className = {styles.input}
               />
             </div>
             <Select defaultValue = "all">
-              <SelectTrigger className = "w-40 rounded-full">
-                <Filter className = "w-4 h-4 mr-2" />
+              <SelectTrigger className = {styles.selectTrigger}>
+                <Filter className = {styles.filterIcon} />
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -99,44 +100,44 @@ export default function GroupMembersPage() {
         </div>
 
         {/* Members Grid */}
-        <div className = "grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className = {styles.statsGrid}>
           {allMembers.map((member, idx) => (
-            <div key = {idx} className = "bg-card border border-border rounded-2xl p-6 hover:border-primary transition-all"
+            <div key = {idx} className = {styles.header4}
             >
-              <div className = "flex items-start gap-4 mb-4">
-                <div className = "w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
-                  <span className = "text-2xl font-medium text-primary">
+              <div className = {styles.mediaRow}>
+                <div className = {styles.row4}>
+                  <span className = {styles.labelText}>
                     {member.name[0]}
                   </span>
                 </div>
-                <div className = "flex-1 min-w-0">
-                  <h3 className = "text-xl font-medium mb-1">{member.name}</h3>
-                  <div className = "flex items-center gap-2 flex-wrap">
-                    <Badge className = "bg-primary text-primary-foreground">{member.level}</Badge>
+                <div className = {styles.row5}>
+                  <h3 className = {styles.cardTitle}>{member.name}</h3>
+                  <div className = {styles.wrapRow}>
+                    <Badge className = {styles.badge}>{member.level}</Badge>
                     <Badge variant = "outline">{member.gender}</Badge>
                     <Badge variant = "outline">{member.age}</Badge>
                   </div>
                 </div>
               </div>
 
-              <div className = "grid grid-cols-2 gap-3 pt-4 border-t border-border">
-                <div className = "bg-secondary rounded-xl p-3 text-center">
-                  <div className = "flex items-center justify-center gap-1 mb-1">
-                    <Calendar className = "w-4 h-4 text-muted-foreground" />
+              <div className = {styles.footerActions}>
+                <div className = {styles.summaryBox}>
+                  <div className = {styles.row6}>
+                    <Calendar className = {styles.calendarIcon} />
                   </div>
-                  <p className = "text-xl font-medium text-primary">{member.sessions}</p>
-                  <p className = "text-xs text-muted-foreground">참여</p>
+                  <p className = {styles.summaryText3}>{member.sessions}</p>
+                  <p className = {styles.descriptionText3}>참여</p>
                 </div>
-                <div className = "bg-secondary rounded-xl p-3 text-center">
-                  <div className = "flex items-center justify-center gap-1 mb-1">
-                    <Trophy className = "w-4 h-4 text-muted-foreground" />
+                <div className = {styles.summaryBox}>
+                  <div className = {styles.row6}>
+                    <Trophy className = {styles.calendarIcon} />
                   </div>
-                  <p className = "text-xl font-medium text-primary">{member.winRate}%</p>
-                  <p className = "text-xs text-muted-foreground">승률</p>
+                  <p className = {styles.summaryText3}>{member.winRate}%</p>
+                  <p className = {styles.descriptionText3}>승률</p>
                 </div>
               </div>
 
-              <div className = "pt-3 text-center text-sm text-muted-foreground">
+              <div className = {styles.mutedText}>
                 {member.wins}승 {member.losses}패
               </div>
             </div>
@@ -144,17 +145,17 @@ export default function GroupMembersPage() {
         </div>
 
         {/* Action */}
-        <div className = "mt-8 bg-gradient-to-br from-accent/20 to-accent/5 border-2 border-accent/40 rounded-3xl p-8">
-          <div className = "flex items-center gap-6">
-            <div className = "w-16 h-16 rounded-2xl bg-accent/30 flex items-center justify-center flex-shrink-0">
-              <Users className = "w-8 h-8 text-accent-foreground" />
+        <div className = {styles.contentBox}>
+          <div className = {styles.row}>
+            <div className = {styles.row7}>
+              <Users className = {styles.usersIcon} />
             </div>
-            <div className = "flex-1">
-              <h3 className = "text-xl font-medium mb-2">새로운 멤버를 초대하세요</h3>
-              <p className = "text-muted-foreground mb-4">
+            <div className = {styles.row8}>
+              <h3 className = {styles.cardTitle2}>새로운 멤버를 초대하세요</h3>
+              <p className = {styles.descriptionText4}>
                 친구들을 초대하여 함께 배드민턴을 즐겨보세요
               </p>
-              <Button className = "rounded-full" onClick = {() => showMessage('멤버 초대 링크를 준비했습니다.')}>
+              <Button className = {styles.roundButton} onClick = {() => showMessage('멤버 초대 링크를 준비했습니다.')}>
                 멤버 초대하기
               </Button>
             </div>
@@ -162,7 +163,7 @@ export default function GroupMembersPage() {
         </div>
       </div>
       {message && (
-        <div className = "fixed bottom-6 left-1/2 -translate-x-1/2 bg-card border border-border rounded-full px-5 py-3 shadow-xl text-sm font-medium">
+        <div className = {styles.floatingNotice}>
           {message}
         </div>
       )}

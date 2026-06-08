@@ -9,6 +9,7 @@ import {
   Grid3x3
 } from 'lucide-react';
 import { Button } from './ui/button';
+import { styles } from './DesktopSidebar.styles';
 
 export default function DesktopSidebar() {
   const location = useLocation();
@@ -28,36 +29,30 @@ export default function DesktopSidebar() {
   };
 
   return (
-    <div className = "desktop-sidebar w-64 h-screen bg-card border-r border-border flex flex-col sticky top-0">
-      <div className = "p-6 border-b border-border">
+    <div className = {styles.header}>
+      <div className = {styles.contentBox}>
         <Logo size = "md" />
       </div>
 
-      <nav className = "flex-1 p-4 space-y-1">
+      <nav className = {styles.row}>
         {navigation.map((item) => {
           const Icon = item.icon;
           const active = isActive(item.path);
 
           return (
-            <Link key = {item.path} to = {item.path} className = {`
-                flex items-center gap-3 px-4 py-3 rounded-xl transition-all
-                ${active
-                  ? 'bg-primary text-primary-foreground shadow-sm'
-                  : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
-                }
-              `}
+            <Link key = {item.path} to = {item.path} className = {styles.navLink(active)}
             >
-              <Icon className = "w-5 h-5" />
-              <span className = "font-medium">{item.name}</span>
+              <Icon className = {styles.iconIcon} />
+              <span className = {styles.labelText}>{item.name}</span>
             </Link>
           );
         })}
       </nav>
 
-      <div className = "p-4 border-t border-border">
-        <Button variant = "ghost" className = "w-full justify-start gap-2 text-muted-foreground hover:text-destructive rounded-xl" onClick = {() => navigate('/')}
+      <div className = {styles.footerActions}>
+        <Button variant = "ghost" className = {styles.fullWidthButton} onClick = {() => navigate('/')}
         >
-          <LogOut className = "w-4 h-4" />
+          <LogOut className = {styles.logOutIcon} />
           로그아웃
         </Button>
       </div>

@@ -5,6 +5,7 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { ArrowLeft, Mail, Check } from 'lucide-react';
+import { styles } from './PasswordResetPage.styles';
 
 export default function PasswordResetPage() {
   const [email, setEmail] = useState('');
@@ -17,45 +18,45 @@ export default function PasswordResetPage() {
   };
 
   return (
-    <div className = "min-h-screen bg-gradient-to-b from-background to-secondary/20 flex items-center justify-center p-4">
-      <div className = "w-full max-w-md">
-        <div className = "text-center mb-8">
-          <Logo size = "lg" className = "justify-center mb-6" />
+    <div className = {styles.page}>
+      <div className = {styles.authPanel}>
+        <div className = {styles.sectionHeader}>
+          <Logo size = "lg" className = {styles.sectionHeader2} />
         </div>
 
-        <div className = "bg-card border border-border rounded-3xl p-8 shadow-lg">
+        <div className = {styles.header}>
           {!emailSent ? (
             <>
-              <div className = "text-center mb-8">
-                <div className = "w-16 h-16 rounded-full bg-primary/20 mx-auto flex items-center justify-center mb-4">
-                  <Mail className = "w-8 h-8 text-primary" />
+              <div className = {styles.sectionHeader}>
+                <div className = {styles.row}>
+                  <Mail className = {styles.mailIcon} />
                 </div>
-                <h1 className = "text-3xl font-medium mb-2">비밀번호 찾기</h1>
-                <p className = "text-muted-foreground">
+                <h1 className = {styles.pageTitle}>비밀번호 찾기</h1>
+                <p className = {styles.descriptionText}>
                   가입하신 이메일 주소를 입력해주세요
                 </p>
               </div>
 
-              <form onSubmit = {handleSubmit} className = "space-y-6">
-                <div className = "space-y-2">
+              <form onSubmit = {handleSubmit} className = {styles.form}>
+                <div className = {styles.stack}>
                   <Label htmlFor = "email">이메일</Label>
                   <Input id = "email" type = "email" placeholder = "example@email.com" value = {email} onChange = {(e) => setEmail(e.target.value)}
-                    required className = "rounded-xl"
+                    required className = {styles.roundedControl}
                   />
-                  <p className = "text-sm text-muted-foreground">
+                  <p className = {styles.descriptionText2}>
                     비밀번호 재설정 링크를 보내드립니다
                   </p>
                 </div>
 
-                <Button type = "submit" className = "w-full rounded-full" size = "lg"
+                <Button type = "submit" className = {styles.submitButton} size = "lg"
                 >
                   재설정 링크 보내기
                 </Button>
 
                 <Link to = "/login">
-                  <Button variant = "outline" className = "w-full rounded-full" size = "lg" type = "button"
+                  <Button variant = "outline" className = {styles.submitButton} size = "lg" type = "button"
                   >
-                    <ArrowLeft className = "w-4 h-4 mr-2" />
+                    <ArrowLeft className = {styles.arrowLeftIcon} />
                     로그인으로 돌아가기
                   </Button>
                 </Link>
@@ -63,19 +64,19 @@ export default function PasswordResetPage() {
             </>
           ) : (
             <>
-              <div className = "text-center mb-8">
-                <div className = "w-16 h-16 rounded-full bg-primary/20 mx-auto flex items-center justify-center mb-4">
-                  <Check className = "w-8 h-8 text-primary" />
+              <div className = {styles.sectionHeader}>
+                <div className = {styles.row}>
+                  <Check className = {styles.mailIcon} />
                 </div>
-                <h1 className = "text-3xl font-medium mb-2">이메일을 보냈어요</h1>
-                <p className = "text-muted-foreground">
+                <h1 className = {styles.pageTitle}>이메일을 보냈어요</h1>
+                <p className = {styles.descriptionText}>
                   {email}로 비밀번호 재설정 링크를 보냈습니다
                 </p>
               </div>
 
-              <div className = "bg-secondary rounded-2xl p-6 mb-6">
-                <h3 className = "font-medium mb-2">다음 단계</h3>
-                <ol className = "space-y-2 text-sm text-muted-foreground">
+              <div className = {styles.summaryBox}>
+                <h3 className = {styles.cardTitle}>다음 단계</h3>
+                <ol className = {styles.stack2}>
                   <li>1. 이메일을 확인하세요</li>
                   <li>2. 비밀번호 재설정 링크를 클릭하세요</li>
                   <li>3. 새로운 비밀번호를 설정하세요</li>
@@ -83,18 +84,18 @@ export default function PasswordResetPage() {
                 </ol>
               </div>
 
-              <div className = "space-y-3">
-                <p className = "text-sm text-muted-foreground text-center">
+              <div className = {styles.stack3}>
+                <p className = {styles.descriptionText3}>
                   이메일이 오지 않았나요?
                 </p>
-                <Button variant = "outline" className = "w-full rounded-full" onClick = {() => setEmailSent(false)}
+                <Button variant = "outline" className = {styles.submitButton} onClick = {() => setEmailSent(false)}
                 >
                   다시 보내기
                 </Button>
                 <Link to = "/login">
-                  <Button variant = "outline" className = "w-full rounded-full"
+                  <Button variant = "outline" className = {styles.submitButton}
                   >
-                    <ArrowLeft className = "w-4 h-4 mr-2" />
+                    <ArrowLeft className = {styles.arrowLeftIcon} />
                     로그인으로 돌아가기
                   </Button>
                 </Link>
@@ -103,10 +104,10 @@ export default function PasswordResetPage() {
           )}
         </div>
 
-        <div className = "text-center mt-6">
-          <p className = "text-sm text-muted-foreground">
+        <div className = {styles.centeredBlock}>
+          <p className = {styles.descriptionText2}>
             계정이 없으신가요?{' '}
-            <Link to = "/signup" className = "text-primary hover:underline">
+            <Link to = "/signup" className = {styles.primaryLink}>
               회원가입
             </Link>
           </p>

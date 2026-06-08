@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { ArrowLeft, Award, Heart } from 'lucide-react';
 import { useState } from 'react';
 import { useActionFeedback } from '../utils/useActionFeedback';
+import { styles } from './SignupPage.styles';
 
 export default function SignupPage() {
   const navigate = useNavigate();
@@ -32,74 +33,74 @@ export default function SignupPage() {
     window.setTimeout(() => navigate('/login'), 500);
   };
   return (
-    <div className = "min-h-screen flex items-center justify-center px-4 py-12 relative overflow-hidden">
+    <div className = {styles.page}>
       {/* Background Pattern */}
-      <div className = "absolute inset-0 bg-gradient-to-br from-primary/5 via-secondary/20 to-background" />
+      <div className = {styles.decorativeShape} />
 
       {/* Decorative Elements */}
-      <div className = "absolute top-20 right-20 opacity-10">
-        <Award className = "w-24 h-24 text-primary" />
+      <div className = {styles.decorativeShape2}>
+        <Award className = {styles.awardIcon} />
       </div>
-      <div className = "absolute bottom-20 left-20 opacity-10">
-        <Heart className = "w-16 h-16 text-primary" />
+      <div className = {styles.decorativeShape3}>
+        <Heart className = {styles.heartIcon} />
       </div>
-      <div className = "absolute top-1/2 right-10 opacity-5">
-        <ShuttlecockIcon size = {100} className = "text-primary" />
+      <div className = {styles.decorativeShape4}>
+        <ShuttlecockIcon size = {100} className = {styles.shuttlecockIcon} />
       </div>
 
-      <div className = "w-full max-w-md space-y-8 relative z-10">
-        <Link to = "/" className = "inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
-          <ArrowLeft className = "w-4 h-4" />
+      <div className = {styles.stack}>
+        <Link to = "/" className = {styles.backLink}>
+          <ArrowLeft className = {styles.arrowLeftIcon} />
           돌아가기
         </Link>
 
-        <div className = "text-center space-y-6">
-          <div className = "flex justify-center">
+        <div className = {styles.stack2}>
+          <div className = {styles.row}>
             <Logo size = "lg" />
           </div>
-          <div className = "space-y-2">
-            <h1 className = "text-3xl font-medium">회원가입</h1>
-            <p className = "text-lg text-muted-foreground">
+          <div className = {styles.stack3}>
+            <h1 className = {styles.pageTitle}>회원가입</h1>
+            <p className = {styles.descriptionText}>
               ShuttlePlay와 함께 시작하세요
             </p>
           </div>
         </div>
 
-        <div className = "bg-card/80 backdrop-blur-sm border-2 border-border rounded-3xl p-10 shadow-2xl shadow-primary/10">
-          <form onSubmit = {handleSubmit} className = "space-y-5">
-            <div className = "space-y-2">
+        <div className = {styles.header}>
+          <form onSubmit = {handleSubmit} className = {styles.form}>
+            <div className = {styles.stack3}>
               <Label htmlFor = "name">이름</Label>
-              <Input id = "name" type = "text" placeholder = "이름을 입력하세요" className = "rounded-xl h-11" value = {formData.name} onChange = {(e) => setFormData({ ...formData, name: e.target.value })}
+              <Input id = "name" type = "text" placeholder = "이름을 입력하세요" className = {styles.input} value = {formData.name} onChange = {(e) => setFormData({ ...formData, name: e.target.value })}
                 required
               />
             </div>
 
-            <div className = "space-y-2">
+            <div className = {styles.stack3}>
               <Label htmlFor = "email">이메일</Label>
-              <Input id = "email" type = "email" placeholder = "이메일을 입력하세요" className = "rounded-xl h-11" value = {formData.email} onChange = {(e) => setFormData({ ...formData, email: e.target.value })}
+              <Input id = "email" type = "email" placeholder = "이메일을 입력하세요" className = {styles.input} value = {formData.email} onChange = {(e) => setFormData({ ...formData, email: e.target.value })}
                 required
               />
             </div>
 
-            <div className = "space-y-2">
+            <div className = {styles.stack3}>
               <Label htmlFor = "password">비밀번호</Label>
-              <Input id = "password" type = "password" placeholder = "비밀번호를 입력하세요" className = "rounded-xl h-11" value = {formData.password} onChange = {(e) => setFormData({ ...formData, password: e.target.value })}
+              <Input id = "password" type = "password" placeholder = "비밀번호를 입력하세요" className = {styles.input} value = {formData.password} onChange = {(e) => setFormData({ ...formData, password: e.target.value })}
                 required
               />
             </div>
 
-            <div className = "space-y-2">
+            <div className = {styles.stack3}>
               <Label htmlFor = "password-confirm">비밀번호 확인</Label>
-              <Input id = "password-confirm" type = "password" placeholder = "비밀번호를 다시 입력하세요" className = "rounded-xl h-11" value = {formData.passwordConfirm} onChange = {(e) => setFormData({ ...formData, passwordConfirm: e.target.value })}
+              <Input id = "password-confirm" type = "password" placeholder = "비밀번호를 다시 입력하세요" className = {styles.input} value = {formData.passwordConfirm} onChange = {(e) => setFormData({ ...formData, passwordConfirm: e.target.value })}
                 required
               />
             </div>
 
-            <div className = "grid grid-cols-2 gap-4">
-              <div className = "space-y-2">
+            <div className = {styles.cardGrid}>
+              <div className = {styles.stack3}>
                 <Label htmlFor = "gender">성별</Label>
                 <Select value = {formData.gender} onValueChange = {(value) => setFormData({ ...formData, gender: value })} required>
-                  <SelectTrigger id = "gender" className = "rounded-xl h-11">
+                  <SelectTrigger id = "gender" className = {styles.input}>
                     <SelectValue placeholder = "선택" />
                   </SelectTrigger>
                   <SelectContent>
@@ -109,10 +110,10 @@ export default function SignupPage() {
                 </Select>
               </div>
 
-              <div className = "space-y-2">
+              <div className = {styles.stack3}>
                 <Label htmlFor = "age">나이대</Label>
                 <Select value = {formData.age} onValueChange = {(value) => setFormData({ ...formData, age: value })} required>
-                  <SelectTrigger id = "age" className = "rounded-xl h-11">
+                  <SelectTrigger id = "age" className = {styles.input}>
                     <SelectValue placeholder = "선택" />
                   </SelectTrigger>
                   <SelectContent>
@@ -126,10 +127,10 @@ export default function SignupPage() {
               </div>
             </div>
 
-            <div className = "space-y-2">
+            <div className = {styles.stack3}>
               <Label htmlFor = "level">급수</Label>
               <Select value = {formData.level} onValueChange = {(value) => setFormData({ ...formData, level: value })} required>
-                <SelectTrigger id = "level" className = "rounded-xl h-11">
+                <SelectTrigger id = "level" className = {styles.input}>
                   <SelectValue placeholder = "선택하세요" />
                 </SelectTrigger>
                 <SelectContent>
@@ -145,29 +146,29 @@ export default function SignupPage() {
             </div>
 
             {message && (
-              <div className = "rounded-xl border border-primary/30 bg-primary/5 p-3 text-center text-sm text-primary">
+              <div className = {styles.contentBox}>
                 {message}
               </div>
             )}
-            <Button type = "submit" className = "w-full rounded-full shadow-lg shadow-primary/20" size = "lg">
+            <Button type = "submit" className = {styles.submitButton} size = "lg">
               회원가입 완료
             </Button>
           </form>
         </div>
 
-        <div className = "text-center">
-          <span className = "text-muted-foreground">이미 회원이신가요? </span>
-          <Link to = "/login" className = "text-primary hover:underline font-medium">
+        <div className = {styles.centeredBlock}>
+          <span className = {styles.mutedText}>이미 회원이신가요? </span>
+          <Link to = "/login" className = {styles.primaryLink}>
             로그인
           </Link>
         </div>
 
         {/* Decorative Badge */}
-        <div className = "flex justify-center">
-          <div className = "bg-gradient-to-r from-secondary/50 to-primary/10 rounded-full px-6 py-3 border border-border/50 backdrop-blur-sm">
-            <div className = "flex items-center gap-2 text-sm">
-              <ShuttlecockIcon size = {16} className = "text-primary" />
-              <span className = "text-muted-foreground">함께하는 배드민턴의 즐거움</span>
+        <div className = {styles.row}>
+          <div className = {styles.pill}>
+            <div className = {styles.row2}>
+              <ShuttlecockIcon size = {16} className = {styles.shuttlecockIcon} />
+              <span className = {styles.mutedText}>함께하는 배드민턴의 즐거움</span>
             </div>
           </div>
         </div>

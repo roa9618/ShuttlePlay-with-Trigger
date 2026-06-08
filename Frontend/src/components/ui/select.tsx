@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 
 import { cn } from "./utils";
+import { styles } from './select.styles';
 
 function Select({
   ...props
@@ -45,7 +46,7 @@ function SelectTrigger({
     >
       {children}
       <SelectPrimitive.Icon asChild>
-        <ChevronDownIcon className = "size-4 opacity-50" />
+        <ChevronDownIcon className = {styles.chevronDownIconIcon} />
       </SelectPrimitive.Icon>
     </SelectPrimitive.Trigger>
   );
@@ -87,7 +88,7 @@ function SelectLabel({
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Label>) {
   return (
-    <SelectPrimitive.Label data-slot = "select-label" className = {cn("text-muted-foreground px-2 py-1.5 text-xs", className)}
+    <SelectPrimitive.Label data-slot = "select-label" className = {cn(styles.label, className)}
       {...props}
     />
   );
@@ -100,14 +101,14 @@ function SelectItem({
 }: React.ComponentProps<typeof SelectPrimitive.Item>) {
   return (
     <SelectPrimitive.Item data-slot = "select-item" className = {cn(
-        "focus:bg-accent focus:text-accent-foreground [&_svg:not([class*='text-'])]:text-muted-foreground relative flex w-full cursor-default items-center gap-2 rounded-sm py-1.5 pr-8 pl-2 text-sm outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2",
+        styles.item,
         className,
       )}
       {...props}
     >
-      <span className = "absolute right-2 flex size-3.5 items-center justify-center">
+      <span className = {styles.inlineText}>
         <SelectPrimitive.ItemIndicator>
-          <CheckIcon className = "size-4" />
+          <CheckIcon className = {styles.checkIconIcon} />
         </SelectPrimitive.ItemIndicator>
       </span>
       <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
@@ -120,7 +121,7 @@ function SelectSeparator({
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Separator>) {
   return (
-    <SelectPrimitive.Separator data-slot = "select-separator" className = {cn("bg-border pointer-events-none -mx-1 my-1 h-px", className)}
+    <SelectPrimitive.Separator data-slot = "select-separator" className = {cn(styles.separator, className)}
       {...props}
     />
   );
@@ -137,7 +138,7 @@ function SelectScrollUpButton({
       )}
       {...props}
     >
-      <ChevronUpIcon className = "size-4" />
+      <ChevronUpIcon className = {styles.checkIconIcon} />
     </SelectPrimitive.ScrollUpButton>
   );
 }
@@ -153,7 +154,7 @@ function SelectScrollDownButton({
       )}
       {...props}
     >
-      <ChevronDownIcon className = "size-4" />
+      <ChevronDownIcon className = {styles.checkIconIcon} />
     </SelectPrimitive.ScrollDownButton>
   );
 }

@@ -9,6 +9,7 @@ import { Switch } from '../components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { ArrowLeft, Settings, Trash2, Users, SlidersHorizontal } from 'lucide-react';
 import { useActionFeedback } from '../utils/useActionFeedback';
+import { styles } from './GroupSettingsPage.styles';
 
 export default function GroupSettingsPage() {
   const { groupId } = useParams();
@@ -49,12 +50,12 @@ export default function GroupSettingsPage() {
   };
 
   return (
-    <div className = "min-h-screen bg-background">
-      <div className = "border-b border-border bg-card">
-        <div className = "max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className = "flex items-center gap-6">
-            <Link to = {`/groups/${groupId}`} className = "inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
-              <ArrowLeft className = "w-4 h-4" />
+    <div className = {styles.page}>
+      <div className = {styles.header}>
+        <div className = {styles.headerInner}>
+          <div className = {styles.row}>
+            <Link to = {`/groups/${groupId}`} className = {styles.backLink}>
+              <ArrowLeft className = {styles.arrowLeftIcon} />
               모임 상세
             </Link>
             <Logo size = "sm" />
@@ -62,50 +63,50 @@ export default function GroupSettingsPage() {
         </div>
       </div>
 
-      <div className = "max-w-5xl mx-auto px-6 py-8">
-        <div className = "mb-6">
-          <div className = "flex items-center gap-3 mb-2">
-            <Settings className = "w-8 h-8 text-primary" />
-            <h1 className = "text-4xl font-medium">모임 설정</h1>
+      <div className = {styles.content}>
+        <div className = {styles.sectionHeader}>
+          <div className = {styles.row2}>
+            <Settings className = {styles.settingsIcon} />
+            <h1 className = {styles.pageTitle}>모임 설정</h1>
           </div>
-          <p className = "text-muted-foreground">
+          <p className = {styles.descriptionText}>
             모임 정보와 운영 설정을 관리하세요
           </p>
         </div>
 
-        <form onSubmit = {handleSave} className = "space-y-8">
+        <form onSubmit = {handleSave} className = {styles.form}>
           {message && (
-            <div className = "rounded-xl border border-primary/30 bg-primary/5 p-3 text-center text-sm text-primary">
+            <div className = {styles.contentBox}>
               {message}
             </div>
           )}
           {/* Basic Info */}
-          <div className = "bg-card border border-border rounded-3xl p-8 space-y-6">
-            <div className = "flex items-center gap-3 pb-4 border-b border-border">
-              <Users className = "w-5 h-5 text-primary" />
-              <h2 className = "text-2xl font-medium">기본 정보</h2>
+          <div className = {styles.header2}>
+            <div className = {styles.row3}>
+              <Users className = {styles.usersIcon} />
+              <h2 className = {styles.sectionTitle}>기본 정보</h2>
             </div>
 
-            <div className = "space-y-4">
-              <div className = "space-y-2">
+            <div className = {styles.stack}>
+              <div className = {styles.stack2}>
                 <Label htmlFor = "groupName">모임 이름</Label>
-                <Input id = "groupName" value = {formData.groupName} onChange = {(e) => setFormData({ ...formData, groupName: e.target.value })} placeholder = "모임 이름을 입력하세요" className = "rounded-xl"
+                <Input id = "groupName" value = {formData.groupName} onChange = {(e) => setFormData({ ...formData, groupName: e.target.value })} placeholder = "모임 이름을 입력하세요" className = {styles.input}
                   required
                 />
               </div>
 
-              <div className = "space-y-2">
+              <div className = {styles.stack2}>
                 <Label htmlFor = "location">장소</Label>
-                <Input id = "location" value = {formData.location} onChange = {(e) => setFormData({ ...formData, location: e.target.value })} placeholder = "운동하는 장소를 입력하세요" className = "rounded-xl"
+                <Input id = "location" value = {formData.location} onChange = {(e) => setFormData({ ...formData, location: e.target.value })} placeholder = "운동하는 장소를 입력하세요" className = {styles.input}
                   required
                 />
               </div>
 
-              <div className = "space-y-2">
+              <div className = {styles.stack2}>
                 <Label htmlFor = "description">모임 소개</Label>
-                <Textarea id = "description" value = {formData.description} onChange = {(e) => setFormData({ ...formData, description: e.target.value })} placeholder = "모임에 대한 간단한 소개를 입력하세요" className = "min-h-24 rounded-xl"
+                <Textarea id = "description" value = {formData.description} onChange = {(e) => setFormData({ ...formData, description: e.target.value })} placeholder = "모임에 대한 간단한 소개를 입력하세요" className = {styles.textareaIcon}
                 />
-                <p className = "text-sm text-muted-foreground">
+                <p className = {styles.descriptionText2}>
                   모임의 특징, 운동 일정, 분위기 등을 자유롭게 작성하세요
                 </p>
               </div>
@@ -113,17 +114,17 @@ export default function GroupSettingsPage() {
           </div>
 
           {/* Participation Settings */}
-          <div className = "bg-card border border-border rounded-3xl p-8 space-y-6">
-            <div className = "flex items-center gap-3 pb-4 border-b border-border">
-              <Settings className = "w-5 h-5 text-primary" />
-              <h2 className = "text-2xl font-medium">참여 설정</h2>
+          <div className = {styles.header2}>
+            <div className = {styles.row3}>
+              <Settings className = {styles.usersIcon} />
+              <h2 className = {styles.sectionTitle}>참여 설정</h2>
             </div>
 
-            <div className = "space-y-4">
-              <div className = "flex items-center justify-between">
-                <div className = "flex-1">
-                  <p className = "font-medium">비회원 참여 허용</p>
-                  <p className = "text-sm text-muted-foreground">
+            <div className = {styles.stack}>
+              <div className = {styles.betweenRow}>
+                <div className = {styles.row4}>
+                  <p className = {styles.summaryText}>비회원 참여 허용</p>
+                  <p className = {styles.descriptionText2}>
                     비회원도 세션에 참여할 수 있도록 허용합니다
                   </p>
                 </div>
@@ -131,10 +132,10 @@ export default function GroupSettingsPage() {
                 />
               </div>
 
-              <div className = "flex items-center justify-between">
-                <div className = "flex-1">
-                  <p className = "font-medium">멤버 자동 승인</p>
-                  <p className = "text-sm text-muted-foreground">
+              <div className = {styles.betweenRow}>
+                <div className = {styles.row4}>
+                  <p className = {styles.summaryText}>멤버 자동 승인</p>
+                  <p className = {styles.descriptionText2}>
                     가입 요청을 자동으로 승인합니다
                   </p>
                 </div>
@@ -142,10 +143,10 @@ export default function GroupSettingsPage() {
                 />
               </div>
 
-              <div className = "flex items-center justify-between">
-                <div className = "flex-1">
-                  <p className = "font-medium">급수 정보 필수</p>
-                  <p className = "text-sm text-muted-foreground">
+              <div className = {styles.betweenRow}>
+                <div className = {styles.row4}>
+                  <p className = {styles.summaryText}>급수 정보 필수</p>
+                  <p className = {styles.descriptionText2}>
                     가입 시 급수 정보 입력을 필수로 합니다
                   </p>
                 </div>
@@ -155,18 +156,18 @@ export default function GroupSettingsPage() {
             </div>
           </div>
 
-          <div className = "bg-card border border-border rounded-3xl p-8 space-y-6">
-            <div className = "flex items-center gap-3 pb-4 border-b border-border">
-              <SlidersHorizontal className = "w-5 h-5 text-primary" />
-              <h2 className = "text-2xl font-medium">기본 매칭 설정</h2>
+          <div className = {styles.header2}>
+            <div className = {styles.row3}>
+              <SlidersHorizontal className = {styles.usersIcon} />
+              <h2 className = {styles.sectionTitle}>기본 매칭 설정</h2>
             </div>
 
-            <div className = "grid md:grid-cols-2 gap-4">
-              <div className = "space-y-2">
+            <div className = {styles.cardGrid}>
+              <div className = {styles.stack2}>
                 <Label>기본 세션 구분</Label>
                 <Select value = {formData.defaultSessionType} onValueChange = {(value) => setFormData({ ...formData, defaultSessionType: value })}
                 >
-                  <SelectTrigger className = "rounded-xl">
+                  <SelectTrigger className = {styles.input}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -176,11 +177,11 @@ export default function GroupSettingsPage() {
                 </Select>
               </div>
 
-              <div className = "space-y-2">
+              <div className = {styles.stack2}>
                 <Label>기본 코트 수</Label>
                 <Select value = {formData.defaultCourts} onValueChange = {(value) => setFormData({ ...formData, defaultCourts: value })}
                 >
-                  <SelectTrigger className = "rounded-xl">
+                  <SelectTrigger className = {styles.input}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -191,11 +192,11 @@ export default function GroupSettingsPage() {
                 </Select>
               </div>
 
-              <div className = "space-y-2">
+              <div className = {styles.stack2}>
                 <Label>기본 경기 유형</Label>
                 <Select value = {formData.defaultMatchType} onValueChange = {(value) => setFormData({ ...formData, defaultMatchType: value })}
                 >
-                  <SelectTrigger className = "rounded-xl">
+                  <SelectTrigger className = {styles.input}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -207,11 +208,11 @@ export default function GroupSettingsPage() {
                 </Select>
               </div>
 
-              <div className = "space-y-2">
+              <div className = {styles.stack2}>
                 <Label>기본 운영 성향</Label>
                 <Select value = {formData.defaultPlayStyle} onValueChange = {(value) => setFormData({ ...formData, defaultPlayStyle: value })}
                 >
-                  <SelectTrigger className = "rounded-xl">
+                  <SelectTrigger className = {styles.input}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -222,14 +223,14 @@ export default function GroupSettingsPage() {
               </div>
             </div>
 
-            <div className = "grid md:grid-cols-3 gap-4">
+            <div className = {styles.statsGrid}>
               {[
                 ['신규 참가자 보호', 'protectNewPlayers'],
                 ['파트너·상대 중복 회피', 'avoidDuplicatePartners'],
                 ['성별 보정 매칭 허용', 'useFlexibleGender'],
               ].map(([label, key]) => (
-                <div key = {key} className = "flex items-center justify-between rounded-2xl border border-border p-5">
-                  <p className = "font-medium">{label}</p>
+                <div key = {key} className = {styles.betweenRow2}>
+                  <p className = {styles.summaryText}>{label}</p>
                   <Switch checked = {formData[key as 'protectNewPlayers' | 'avoidDuplicatePartners' | 'useFlexibleGender']} onCheckedChange = {(checked) => setFormData({ ...formData, [key]: checked })}
                   />
                 </div>
@@ -238,34 +239,34 @@ export default function GroupSettingsPage() {
           </div>
 
           {/* Action Buttons */}
-          <div className = "flex gap-3">
-            <Link to = {`/groups/${groupId}`} className = "flex-1">
-              <Button variant = "outline" className = "w-full rounded-full" size = "lg" type = "button"
+          <div className = {styles.row5}>
+            <Link to = {`/groups/${groupId}`} className = {styles.row4}>
+              <Button variant = "outline" className = {styles.fullWidthButton} size = "lg" type = "button"
               >
                 취소
               </Button>
             </Link>
-            <Button type = "submit" className = "flex-1 rounded-full" size = "lg"
+            <Button type = "submit" className = {styles.submitButton} size = "lg"
             >
               변경사항 저장
             </Button>
           </div>
 
           {/* Danger Zone */}
-          <div className = "bg-destructive/10 border-2 border-destructive/30 rounded-3xl p-8">
-            <div className = "flex items-start gap-6">
-              <div className = "w-16 h-16 rounded-2xl bg-destructive/20 flex items-center justify-center flex-shrink-0">
-                <Trash2 className = "w-8 h-8 text-destructive" />
+          <div className = {styles.contentBox2}>
+            <div className = {styles.mediaRow}>
+              <div className = {styles.row6}>
+                <Trash2 className = {styles.trash2Icon} />
               </div>
-              <div className = "flex-1">
-                <h3 className = "text-xl font-medium mb-2 text-destructive">위험 영역</h3>
-                <p className = "text-muted-foreground mb-4">
+              <div className = {styles.row4}>
+                <h3 className = {styles.cardTitle}>위험 영역</h3>
+                <p className = {styles.descriptionText3}>
                   모임을 삭제하면 모든 세션 기록과 데이터가 영구적으로 삭제됩니다.
                   이 작업은 되돌릴 수 없습니다.
                 </p>
-                <Button type = "button" variant = "destructive" className = "rounded-full gap-2" onClick = {handleDeleteGroup}
+                <Button type = "button" variant = "destructive" className = {styles.roundButton} onClick = {handleDeleteGroup}
                 >
-                  <Trash2 className = "w-4 h-4" />
+                  <Trash2 className = {styles.arrowLeftIcon} />
                   {deleteArmed ? '정말 삭제하기' : '모임 삭제하기'}
                 </Button>
               </div>

@@ -2,6 +2,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { MapPin, Users, Calendar, Share2, Settings, ArrowLeft, QrCode } from 'lucide-react';
 import { useActionFeedback } from '../utils/useActionFeedback';
+import { styles } from './GroupDetailPage.styles';
 
 export default function GroupDetailPage() {
   const { groupId } = useParams();
@@ -28,34 +29,34 @@ export default function GroupDetailPage() {
   ];
 
   return (
-    <div className = "min-h-screen bg-background">
-      <div className = "max-w-5xl mx-auto px-4 md:px-8 py-8 space-y-8">
-        <Link to = "/groups" className = "inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
-          <ArrowLeft className = "w-4 h-4" />
+    <div className = {styles.page}>
+      <div className = {styles.content}>
+        <Link to = "/groups" className = {styles.backLink}>
+          <ArrowLeft className = {styles.arrowLeftIcon} />
           모임 목록
         </Link>
 
         {/* Header Card */}
-        <div className = "bg-gradient-to-br from-card to-secondary/10 border-2 border-border rounded-3xl p-8 md:p-10 shadow-sm">
-          <div className = "flex items-start justify-between mb-8">
-            <div className = "flex items-start gap-6">
-              <div className = "w-20 h-20 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center flex-shrink-0">
-                <Users className = "w-10 h-10 text-primary" />
+        <div className = {styles.contentBox}>
+          <div className = {styles.betweenRow}>
+            <div className = {styles.mediaRow}>
+              <div className = {styles.row}>
+                <Users className = {styles.usersIcon} />
               </div>
-              <div className = "space-y-4">
+              <div className = {styles.stack}>
                 <div>
-                  <h1 className = "text-4xl mb-3">강남 배드민턴 클럽</h1>
-                  <div className = "space-y-2 text-muted-foreground">
-                    <div className = "flex items-center gap-2">
-                      <MapPin className = "w-4 h-4" />
+                  <h1 className = {styles.pageTitle}>강남 배드민턴 클럽</h1>
+                  <div className = {styles.stack2}>
+                    <div className = {styles.row2}>
+                      <MapPin className = {styles.arrowLeftIcon} />
                       <span>강남구민회관</span>
                     </div>
-                    <div className = "flex items-center gap-2">
-                      <Users className = "w-4 h-4" />
+                    <div className = {styles.row2}>
+                      <Users className = {styles.arrowLeftIcon} />
                       <span>멤버 24명</span>
                     </div>
-                    <div className = "flex items-center gap-2">
-                      <Calendar className = "w-4 h-4" />
+                    <div className = {styles.row2}>
+                      <Calendar className = {styles.arrowLeftIcon} />
                       <span>최근 운동 2일 전</span>
                     </div>
                   </div>
@@ -63,55 +64,55 @@ export default function GroupDetailPage() {
               </div>
             </div>
             <Link to = {`/groups/${groupId}/settings`}>
-              <Button variant = "outline" size = "icon" className = "rounded-full flex-shrink-0"
+              <Button variant = "outline" size = "icon" className = {styles.roundButton}
               >
-                <Settings className = "w-4 h-4" />
+                <Settings className = {styles.arrowLeftIcon} />
               </Button>
             </Link>
           </div>
 
-          <div className = "grid md:grid-cols-2 gap-4">
-            <Link to = {`/groups/${groupId}/create-session`} className = "block">
-              <Button className = "w-full rounded-full h-12 shadow-lg shadow-primary/20" size = "lg">
-                <Calendar className = "w-5 h-5 mr-2" />
+          <div className = {styles.cardGrid}>
+            <Link to = {`/groups/${groupId}/create-session`} className = {styles.cardLink}>
+              <Button className = {styles.fullWidthButton} size = "lg">
+                <Calendar className = {styles.calendarIcon} />
                 오늘 세션 만들기
               </Button>
             </Link>
-            <Button variant = "outline" size = "lg" className = "rounded-full h-12 gap-2" onClick = {copyInviteLink}
+            <Button variant = "outline" size = "lg" className = {styles.roundButton2} onClick = {copyInviteLink}
             >
-              <Share2 className = "w-5 h-5" />
+              <Share2 className = {styles.share2Icon} />
               멤버 초대하기
             </Button>
           </div>
         </div>
 
         {/* Recent Sessions */}
-        <div className = "bg-card border border-border rounded-3xl p-8 space-y-6">
-          <div className = "flex items-center justify-between">
-            <h2 className = "text-2xl font-medium">최근 운동 기록</h2>
-            <Button variant = "ghost" size = "sm" className = "text-primary" onClick = {() => navigate('/sessions/demo/report')}
+        <div className = {styles.header}>
+          <div className = {styles.betweenRow2}>
+            <h2 className = {styles.sectionTitle}>최근 운동 기록</h2>
+            <Button variant = "ghost" size = "sm" className = {styles.actionButton} onClick = {() => navigate('/sessions/demo/report')}
             >
               전체 보기
             </Button>
           </div>
-          <div className = "grid gap-3">
+          <div className = {styles.grid}>
             {recentSessions.map((session, idx) => (
-              <div key = {idx} onClick = {() => navigate('/sessions/demo/report')} className = "bg-gradient-to-r from-secondary/50 to-transparent rounded-2xl p-5 border border-border hover:border-primary transition-all group cursor-pointer"
+              <div key = {idx} onClick = {() => navigate('/sessions/demo/report')} className = {styles.contentBox2}
               >
-                <div className = "flex items-center justify-between">
-                  <div className = "flex items-center gap-4">
-                    <div className = "w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
-                      <Calendar className = "w-6 h-6 text-primary" />
+                <div className = {styles.betweenRow2}>
+                  <div className = {styles.row3}>
+                    <div className = {styles.row4}>
+                      <Calendar className = {styles.calendarIcon2} />
                     </div>
                     <div>
-                      <p className = "font-medium text-lg mb-1">{session.date}</p>
-                      <p className = "text-sm text-muted-foreground">{session.time}</p>
+                      <p className = {styles.summaryText}>{session.date}</p>
+                      <p className = {styles.descriptionText}>{session.time}</p>
                     </div>
                   </div>
-                  <div className = "flex items-center gap-3">
-                    <div className = "text-right">
-                      <p className = "text-sm text-muted-foreground">참가 인원</p>
-                      <p className = "text-lg font-medium text-primary">{session.participants}명</p>
+                  <div className = {styles.row5}>
+                    <div className = {styles.rightAlignedBlock}>
+                      <p className = {styles.descriptionText}>참가 인원</p>
+                      <p className = {styles.summaryText2}>{session.participants}명</p>
                     </div>
                   </div>
                 </div>
@@ -121,33 +122,33 @@ export default function GroupDetailPage() {
         </div>
 
         {/* Members */}
-        <div className = "bg-card border border-border rounded-3xl p-8 space-y-6">
-          <div className = "flex items-center justify-between">
-            <h2 className = "text-2xl font-medium">멤버 목록</h2>
+        <div className = {styles.header}>
+          <div className = {styles.betweenRow2}>
+            <h2 className = {styles.sectionTitle}>멤버 목록</h2>
             <Link to = {`/groups/${groupId}/members`}>
-              <Button variant = "ghost" size = "sm" className = "text-primary"
+              <Button variant = "ghost" size = "sm" className = {styles.actionButton}
               >
                 전체 보기
               </Button>
             </Link>
           </div>
-          <div className = "grid md:grid-cols-2 gap-3">
+          <div className = {styles.cardGrid2}>
             {members.map((member, idx) => (
-              <div key = {idx} className = "bg-gradient-to-r from-secondary/50 to-transparent rounded-2xl p-5 border border-border hover:border-primary transition-all"
+              <div key = {idx} className = {styles.contentBox3}
               >
-                <div className = "flex items-center gap-4">
-                  <div className = "w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
-                    <span className = "text-lg font-medium text-primary">
+                <div className = {styles.row3}>
+                  <div className = {styles.row6}>
+                    <span className = {styles.summaryText2}>
                       {member.name[0]}
                     </span>
                   </div>
-                  <div className = "flex-1">
-                    <p className = "font-medium text-lg">{member.name}</p>
-                    <p className = "text-sm text-muted-foreground">{member.level}</p>
+                  <div className = {styles.row7}>
+                    <p className = {styles.summaryText3}>{member.name}</p>
+                    <p className = {styles.descriptionText}>{member.level}</p>
                   </div>
-                  <div className = "text-right">
-                    <p className = "text-sm text-muted-foreground">참여</p>
-                    <p className = "font-medium text-primary">{member.sessions}회</p>
+                  <div className = {styles.rightAlignedBlock}>
+                    <p className = {styles.descriptionText}>참여</p>
+                    <p className = {styles.summaryText4}>{member.sessions}회</p>
                   </div>
                 </div>
               </div>
@@ -156,25 +157,25 @@ export default function GroupDetailPage() {
         </div>
 
         {/* Invite */}
-        <div className = "bg-gradient-to-br from-accent/20 to-accent/5 border-2 border-accent/40 rounded-3xl p-8">
-          <div className = "flex items-start gap-6">
-            <div className = "w-16 h-16 rounded-2xl bg-accent/30 flex items-center justify-center flex-shrink-0">
-              <QrCode className = "w-8 h-8 text-accent-foreground" />
+        <div className = {styles.contentBox4}>
+          <div className = {styles.mediaRow}>
+            <div className = {styles.row8}>
+              <QrCode className = {styles.qrCodeIcon} />
             </div>
-            <div className = "flex-1">
-              <h3 className = "text-xl font-medium mb-2">새로운 멤버 초대하기</h3>
-              <p className = "text-muted-foreground mb-6">
+            <div className = {styles.row7}>
+              <h3 className = {styles.cardTitle}>새로운 멤버 초대하기</h3>
+              <p className = {styles.descriptionText2}>
                 QR 코드나 초대 링크를 공유하여 친구들을 모임에 초대하세요
               </p>
-              <div className = "flex gap-3">
-                <Button className = "rounded-full gap-2" onClick = {() => showMessage('초대 QR 코드를 준비했습니다.')}
+              <div className = {styles.row9}>
+                <Button className = {styles.roundButton3} onClick = {() => showMessage('초대 QR 코드를 준비했습니다.')}
                 >
-                  <QrCode className = "w-4 h-4" />
+                  <QrCode className = {styles.arrowLeftIcon} />
                   QR 코드 생성
                 </Button>
-                <Button variant = "outline" className = "rounded-full gap-2" onClick = {copyInviteLink}
+                <Button variant = "outline" className = {styles.roundButton3} onClick = {copyInviteLink}
                 >
-                  <Share2 className = "w-4 h-4" />
+                  <Share2 className = {styles.arrowLeftIcon} />
                   링크 복사
                 </Button>
               </div>
@@ -183,7 +184,7 @@ export default function GroupDetailPage() {
         </div>
       </div>
       {message && (
-        <div className = "fixed bottom-6 left-1/2 -translate-x-1/2 bg-card border border-border rounded-full px-5 py-3 shadow-xl text-sm font-medium">
+        <div className = {styles.floatingNotice}>
           {message}
         </div>
       )}

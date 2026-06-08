@@ -6,6 +6,7 @@ import { Label } from '../components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { ArrowLeft, UserPlus, User, Award } from 'lucide-react';
 import { useState } from 'react';
+import { styles } from './GuestJoinPage.styles';
 
 export default function GuestJoinPage() {
   const { sessionId } = useParams();
@@ -23,54 +24,54 @@ export default function GuestJoinPage() {
   };
 
   return (
-    <div className = "min-h-screen bg-background">
-      <div className = "border-b border-border bg-card px-4 py-4">
-        <Logo size = "md" className = "justify-center" />
+    <div className = {styles.page}>
+      <div className = {styles.header}>
+        <Logo size = "md" className = {styles.logoWrapper} />
       </div>
 
-      <div className = "max-w-2xl mx-auto px-4 py-12 space-y-8">
-        <Link to = {`/sessions/${sessionId}/join`} className = "inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
-          <ArrowLeft className = "w-4 h-4" />
+      <div className = {styles.content}>
+        <Link to = {`/sessions/${sessionId}/join`} className = {styles.backLink}>
+          <ArrowLeft className = {styles.arrowLeftIcon} />
           돌아가기
         </Link>
 
-        <div className = "text-center space-y-4">
-          <div className = "w-20 h-20 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 mx-auto flex items-center justify-center mb-4">
-            <UserPlus className = "w-10 h-10 text-primary" />
+        <div className = {styles.stack}>
+          <div className = {styles.row}>
+            <UserPlus className = {styles.userPlusIcon} />
           </div>
           <div>
-            <h1 className = "text-4xl font-medium mb-3">비회원 참여</h1>
-            <p className = "text-lg text-muted-foreground">
+            <h1 className = {styles.pageTitle}>비회원 참여</h1>
+            <p className = {styles.descriptionText}>
               간단한 정보만 입력하면 바로 참여할 수 있어요
             </p>
           </div>
         </div>
 
-        <div className = "bg-card border border-border rounded-3xl p-8 md:p-10 shadow-sm">
-          <form onSubmit = {handleSubmit} className = "space-y-8">
+        <div className = {styles.header2}>
+          <form onSubmit = {handleSubmit} className = {styles.form}>
             <div>
-              <h2 className = "text-xl font-medium mb-6 flex items-center gap-3">
-                <div className = "w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <User className = "w-4 h-4 text-primary" />
+              <h2 className = {styles.sectionTitle}>
+                <div className = {styles.row2}>
+                  <User className = {styles.userIcon} />
                 </div>
                 기본 정보
               </h2>
 
-              <div className = "space-y-6">
-                <div className = "space-y-2">
+              <div className = {styles.stack2}>
+                <div className = {styles.stack3}>
                   <Label htmlFor = "name">이름 *</Label>
-                  <Input id = "name" type = "text" placeholder = "이름을 입력하세요" className = "rounded-xl h-12" value = {formData.name} onChange = {(e) => setFormData({ ...formData, name: e.target.value })}
+                  <Input id = "name" type = "text" placeholder = "이름을 입력하세요" className = {styles.input} value = {formData.name} onChange = {(e) => setFormData({ ...formData, name: e.target.value })}
                     required
                   />
                 </div>
 
-                <div className = "grid grid-cols-2 gap-4">
-                  <div className = "space-y-2">
+                <div className = {styles.cardGrid}>
+                  <div className = {styles.stack3}>
                     <Label htmlFor = "gender">성별 *</Label>
                     <Select value = {formData.gender} onValueChange = {(value) => setFormData({ ...formData, gender: value })}
                       required
                     >
-                      <SelectTrigger id = "gender" className = "rounded-xl h-12">
+                      <SelectTrigger id = "gender" className = {styles.input}>
                         <SelectValue placeholder = "선택" />
                       </SelectTrigger>
                       <SelectContent>
@@ -80,12 +81,12 @@ export default function GuestJoinPage() {
                     </Select>
                   </div>
 
-                  <div className = "space-y-2">
+                  <div className = {styles.stack3}>
                     <Label htmlFor = "age">나이대 *</Label>
                     <Select value = {formData.age} onValueChange = {(value) => setFormData({ ...formData, age: value })}
                       required
                     >
-                      <SelectTrigger id = "age" className = "rounded-xl h-12">
+                      <SelectTrigger id = "age" className = {styles.input}>
                         <SelectValue placeholder = "선택" />
                       </SelectTrigger>
                       <SelectContent>
@@ -101,21 +102,21 @@ export default function GuestJoinPage() {
               </div>
             </div>
 
-            <div className = "border-t border-border pt-8">
-              <h2 className = "text-xl font-medium mb-6 flex items-center gap-3">
-                <div className = "w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <Award className = "w-4 h-4 text-primary" />
+            <div className = {styles.footerActions}>
+              <h2 className = {styles.sectionTitle}>
+                <div className = {styles.row2}>
+                  <Award className = {styles.userIcon} />
                 </div>
                 실력 정보
               </h2>
 
-              <div className = "space-y-6">
-                <div className = "space-y-2">
+              <div className = {styles.stack2}>
+                <div className = {styles.stack3}>
                   <Label htmlFor = "level">급수 *</Label>
                   <Select value = {formData.level} onValueChange = {(value) => setFormData({ ...formData, level: value })}
                     required
                   >
-                    <SelectTrigger id = "level" className = "rounded-xl h-12">
+                    <SelectTrigger id = "level" className = {styles.input}>
                       <SelectValue placeholder = "선택하세요" />
                     </SelectTrigger>
                     <SelectContent>
@@ -128,24 +129,24 @@ export default function GuestJoinPage() {
                     <SelectItem value = "SS">SS</SelectItem>
                     </SelectContent>
                   </Select>
-                  <p className = "text-sm text-muted-foreground">
+                  <p className = {styles.descriptionText2}>
                     실력에 맞는 매칭을 위해 정확하게 선택해주세요
                   </p>
                 </div>
 
-                <div className = "bg-secondary/30 rounded-2xl p-6">
-                  <h3 className = "font-medium mb-3">급수 선택 가이드</h3>
-                  <ul className = "space-y-2 text-sm text-muted-foreground">
-                    <li className = "flex items-start gap-2">
-                      <div className = "w-1.5 h-1.5 rounded-full bg-primary mt-1.5 flex-shrink-0" />
+                <div className = {styles.summaryBox}>
+                  <h3 className = {styles.cardTitle}>급수 선택 가이드</h3>
+                  <ul className = {styles.list}>
+                    <li className = {styles.listItem}>
+                      <div className = {styles.row3} />
                       <span><strong>E/D:</strong> 시작 또는 기초 단계</span>
                     </li>
-                    <li className = "flex items-start gap-2">
-                      <div className = "w-1.5 h-1.5 rounded-full bg-primary mt-1.5 flex-shrink-0" />
+                    <li className = {styles.listItem}>
+                      <div className = {styles.row3} />
                       <span><strong>C/B/A:</strong> 기본 랠리와 경기 운영이 가능한 단계</span>
                     </li>
-                    <li className = "flex items-start gap-2">
-                      <div className = "w-1.5 h-1.5 rounded-full bg-primary mt-1.5 flex-shrink-0" />
+                    <li className = {styles.listItem}>
+                      <div className = {styles.row3} />
                       <span><strong>S/SS:</strong> 상위 실력 또는 대회 경험이 많은 단계</span>
                     </li>
                   </ul>
@@ -153,13 +154,13 @@ export default function GuestJoinPage() {
               </div>
             </div>
 
-            <div className = "border-t border-border pt-8 space-y-4">
-              <Button type = "submit" className = "w-full rounded-full h-12 shadow-lg shadow-primary/20" size = "lg">
-                <UserPlus className = "w-5 h-5 mr-2" />
+            <div className = {styles.footerActions2}>
+              <Button type = "submit" className = {styles.submitButton} size = "lg">
+                <UserPlus className = {styles.userPlusIcon2} />
                 참여하기
               </Button>
-              <Link to = {`/sessions/${sessionId}/join`} className = "block">
-                <Button type = "button" variant = "outline" className = "w-full rounded-full h-12" size = "lg">
+              <Link to = {`/sessions/${sessionId}/join`} className = {styles.cardLink}>
+                <Button type = "button" variant = "outline" className = {styles.fullWidthButton} size = "lg">
                   취소
                 </Button>
               </Link>
@@ -167,14 +168,14 @@ export default function GuestJoinPage() {
           </form>
         </div>
 
-        <div className = "bg-gradient-to-br from-secondary/50 to-transparent rounded-2xl p-8 text-center border border-border">
-          <h3 className = "font-medium mb-2">다음에도 ShuttlePlay를 사용하실 예정이라면</h3>
-          <p className = "text-sm text-muted-foreground mb-6">
+        <div className = {styles.contentBox}>
+          <h3 className = {styles.cardTitle2}>다음에도 ShuttlePlay를 사용하실 예정이라면</h3>
+          <p className = {styles.descriptionText3}>
             회원가입하면 내 기록을 관리하고 더 편하게 사용할 수 있어요
           </p>
           <Link to = "/signup">
-            <Button variant = "outline" className = "rounded-full gap-2">
-              <UserPlus className = "w-4 h-4" />
+            <Button variant = "outline" className = {styles.roundButton}>
+              <UserPlus className = {styles.arrowLeftIcon} />
               회원가입하고 더 편하게 사용하기
             </Button>
           </Link>
