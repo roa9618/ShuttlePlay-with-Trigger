@@ -16,7 +16,7 @@ export const styles = {
   descriptionText: 'text-sm text-muted-foreground md:text-base',
   header: 'rounded-3xl border border-border bg-card/90 p-5 shadow-xl shadow-primary/10 backdrop-blur-sm',
   form: 'space-y-3',
-  input: 'h-11 rounded-xl',
+  input: 'h-11 rounded-xl bg-input-background [&:not(:placeholder-shown)]:bg-input-background [&:-webkit-autofill]:[-webkit-text-fill-color:var(--foreground)] [&:-webkit-autofill]:[box-shadow:0_0_0_1000px_var(--input-background)_inset] [&:-webkit-autofill:focus]:[box-shadow:0_0_0_1000px_var(--input-background)_inset]',
   cardLink: 'block text-sm text-muted-foreground hover:text-primary transition-colors text-right w-full',
   submitButton: 'w-full cursor-pointer rounded-full shadow-lg shadow-primary/20',
   row2: 'my-3 flex items-center gap-3',
