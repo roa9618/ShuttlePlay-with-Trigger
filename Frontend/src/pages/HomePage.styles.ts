@@ -13,7 +13,6 @@ export const styles = {
   shuttlecockBottom: 'absolute bottom-10 left-[12%] opacity-[0.1] rotate-[38deg] hidden sm:block',
   calendarDecoration: 'absolute top-28 left-[8%] w-14 h-14 opacity-[0.1] hidden md:block',
   usersDecoration: 'absolute bottom-32 left-[22%] w-16 h-16 opacity-[0.1] hidden md:block',
-  qrDecoration: 'absolute top-[44%] right-[18%] w-12 h-12 opacity-[0.09] hidden md:block',
   clipboardDecoration: 'absolute bottom-[26%] right-[34%] w-11 h-11 opacity-[0.08] hidden lg:block',
   content: 'relative w-full max-w-5xl mx-auto px-4 md:px-8 py-8 md:py-12',
   sectionHeader: 'mb-8 md:mb-10',

@@ -9,8 +9,8 @@ import { styles } from './HomePage.styles';
 export default function HomePage() {
   const mainActions = [
     {
-      title: '오늘 운동 참여',
-      description: 'QR 또는 공유 링크로 들어온 참가자',
+      title: '모임 참여',
+      description: '초대 링크나 QR로 오늘 모임에 참여하세요',
       path: '/sessions/demo/join',
       icon: QrCode,
       badge: '참가자',
@@ -18,7 +18,7 @@ export default function HomePage() {
     },
     {
       title: '모임 운영',
-      description: '출석, 매칭, 결과 입력을 관리',
+      description: '출석, 매칭, 결과 입력을 한곳에서 관리하세요',
       path: '/sessions/demo/dashboard',
       icon: ClipboardCheck,
       badge: '운영자',
@@ -28,7 +28,7 @@ export default function HomePage() {
 
   const quickLinks = [
     { title: '내 모임', path: '/groups', icon: Users },
-    { title: '세션 만들기', path: '/groups/1/create-session', icon: Calendar },
+    { title: '일정 생성', path: '/groups/1/create-session', icon: Calendar },
     { title: '내 기록', path: '/my-record', icon: ClipboardCheck },
     { title: '설정', path: '/settings', icon: Settings },
   ];
@@ -63,7 +63,6 @@ export default function HomePage() {
           <ShuttlecockIcon size = {72} className = {styles.shuttlecockBottom} />
           <Calendar className = {styles.calendarDecoration} />
           <Users className = {styles.usersDecoration} />
-          <QrCode className = {styles.qrDecoration} />
           <ClipboardCheck className = {styles.clipboardDecoration} />
         </div>
 
