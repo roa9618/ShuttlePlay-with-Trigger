@@ -1,4 +1,4 @@
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import Logo from '../components/Logo';
 import ShuttlecockIcon from '../components/ShuttlecockIcon';
 import { Button } from '../components/ui/button';
@@ -9,6 +9,7 @@ import { useEffect, useState } from 'react';
 import googleLogo from '../assets/social/google_logo.svg';
 import kakaoLogo from '../assets/social/kakao_logo.png';
 import naverLogo from '../assets/social/naver_logo.svg';
+import { authenticateMockAccount, startAuthSession } from '../utils/authSession';
 import { styles } from './LoginPage.styles';
 
 type FeedbackField = 'email' | 'password';
@@ -22,6 +23,7 @@ function AppleLogo() {
 }
 
 export default function LoginPage() {
+  const location = useLocation();
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     email: '',
@@ -72,8 +74,21 @@ export default function LoginPage() {
       return;
     }
 
+    const account = authenticateMockAccount(trimmedEmail, formData.password);
+
+    if (!account) {
+      setFieldFeedback({
+        field: 'password',
+        message: '이메일 또는 비밀번호를 확인해주세요.',
+      });
+      return;
+    }
+
     setFieldFeedback(null);
-    navigate('/groups');
+    startAuthSession(account);
+    navigate(location.state?.from ?? '/groups', {
+      replace: true,
+    });
   };
   return (
     <div className = {styles.page}>

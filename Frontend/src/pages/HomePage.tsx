@@ -1,14 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import Logo from '../components/Logo';
 import ShuttlecockIcon from '../components/ShuttlecockIcon';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 import { Calendar, ChevronRight, ClipboardCheck, Download, LogIn, QrCode, Settings, UserPlus, Users } from 'lucide-react';
+import { isAuthenticated } from '../utils/authSession';
 import { usePwaInstall } from '../utils/usePwaInstall';
 import { styles } from './HomePage.styles';
 
 export default function HomePage() {
+  const navigate = useNavigate();
   const { install, isInstalled, installGuide } = usePwaInstall();
   const [toastMessage, setToastMessage] = useState('');
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -21,6 +23,7 @@ export default function HomePage() {
       icon: QrCode,
       badge: '참가자',
       tone: 'accent',
+      requiresAuth: false,
     },
     {
       title: '모임 운영',
@@ -29,6 +32,7 @@ export default function HomePage() {
       icon: ClipboardCheck,
       badge: '운영자',
       tone: 'primary',
+      requiresAuth: true,
     },
   ];
 
@@ -76,6 +80,19 @@ export default function HomePage() {
     }
   };
 
+  const handleProtectedNavigation = (path: string) => {
+    if (isAuthenticated()) {
+      navigate(path);
+      return;
+    }
+
+    navigate('/login', {
+      state: {
+        from: path,
+      },
+    });
+  };
+
   return (
     <div className = {styles.page}>
       <div className = {styles.header}>
@@ -120,6 +137,36 @@ export default function HomePage() {
           <div className = {styles.cardGrid}>
             {mainActions.map((action) => {
               const Icon = action.icon;
+
+              if (action.requiresAuth) {
+                return (
+                  <button
+                    key = {action.title}
+                    type = "button"
+                    className = {styles.cardButton}
+                    onClick = {() => handleProtectedNavigation(action.path)}
+                  >
+                    <div className = {styles.actionCard(action.tone)}>
+                      <div className = {styles.betweenRow}>
+                        <div className = {styles.row2}>
+                          <Icon className = {styles.iconIcon(action.tone)} />
+                        </div>
+                        <Badge className = {styles.actionBadge(action.tone)}>
+                          {action.badge}
+                        </Badge>
+                      </div>
+                      <div className = {styles.betweenRow2}>
+                        <div>
+                          <h2 className = {styles.sectionTitle}>{action.title}</h2>
+                          <p className = {styles.descriptionText2}>{action.description}</p>
+                        </div>
+                        <ChevronRight className = {styles.chevronRightIcon} />
+                      </div>
+                    </div>
+                  </button>
+                );
+              }
+
               return (
                 <Link key = {action.title} to = {action.path} className = {styles.cardLink}>
                   <div className = {styles.actionCard(action.tone)}>
@@ -150,12 +197,17 @@ export default function HomePage() {
               {quickLinks.map((link) => {
                 const Icon = link.icon;
                 return (
-                  <Link key = {link.title} to = {link.path}>
+                  <button
+                    key = {link.title}
+                    type = "button"
+                    className = {styles.quickLinkButton}
+                    onClick = {() => handleProtectedNavigation(link.path)}
+                  >
                     <div className = {styles.summaryBox}>
                       <Icon className = {styles.iconIcon2} />
                       <p className = {styles.summaryText}>{link.title}</p>
                     </div>
-                  </Link>
+                  </button>
                 );
               })}
               <button type = "button" className = {styles.installButton} onClick = {handleInstall}>

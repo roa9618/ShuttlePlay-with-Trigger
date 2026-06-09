@@ -1,5 +1,6 @@
 import { createBrowserRouter } from "react-router-dom";
 import Layout from "../components/Layout";
+import RequireAuth from "../components/RequireAuth";
 import HomePage from "../pages/HomePage";
 import LoginPage from "../pages/LoginPage";
 import SignupPage from "../pages/SignupPage";
@@ -53,23 +54,28 @@ export const router = createBrowserRouter([
       // Large display (no sidebar)
       { path: "sessions/:sessionId/display", Component: DisplayBoardPage, handle: { title: "경기 현황판" } },
 
-      // Desktop-optimized pages (with sidebar) - nested under Layout
-      { path: "groups", Component: GroupListPage, handle: { title: "모임 목록" } },
-      { path: "groups/new", Component: GroupNewPage, handle: { title: "모임 생성" } },
-      { path: "groups/:groupId", Component: GroupDetailPage, handle: { title: "모임 상세" } },
-      { path: "groups/:groupId/members", Component: GroupMembersPage, handle: { title: "구성원 관리" } },
-      { path: "groups/:groupId/settings", Component: GroupSettingsPage, handle: { title: "모임 설정" } },
-      { path: "groups/:groupId/create-session", Component: CreateSessionPage, handle: { title: "운동 일정 만들기" } },
-      { path: "sessions/:sessionId/dashboard", Component: OrganizerDashboardPage, handle: { title: "운영 대시보드" } },
-      { path: "sessions/:sessionId/participants", Component: ParticipantManagementPage, handle: { title: "참가자 관리" } },
-      { path: "sessions/:sessionId/queue", Component: MatchQueuePage, handle: { title: "매칭 대기열" } },
-      { path: "sessions/:sessionId/current", Component: CurrentMatchesPage, handle: { title: "경기 현황" } },
-      { path: "sessions/:sessionId/result/new", Component: MatchResultInputPage, handle: { title: "경기 결과 입력" } },
-      { path: "sessions/:sessionId/result/:matchId/edit", Component: MatchResultEditPage, handle: { title: "경기 결과 수정" } },
-      { path: "my-record", Component: MyRecordPage, handle: { title: "내 기록" } },
-      { path: "sessions/:sessionId/report", Component: SessionReportPage, handle: { title: "세션 리포트" } },
-      { path: "sessions/:sessionId/my-report", Component: ParticipantSessionReportPage, handle: { title: "내 세션 리포트" } },
-      { path: "settings", Component: SettingsPage, handle: { title: "설정" } },
+      {
+        Component: RequireAuth,
+        children: [
+          // Desktop-optimized pages (with sidebar) - nested under Layout
+          { path: "groups", Component: GroupListPage, handle: { title: "모임 목록" } },
+          { path: "groups/new", Component: GroupNewPage, handle: { title: "모임 생성" } },
+          { path: "groups/:groupId", Component: GroupDetailPage, handle: { title: "모임 상세" } },
+          { path: "groups/:groupId/members", Component: GroupMembersPage, handle: { title: "구성원 관리" } },
+          { path: "groups/:groupId/settings", Component: GroupSettingsPage, handle: { title: "모임 설정" } },
+          { path: "groups/:groupId/create-session", Component: CreateSessionPage, handle: { title: "운동 일정 만들기" } },
+          { path: "sessions/:sessionId/dashboard", Component: OrganizerDashboardPage, handle: { title: "운영 대시보드" } },
+          { path: "sessions/:sessionId/participants", Component: ParticipantManagementPage, handle: { title: "참가자 관리" } },
+          { path: "sessions/:sessionId/queue", Component: MatchQueuePage, handle: { title: "매칭 대기열" } },
+          { path: "sessions/:sessionId/current", Component: CurrentMatchesPage, handle: { title: "경기 현황" } },
+          { path: "sessions/:sessionId/result/new", Component: MatchResultInputPage, handle: { title: "경기 결과 입력" } },
+          { path: "sessions/:sessionId/result/:matchId/edit", Component: MatchResultEditPage, handle: { title: "경기 결과 수정" } },
+          { path: "my-record", Component: MyRecordPage, handle: { title: "내 기록" } },
+          { path: "sessions/:sessionId/report", Component: SessionReportPage, handle: { title: "세션 리포트" } },
+          { path: "sessions/:sessionId/my-report", Component: ParticipantSessionReportPage, handle: { title: "내 세션 리포트" } },
+          { path: "settings", Component: SettingsPage, handle: { title: "설정" } },
+        ],
+      },
       { path: "gallery", Component: GalleryPage, handle: { title: "화면 목록" } },
       { path: "*", Component: NotFoundPage, handle: { title: "페이지를 찾을 수 없음" } },
     ],
