@@ -4,6 +4,8 @@ import com.shuttleplay.server.domain.auth.dto.request.CheckEmailRequest;
 import com.shuttleplay.server.domain.auth.dto.request.EmailVerificationConfirmRequest;
 import com.shuttleplay.server.domain.auth.dto.request.EmailVerificationSendRequest;
 import com.shuttleplay.server.domain.auth.dto.request.LoginRequest;
+import com.shuttleplay.server.domain.auth.dto.request.PasswordResetConfirmRequest;
+import com.shuttleplay.server.domain.auth.dto.request.PasswordResetSendRequest;
 import com.shuttleplay.server.domain.auth.dto.request.RegisterRequest;
 import com.shuttleplay.server.domain.auth.dto.request.TokenReissueRequest;
 import com.shuttleplay.server.domain.auth.dto.response.CheckEmailResponse;
@@ -12,12 +14,17 @@ import com.shuttleplay.server.domain.auth.dto.response.EmailVerificationSendResp
 import com.shuttleplay.server.domain.auth.dto.response.LoginResponse;
 import com.shuttleplay.server.domain.auth.dto.response.LoginUserResponse;
 import com.shuttleplay.server.domain.auth.dto.response.LogoutResponse;
+import com.shuttleplay.server.domain.auth.dto.response.PasswordResetConfirmResponse;
+import com.shuttleplay.server.domain.auth.dto.response.PasswordResetSendResponse;
 import com.shuttleplay.server.domain.auth.dto.response.RegisterResponse;
 import com.shuttleplay.server.domain.auth.dto.response.TokenReissueResponse;
 import com.shuttleplay.server.domain.auth.entity.EmailVerification;
+import com.shuttleplay.server.domain.auth.entity.PasswordResetToken;
 import com.shuttleplay.server.domain.auth.entity.RefreshToken;
 import com.shuttleplay.server.domain.auth.repository.EmailVerificationRepository;
+import com.shuttleplay.server.domain.auth.repository.PasswordResetTokenRepository;
 import com.shuttleplay.server.domain.auth.repository.RefreshTokenRepository;
+import com.shuttleplay.server.domain.auth.util.PasswordResetTokenGenerator;
 import com.shuttleplay.server.domain.auth.util.RefreshTokenGenerator;
 import com.shuttleplay.server.domain.auth.util.VerificationCodeGenerator;
 import com.shuttleplay.server.domain.user.entity.User;
@@ -28,8 +35,11 @@ import com.shuttleplay.server.domain.user.util.InitialMmrCalculator;
 import com.shuttleplay.server.global.error.BusinessException;
 import com.shuttleplay.server.global.error.ErrorCode;
 import com.shuttleplay.server.global.security.JwtTokenProvider;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -39,13 +49,18 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class AuthService {
     private static final int EMAIL_VERIFICATION_EXPIRE_MINUTES = 5;
+    private static final int PASSWORD_RESET_TOKEN_EXPIRE_MINUTES = 10;
 
     private final UserRepository userRepository;
     private final EmailVerificationRepository emailVerificationRepository;
+    private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final RefreshTokenRepository refreshTokenRepository;
     private final EmailService emailService;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
+
+    @Value("${app.password-reset-url}")
+    private String passwordResetUrl;
 
     public CheckEmailResponse checkEmail(CheckEmailRequest request) {
         boolean available = !userRepository.existsByEmail(request.getEmail());
@@ -177,6 +192,69 @@ public class AuthService {
         return LogoutResponse.of(userId);
     }
 
+    @Transactional
+    public PasswordResetSendResponse sendPasswordResetLink(PasswordResetSendRequest request) {
+        User user = userRepository.findByEmailAndProvider(request.getEmail(), AuthProvider.LOCAL)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        validateLoginAvailable(user);
+
+        String token = PasswordResetTokenGenerator.generate();
+        LocalDateTime expiresAt = LocalDateTime.now().plusMinutes(PASSWORD_RESET_TOKEN_EXPIRE_MINUTES);
+
+        PasswordResetToken passwordResetToken = PasswordResetToken.create(
+                request.getEmail(),
+                token,
+                expiresAt
+        );
+
+        passwordResetTokenRepository.save(passwordResetToken);
+
+        String resetLink = createPasswordResetLink(token);
+
+        emailService.sendPasswordResetLink(
+                request.getEmail(),
+                resetLink,
+                PASSWORD_RESET_TOKEN_EXPIRE_MINUTES
+        );
+
+        return PasswordResetSendResponse.of(
+                request.getEmail(),
+                PASSWORD_RESET_TOKEN_EXPIRE_MINUTES
+        );
+    }
+
+    @Transactional
+    public PasswordResetConfirmResponse confirmPasswordReset(PasswordResetConfirmRequest request) {
+        validatePasswordConfirm(request.getNewPassword(), request.getNewPasswordConfirm());
+
+        PasswordResetToken passwordResetToken = passwordResetTokenRepository.findByToken(request.getToken())
+                .orElseThrow(() -> new BusinessException(ErrorCode.PASSWORD_RESET_TOKEN_NOT_FOUND));
+
+        validatePasswordResetToken(passwordResetToken);
+
+        User user = userRepository.findByEmailAndProvider(passwordResetToken.getEmail(), AuthProvider.LOCAL)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        validateLoginAvailable(user);
+
+        String encodedPassword = passwordEncoder.encode(request.getNewPassword());
+
+        user.changePassword(encodedPassword);
+        passwordResetToken.use();
+
+        refreshTokenRepository.findByUserIdAndRevokedFalse(user.getId())
+                .ifPresent(RefreshToken::revoke);
+
+        return PasswordResetConfirmResponse.of(user.getEmail(), true);
+    }
+
+    private String createPasswordResetLink(String token) {
+        String encodedToken = URLEncoder.encode(token, StandardCharsets.UTF_8);
+
+        return passwordResetUrl + "?token=" + encodedToken;
+    }
+
     private RefreshToken createRefreshToken(Long userId) {
         refreshTokenRepository.findByUserIdAndRevokedFalse(userId)
                 .ifPresent(RefreshToken::revoke);
@@ -255,6 +333,16 @@ public class AuthService {
 
         if (refreshToken.isInvalid()) {
             throw new BusinessException(ErrorCode.INVALID_REFRESH_TOKEN);
+        }
+    }
+
+    private void validatePasswordResetToken(PasswordResetToken passwordResetToken) {
+        if (passwordResetToken.isExpired()) {
+            throw new BusinessException(ErrorCode.EXPIRED_PASSWORD_RESET_TOKEN);
+        }
+
+        if (passwordResetToken.isInvalid()) {
+            throw new BusinessException(ErrorCode.INVALID_PASSWORD_RESET_TOKEN);
         }
     }
 }
