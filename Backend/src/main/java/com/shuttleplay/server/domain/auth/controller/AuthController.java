@@ -5,11 +5,13 @@ import com.shuttleplay.server.domain.auth.dto.request.EmailVerificationConfirmRe
 import com.shuttleplay.server.domain.auth.dto.request.EmailVerificationSendRequest;
 import com.shuttleplay.server.domain.auth.dto.request.LoginRequest;
 import com.shuttleplay.server.domain.auth.dto.request.RegisterRequest;
+import com.shuttleplay.server.domain.auth.dto.request.TokenReissueRequest;
 import com.shuttleplay.server.domain.auth.dto.response.CheckEmailResponse;
 import com.shuttleplay.server.domain.auth.dto.response.EmailVerificationConfirmResponse;
 import com.shuttleplay.server.domain.auth.dto.response.EmailVerificationSendResponse;
 import com.shuttleplay.server.domain.auth.dto.response.LoginResponse;
 import com.shuttleplay.server.domain.auth.dto.response.RegisterResponse;
+import com.shuttleplay.server.domain.auth.dto.response.TokenReissueResponse;
 import com.shuttleplay.server.domain.auth.service.AuthService;
 import com.shuttleplay.server.global.common.ApiResponse;
 import jakarta.validation.Valid;
@@ -75,5 +77,14 @@ public class AuthController {
         LoginResponse response = authService.login(request);
 
         return ResponseEntity.ok(ApiResponse.success("로그인되었습니다.", response));
+    }
+
+    @PostMapping("/token/reissue")
+    public ResponseEntity<ApiResponse<TokenReissueResponse>> reissueToken(
+            @Valid @RequestBody TokenReissueRequest request
+    ) {
+        TokenReissueResponse response = authService.reissueToken(request);
+
+        return ResponseEntity.ok(ApiResponse.success("토큰이 재발급되었습니다.", response));
     }
 }
