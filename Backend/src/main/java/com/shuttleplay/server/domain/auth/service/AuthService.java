@@ -18,9 +18,11 @@ import com.shuttleplay.server.domain.auth.dto.response.PasswordResetConfirmRespo
 import com.shuttleplay.server.domain.auth.dto.response.PasswordResetSendResponse;
 import com.shuttleplay.server.domain.auth.dto.response.RegisterResponse;
 import com.shuttleplay.server.domain.auth.dto.response.TokenReissueResponse;
+import com.shuttleplay.server.domain.auth.entity.AccessTokenBlacklist;
 import com.shuttleplay.server.domain.auth.entity.EmailVerification;
 import com.shuttleplay.server.domain.auth.entity.PasswordResetToken;
 import com.shuttleplay.server.domain.auth.entity.RefreshToken;
+import com.shuttleplay.server.domain.auth.repository.AccessTokenBlacklistRepository;
 import com.shuttleplay.server.domain.auth.repository.EmailVerificationRepository;
 import com.shuttleplay.server.domain.auth.repository.PasswordResetTokenRepository;
 import com.shuttleplay.server.domain.auth.repository.RefreshTokenRepository;
@@ -55,6 +57,7 @@ public class AuthService {
     private final EmailVerificationRepository emailVerificationRepository;
     private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final AccessTokenBlacklistRepository accessTokenBlacklistRepository;
     private final EmailService emailService;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
@@ -185,9 +188,11 @@ public class AuthService {
     }
 
     @Transactional
-    public LogoutResponse logout(Long userId) {
+    public LogoutResponse logout(Long userId, String accessToken) {
         refreshTokenRepository.findByUserIdAndRevokedFalse(userId)
                 .ifPresent(RefreshToken::revoke);
+
+        blacklistAccessToken(accessToken);
 
         return LogoutResponse.of(userId);
     }
@@ -247,6 +252,21 @@ public class AuthService {
                 .ifPresent(RefreshToken::revoke);
 
         return PasswordResetConfirmResponse.of(user.getEmail(), true);
+    }
+
+    private void blacklistAccessToken(String accessToken) {
+        if (accessTokenBlacklistRepository.existsByToken(accessToken)) {
+            return;
+        }
+
+        LocalDateTime expiresAt = jwtTokenProvider.getExpiresAt(accessToken);
+
+        AccessTokenBlacklist accessTokenBlacklist = AccessTokenBlacklist.create(
+                accessToken,
+                expiresAt
+        );
+
+        accessTokenBlacklistRepository.save(accessTokenBlacklist);
     }
 
     private String createPasswordResetLink(String token) {
