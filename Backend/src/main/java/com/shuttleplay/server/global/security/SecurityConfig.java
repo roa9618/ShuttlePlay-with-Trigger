@@ -34,8 +34,12 @@ public class SecurityConfig {
                                 "/swagger-ui.html",
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
-                                "/v3/api-docs"
+                                "/v3/api-docs",
+                                "/error"
                         ).permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/auth/check-email").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/auth/email-verification/send").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/auth/email-verification/confirm").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/auth/register").permitAll()
                         .anyRequest().authenticated()
                 );
