@@ -29,6 +29,7 @@ export default function LoginPage() {
     email: '',
     password: '',
   });
+  const [rememberLogin, setRememberLogin] = useState(false);
   const [fieldFeedback, setFieldFeedback] = useState<{
     field: FeedbackField;
     message: string;
@@ -85,7 +86,7 @@ export default function LoginPage() {
     }
 
     setFieldFeedback(null);
-    startAuthSession(account);
+    startAuthSession(account, rememberLogin);
     navigate(location.state?.from ?? '/', {
       replace: true,
     });
@@ -155,10 +156,21 @@ export default function LoginPage() {
               />
             </div>
 
-            <Link to = "/password-reset" className = {styles.cardLink}
-            >
-              비밀번호 찾기
-            </Link>
+            <div className = {styles.optionRow}>
+              <label className = {styles.rememberLabel}>
+                <input
+                  type = "checkbox"
+                  className = {styles.rememberCheckbox}
+                  checked = {rememberLogin}
+                  onChange = {(e) => setRememberLogin(e.target.checked)}
+                />
+                <span>자동 로그인</span>
+              </label>
+
+              <Link to = "/password-reset" className = {styles.cardLink}>
+                비밀번호 찾기
+              </Link>
+            </div>
 
             <Button type = "submit" className = {styles.submitButton} size = "lg">
               로그인

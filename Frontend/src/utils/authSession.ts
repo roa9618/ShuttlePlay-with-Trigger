@@ -33,9 +33,7 @@ export function authenticateMockAccount(email: string, password: string) {
   )) ?? null;
 }
 
-export function getAuthSession(): AuthSession | null {
-  const storedSession = window.sessionStorage.getItem(AUTH_SESSION_KEY);
-
+function parseStoredSession(storedSession: string | null, storage: Storage): AuthSession | null {
   if (!storedSession) {
     return null;
   }
@@ -43,9 +41,25 @@ export function getAuthSession(): AuthSession | null {
   try {
     return JSON.parse(storedSession) as AuthSession;
   } catch {
-    window.sessionStorage.removeItem(AUTH_SESSION_KEY);
+    storage.removeItem(AUTH_SESSION_KEY);
     return null;
   }
+}
+
+export function getAuthSession(): AuthSession | null {
+  const sessionStorageSession = parseStoredSession(
+    window.sessionStorage.getItem(AUTH_SESSION_KEY),
+    window.sessionStorage,
+  );
+
+  if (sessionStorageSession) {
+    return sessionStorageSession;
+  }
+
+  return parseStoredSession(
+    window.localStorage.getItem(AUTH_SESSION_KEY),
+    window.localStorage,
+  );
 }
 
 export function isAuthenticated() {
@@ -56,16 +70,21 @@ export function hasRole(role: UserRole) {
   return getAuthSession()?.role === role;
 }
 
-export function startAuthSession(account: MockAccount) {
+export function startAuthSession(account: MockAccount, remember = false) {
   const session: AuthSession = {
     email: account.email,
     name: account.name,
     role: account.role,
   };
 
-  window.sessionStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(session));
+  const storage = remember ? window.localStorage : window.sessionStorage;
+  const unusedStorage = remember ? window.sessionStorage : window.localStorage;
+
+  unusedStorage.removeItem(AUTH_SESSION_KEY);
+  storage.setItem(AUTH_SESSION_KEY, JSON.stringify(session));
 }
 
 export function endAuthSession() {
   window.sessionStorage.removeItem(AUTH_SESSION_KEY);
+  window.localStorage.removeItem(AUTH_SESSION_KEY);
 }

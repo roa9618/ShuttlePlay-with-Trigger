@@ -8,7 +8,7 @@ export const styles = {
   sparklesIcon: 'h-16 w-16 text-primary',
 
   stack: 'relative z-10 flex w-full max-w-md flex-col gap-3',
-  stack2: 'space-y-3 text-center',
+  stack2: 'space-y-4 pt-3 text-center',
   row: 'flex justify-center',
   stack3: 'space-y-1.5',
   titleGroup: 'space-y-2',
