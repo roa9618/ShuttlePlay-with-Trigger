@@ -4,45 +4,40 @@ import lombok.Builder;
 import lombok.Getter;
 
 @Getter
-public class LoginResponse {
+public class TokenReissueResponse {
     private final String accessToken;
     private final String refreshToken;
     private final String tokenType;
     private final long expiresIn;
-    private final Long refreshTokenExpiresIn;
-    private final LoginUserResponse user;
+    private final long refreshTokenExpiresIn;
 
     @Builder
-    private LoginResponse(
+    private TokenReissueResponse(
             String accessToken,
             String refreshToken,
             String tokenType,
             long expiresIn,
-            Long refreshTokenExpiresIn,
-            LoginUserResponse user
+            long refreshTokenExpiresIn
     ) {
         this.accessToken = accessToken;
         this.refreshToken = refreshToken;
         this.tokenType = tokenType;
         this.expiresIn = expiresIn;
         this.refreshTokenExpiresIn = refreshTokenExpiresIn;
-        this.user = user;
     }
 
-    public static LoginResponse of(
+    public static TokenReissueResponse of(
             String accessToken,
             String refreshToken,
             long expiresIn,
-            Long refreshTokenExpiresIn,
-            LoginUserResponse user
+            long refreshTokenExpiresIn
     ) {
-        return LoginResponse.builder()
+        return TokenReissueResponse.builder()
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
                 .tokenType("Bearer")
                 .expiresIn(expiresIn)
                 .refreshTokenExpiresIn(refreshTokenExpiresIn)
-                .user(user)
                 .build();
     }
 }

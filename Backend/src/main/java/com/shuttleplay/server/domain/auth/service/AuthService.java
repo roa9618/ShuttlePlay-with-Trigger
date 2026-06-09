@@ -5,14 +5,19 @@ import com.shuttleplay.server.domain.auth.dto.request.EmailVerificationConfirmRe
 import com.shuttleplay.server.domain.auth.dto.request.EmailVerificationSendRequest;
 import com.shuttleplay.server.domain.auth.dto.request.LoginRequest;
 import com.shuttleplay.server.domain.auth.dto.request.RegisterRequest;
+import com.shuttleplay.server.domain.auth.dto.request.TokenReissueRequest;
 import com.shuttleplay.server.domain.auth.dto.response.CheckEmailResponse;
 import com.shuttleplay.server.domain.auth.dto.response.EmailVerificationConfirmResponse;
 import com.shuttleplay.server.domain.auth.dto.response.EmailVerificationSendResponse;
 import com.shuttleplay.server.domain.auth.dto.response.LoginResponse;
 import com.shuttleplay.server.domain.auth.dto.response.LoginUserResponse;
 import com.shuttleplay.server.domain.auth.dto.response.RegisterResponse;
+import com.shuttleplay.server.domain.auth.dto.response.TokenReissueResponse;
 import com.shuttleplay.server.domain.auth.entity.EmailVerification;
+import com.shuttleplay.server.domain.auth.entity.RefreshToken;
 import com.shuttleplay.server.domain.auth.repository.EmailVerificationRepository;
+import com.shuttleplay.server.domain.auth.repository.RefreshTokenRepository;
+import com.shuttleplay.server.domain.auth.util.RefreshTokenGenerator;
 import com.shuttleplay.server.domain.auth.util.VerificationCodeGenerator;
 import com.shuttleplay.server.domain.user.entity.User;
 import com.shuttleplay.server.domain.user.enums.AuthProvider;
@@ -36,6 +41,7 @@ public class AuthService {
 
     private final UserRepository userRepository;
     private final EmailVerificationRepository emailVerificationRepository;
+    private final RefreshTokenRepository refreshTokenRepository;
     private final EmailService emailService;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
@@ -108,6 +114,7 @@ public class AuthService {
         return RegisterResponse.from(savedUser);
     }
 
+    @Transactional
     public LoginResponse login(LoginRequest request) {
         User user = userRepository.findByEmailAndProvider(request.getEmail(), AuthProvider.LOCAL)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
@@ -117,11 +124,64 @@ public class AuthService {
 
         String accessToken = jwtTokenProvider.createAccessToken(user);
 
+        String refreshToken = null;
+        Long refreshTokenExpiresIn = null;
+
+        if (request.isAutoLogin()) {
+            RefreshToken savedRefreshToken = createRefreshToken(user.getId());
+
+            refreshToken = savedRefreshToken.getToken();
+            refreshTokenExpiresIn = jwtTokenProvider.getRefreshTokenExpirationMillis();
+        }
+
         return LoginResponse.of(
                 accessToken,
+                refreshToken,
                 jwtTokenProvider.getAccessTokenExpirationMillis(),
+                refreshTokenExpiresIn,
                 LoginUserResponse.from(user)
         );
+    }
+
+    @Transactional
+    public TokenReissueResponse reissueToken(TokenReissueRequest request) {
+        RefreshToken refreshToken = refreshTokenRepository.findByToken(request.getRefreshToken())
+                .orElseThrow(() -> new BusinessException(ErrorCode.REFRESH_TOKEN_NOT_FOUND));
+
+        validateRefreshToken(refreshToken);
+
+        User user = userRepository.findById(refreshToken.getUserId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        validateLoginAvailable(user);
+
+        refreshToken.revoke();
+
+        String newAccessToken = jwtTokenProvider.createAccessToken(user);
+        RefreshToken newRefreshToken = createRefreshToken(user.getId());
+
+        return TokenReissueResponse.of(
+                newAccessToken,
+                newRefreshToken.getToken(),
+                jwtTokenProvider.getAccessTokenExpirationMillis(),
+                jwtTokenProvider.getRefreshTokenExpirationMillis()
+        );
+    }
+
+    private RefreshToken createRefreshToken(Long userId) {
+        refreshTokenRepository.findByUserIdAndRevokedFalse(userId)
+                .ifPresent(RefreshToken::revoke);
+
+        LocalDateTime expiresAt = LocalDateTime.now()
+                .plusNanos(jwtTokenProvider.getRefreshTokenExpirationMillis() * 1_000_000);
+
+        RefreshToken refreshToken = RefreshToken.create(
+                userId,
+                RefreshTokenGenerator.generate(),
+                expiresAt
+        );
+
+        return refreshTokenRepository.save(refreshToken);
     }
 
     private void validateEmailAvailable(String email) {
@@ -176,6 +236,16 @@ public class AuthService {
     private void validatePassword(String rawPassword, String encodedPassword) {
         if (encodedPassword == null || !passwordEncoder.matches(rawPassword, encodedPassword)) {
             throw new BusinessException(ErrorCode.INVALID_PASSWORD);
+        }
+    }
+
+    private void validateRefreshToken(RefreshToken refreshToken) {
+        if (refreshToken.isExpired()) {
+            throw new BusinessException(ErrorCode.EXPIRED_REFRESH_TOKEN);
+        }
+
+        if (refreshToken.isInvalid()) {
+            throw new BusinessException(ErrorCode.INVALID_REFRESH_TOKEN);
         }
     }
 }

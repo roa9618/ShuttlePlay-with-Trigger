@@ -18,13 +18,16 @@ import org.springframework.stereotype.Component;
 public class JwtTokenProvider {
     private final SecretKey secretKey;
     private final long accessTokenExpirationMillis;
+    private final long refreshTokenExpirationMillis;
 
     public JwtTokenProvider(
             @Value("${jwt.secret}") String secret,
-            @Value("${jwt.access-token-expiration-millis}") long accessTokenExpirationMillis
+            @Value("${jwt.access-token-expiration-millis}") long accessTokenExpirationMillis,
+            @Value("${jwt.refresh-token-expiration-millis}") long refreshTokenExpirationMillis
     ) {
         this.secretKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
         this.accessTokenExpirationMillis = accessTokenExpirationMillis;
+        this.refreshTokenExpirationMillis = refreshTokenExpirationMillis;
     }
 
     public String createAccessToken(User user) {
@@ -49,6 +52,10 @@ public class JwtTokenProvider {
 
     public long getAccessTokenExpirationMillis() {
         return accessTokenExpirationMillis;
+    }
+
+    public long getRefreshTokenExpirationMillis() {
+        return refreshTokenExpirationMillis;
     }
 
     public boolean validateToken(String token) {
