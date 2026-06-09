@@ -11,6 +11,7 @@ import com.shuttleplay.server.domain.auth.dto.response.EmailVerificationConfirmR
 import com.shuttleplay.server.domain.auth.dto.response.EmailVerificationSendResponse;
 import com.shuttleplay.server.domain.auth.dto.response.LoginResponse;
 import com.shuttleplay.server.domain.auth.dto.response.LoginUserResponse;
+import com.shuttleplay.server.domain.auth.dto.response.LogoutResponse;
 import com.shuttleplay.server.domain.auth.dto.response.RegisterResponse;
 import com.shuttleplay.server.domain.auth.dto.response.TokenReissueResponse;
 import com.shuttleplay.server.domain.auth.entity.EmailVerification;
@@ -166,6 +167,14 @@ public class AuthService {
                 jwtTokenProvider.getAccessTokenExpirationMillis(),
                 jwtTokenProvider.getRefreshTokenExpirationMillis()
         );
+    }
+
+    @Transactional
+    public LogoutResponse logout(Long userId) {
+        refreshTokenRepository.findByUserIdAndRevokedFalse(userId)
+                .ifPresent(RefreshToken::revoke);
+
+        return LogoutResponse.of(userId);
     }
 
     private RefreshToken createRefreshToken(Long userId) {
