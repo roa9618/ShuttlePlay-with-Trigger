@@ -1,5 +1,6 @@
 package com.shuttleplay.server.global.security;
 
+import com.shuttleplay.server.domain.auth.repository.AccessTokenBlacklistRepository;
 import com.shuttleplay.server.global.error.BusinessException;
 import com.shuttleplay.server.global.error.ErrorCode;
 import jakarta.servlet.FilterChain;
@@ -22,6 +23,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenProvider jwtTokenProvider;
     private final CustomUserDetailsService customUserDetailsService;
+    private final AccessTokenBlacklistRepository accessTokenBlacklistRepository;
 
     @Override
     protected void doFilterInternal(
@@ -32,24 +34,35 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String token = resolveToken(request);
 
         try {
-            if (StringUtils.hasText(token) && jwtTokenProvider.validateToken(token)) {
-                Long userId = jwtTokenProvider.getUserId(token);
-                CustomUserDetails userDetails = customUserDetailsService.loadUserById(userId);
+            if (StringUtils.hasText(token)) {
+                validateNotBlacklisted(token);
 
-                UsernamePasswordAuthenticationToken authentication =
-                        new UsernamePasswordAuthenticationToken(
-                                userDetails,
-                                null,
-                                userDetails.getAuthorities()
-                        );
+                if (jwtTokenProvider.validateToken(token)) {
+                    Long userId = jwtTokenProvider.getUserId(token);
+                    CustomUserDetails userDetails = customUserDetailsService.loadUserById(userId);
 
-                SecurityContextHolder.getContext().setAuthentication(authentication);
+                    UsernamePasswordAuthenticationToken authentication =
+                            new UsernamePasswordAuthenticationToken(
+                                    userDetails,
+                                    null,
+                                    userDetails.getAuthorities()
+                            );
+
+                    SecurityContextHolder.getContext().setAuthentication(authentication);
+                }
             }
         } catch (BusinessException exception) {
+            SecurityContextHolder.clearContext();
             request.setAttribute("exception", exception.getErrorCode());
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    private void validateNotBlacklisted(String token) {
+        if (accessTokenBlacklistRepository.existsByToken(token)) {
+            throw new BusinessException(ErrorCode.BLACKLISTED_TOKEN);
+        }
     }
 
     private String resolveToken(HttpServletRequest request) {

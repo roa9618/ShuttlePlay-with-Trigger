@@ -20,11 +20,13 @@ import com.shuttleplay.server.domain.auth.dto.response.TokenReissueResponse;
 import com.shuttleplay.server.domain.auth.service.AuthService;
 import com.shuttleplay.server.global.common.ApiResponse;
 import com.shuttleplay.server.global.security.CustomUserDetails;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -34,6 +36,9 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
 public class AuthController {
+    private static final String AUTHORIZATION_HEADER = "Authorization";
+    private static final String BEARER_PREFIX = "Bearer ";
+
     private final AuthService authService;
 
     @PostMapping("/check-email")
@@ -97,9 +102,11 @@ public class AuthController {
 
     @PostMapping("/logout")
     public ResponseEntity<ApiResponse<LogoutResponse>> logout(
-            @AuthenticationPrincipal CustomUserDetails userDetails
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            HttpServletRequest request
     ) {
-        LogoutResponse response = authService.logout(userDetails.getId());
+        String accessToken = resolveAccessToken(request);
+        LogoutResponse response = authService.logout(userDetails.getId(), accessToken);
 
         return ResponseEntity.ok(ApiResponse.success("로그아웃되었습니다.", response));
     }
@@ -120,5 +127,15 @@ public class AuthController {
         PasswordResetConfirmResponse response = authService.confirmPasswordReset(request);
 
         return ResponseEntity.ok(ApiResponse.success("비밀번호가 재설정되었습니다.", response));
+    }
+
+    private String resolveAccessToken(HttpServletRequest request) {
+        String bearerToken = request.getHeader(AUTHORIZATION_HEADER);
+
+        if (StringUtils.hasText(bearerToken) && bearerToken.startsWith(BEARER_PREFIX)) {
+            return bearerToken.substring(BEARER_PREFIX.length());
+        }
+
+        return null;
     }
 }

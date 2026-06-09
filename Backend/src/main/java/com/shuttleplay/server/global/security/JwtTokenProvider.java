@@ -9,6 +9,8 @@ import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Date;
 import javax.crypto.SecretKey;
 import org.springframework.beans.factory.annotation.Value;
@@ -48,6 +50,15 @@ public class JwtTokenProvider {
         Claims claims = parseClaims(token);
 
         return Long.parseLong(claims.getSubject());
+    }
+
+    public LocalDateTime getExpiresAt(String token) {
+        Claims claims = parseClaims(token);
+
+        return claims.getExpiration()
+                .toInstant()
+                .atZone(ZoneId.systemDefault())
+                .toLocalDateTime();
     }
 
     public long getAccessTokenExpirationMillis() {

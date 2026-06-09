@@ -19,8 +19,11 @@ public enum ErrorCode {
     INACTIVE_USER(HttpStatus.FORBIDDEN, "INACTIVE_USER", "비활성화된 사용자입니다."),
     DELETED_USER(HttpStatus.FORBIDDEN, "DELETED_USER", "탈퇴한 사용자입니다."),
     SOCIAL_ACCOUNT_LOGIN_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "SOCIAL_ACCOUNT_LOGIN_NOT_ALLOWED", "소셜 로그인 계정은 일반 로그인을 사용할 수 없습니다."),
+
     INVALID_TOKEN(HttpStatus.UNAUTHORIZED, "INVALID_TOKEN", "유효하지 않은 토큰입니다."),
     EXPIRED_TOKEN(HttpStatus.UNAUTHORIZED, "EXPIRED_TOKEN", "만료된 토큰입니다."),
+    BLACKLISTED_TOKEN(HttpStatus.UNAUTHORIZED, "BLACKLISTED_TOKEN", "로그아웃되어 사용할 수 없는 토큰입니다."),
+
     REFRESH_TOKEN_NOT_FOUND(HttpStatus.UNAUTHORIZED, "REFRESH_TOKEN_NOT_FOUND", "Refresh Token을 찾을 수 없습니다."),
     INVALID_REFRESH_TOKEN(HttpStatus.UNAUTHORIZED, "INVALID_REFRESH_TOKEN", "유효하지 않은 Refresh Token입니다."),
     EXPIRED_REFRESH_TOKEN(HttpStatus.UNAUTHORIZED, "EXPIRED_REFRESH_TOKEN", "만료된 Refresh Token입니다."),
