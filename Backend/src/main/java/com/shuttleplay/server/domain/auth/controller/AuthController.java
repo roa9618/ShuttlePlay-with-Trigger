@@ -10,14 +10,17 @@ import com.shuttleplay.server.domain.auth.dto.response.CheckEmailResponse;
 import com.shuttleplay.server.domain.auth.dto.response.EmailVerificationConfirmResponse;
 import com.shuttleplay.server.domain.auth.dto.response.EmailVerificationSendResponse;
 import com.shuttleplay.server.domain.auth.dto.response.LoginResponse;
+import com.shuttleplay.server.domain.auth.dto.response.LogoutResponse;
 import com.shuttleplay.server.domain.auth.dto.response.RegisterResponse;
 import com.shuttleplay.server.domain.auth.dto.response.TokenReissueResponse;
 import com.shuttleplay.server.domain.auth.service.AuthService;
 import com.shuttleplay.server.global.common.ApiResponse;
+import com.shuttleplay.server.global.security.CustomUserDetails;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -86,5 +89,14 @@ public class AuthController {
         TokenReissueResponse response = authService.reissueToken(request);
 
         return ResponseEntity.ok(ApiResponse.success("토큰이 재발급되었습니다.", response));
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<ApiResponse<LogoutResponse>> logout(
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        LogoutResponse response = authService.logout(userDetails.getId());
+
+        return ResponseEntity.ok(ApiResponse.success("로그아웃되었습니다.", response));
     }
 }
