@@ -20,13 +20,13 @@ import org.springframework.stereotype.Service;
 public class EmailService {
     private final ObjectProvider<JavaMailSender> javaMailSenderProvider;
 
-    @Value("${spring.mail.from:${spring.mail.username:}}")
+    @Value("${spring.mail.from:}")
     private String sender;
 
     public void sendVerificationCode(String email, String code, int expiresInMinutes) {
         JavaMailSender mailSender = javaMailSenderProvider.getIfAvailable();
 
-        if (mailSender == null) {
+        if (mailSender == null || sender == null || sender.isBlank()) {
             log.info("[ShuttlePlay 이메일 인증 코드] email={}, code={}, expiresInMinutes={}", email, code, expiresInMinutes);
             return;
         }
@@ -35,14 +35,11 @@ public class EmailService {
             MimeMessage mimeMessage = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(
                     mimeMessage,
-                    false,
+                    true,
                     StandardCharsets.UTF_8.name()
             );
 
-            if (sender != null && !sender.isBlank()) {
-                helper.setFrom(sender);
-            }
-
+            helper.setFrom(sender);
             helper.setTo(email);
             helper.setSubject("[ShuttlePlay] 이메일 인증 코드 안내");
             helper.setText(
