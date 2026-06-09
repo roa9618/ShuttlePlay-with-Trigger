@@ -6,11 +6,12 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Sparkles } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { useActionFeedback } from '../utils/useActionFeedback';
 import googleLogo from '../assets/social/google_logo.svg';
 import kakaoLogo from '../assets/social/kakao_logo.png';
 import naverLogo from '../assets/social/naver_logo.svg';
 import { styles } from './LoginPage.styles';
+
+type FeedbackField = 'email' | 'password';
 
 function AppleLogo() {
   return (
@@ -22,11 +23,14 @@ function AppleLogo() {
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { message, showMessage } = useActionFeedback();
   const [formData, setFormData] = useState({
-    loginId: '',
+    email: '',
     password: '',
   });
+  const [fieldFeedback, setFieldFeedback] = useState<{
+    field: FeedbackField;
+    message: string;
+  } | null>(null);
 
   const socialProviders = [
     { name: '구글', loginLabel: '구글로 로그인', image: googleLogo, tone: 'google' },
@@ -41,6 +45,34 @@ export default function LoginPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    const trimmedEmail = formData.email.trim();
+
+    if (!trimmedEmail) {
+      setFieldFeedback({
+        field: 'email',
+        message: '이메일을 입력해주세요.',
+      });
+      return;
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      setFieldFeedback({
+        field: 'email',
+        message: '올바른 이메일 형식으로 입력해주세요.',
+      });
+      return;
+    }
+
+    if (!formData.password) {
+      setFieldFeedback({
+        field: 'password',
+        message: '비밀번호를 입력해주세요.',
+      });
+      return;
+    }
+
+    setFieldFeedback(null);
     navigate('/groups');
   };
   return (
@@ -73,17 +105,37 @@ export default function LoginPage() {
         </div>
 
         <div className = {styles.header}>
-          <form onSubmit = {handleSubmit} className = {styles.form}>
+          <form onSubmit = {handleSubmit} className = {styles.form} noValidate>
             <div className = {styles.stack3}>
-              <Label htmlFor = "loginId">아이디</Label>
-              <Input id = "loginId" type = "text" placeholder = "아이디를 입력하세요" className = {styles.input} value = {formData.loginId} onChange = {(e) => setFormData({ ...formData, loginId: e.target.value })}
+              <div className = {styles.labelRow}>
+                <Label htmlFor = "email">이메일</Label>
+                {fieldFeedback?.field === 'email' && (
+                  <span className = {styles.fieldMessage}>
+                    {fieldFeedback.message}
+                  </span>
+                )}
+              </div>
+              <Input id = "email" type = "email" placeholder = "이메일을 입력하세요" className = {styles.input} value = {formData.email} onChange = {(e) => {
+                setFormData({ ...formData, email: e.target.value });
+                setFieldFeedback((current) => current?.field === 'email' ? null : current);
+              }}
                 required
               />
             </div>
 
             <div className = {styles.stack3}>
-              <Label htmlFor = "password">비밀번호</Label>
-              <Input id = "password" type = "password" placeholder = "비밀번호를 입력하세요" className = {styles.input} value = {formData.password} onChange = {(e) => setFormData({ ...formData, password: e.target.value })}
+              <div className = {styles.labelRow}>
+                <Label htmlFor = "password">비밀번호</Label>
+                {fieldFeedback?.field === 'password' && (
+                  <span className = {styles.fieldMessage}>
+                    {fieldFeedback.message}
+                  </span>
+                )}
+              </div>
+              <Input id = "password" type = "password" placeholder = "비밀번호를 입력하세요" className = {styles.input} value = {formData.password} onChange = {(e) => {
+                setFormData({ ...formData, password: e.target.value });
+                setFieldFeedback((current) => current?.field === 'password' ? null : current);
+              }}
                 required
               />
             </div>
@@ -106,8 +158,7 @@ export default function LoginPage() {
 
           <div className = {styles.stack4}>
             {socialProviders.map((provider) => (
-              <Button key = {provider.name} type = "button" variant = "outline" className = {styles.socialButton(provider.tone)} onClick = {() => showMessage(`${provider.name} 로그인 연결을 준비했습니다.`)}
-              >
+              <Button key = {provider.name} type = "button" variant = "outline" className = {styles.socialButton(provider.tone)}>
                 <span className = {styles.inlineText}>
                   {provider.image ? (
                     <img src = {provider.image} alt = "" className = {styles.image} />
@@ -120,11 +171,6 @@ export default function LoginPage() {
             ))}
           </div>
 
-          {message && (
-            <div className = {styles.contentBox}>
-              {message}
-            </div>
-          )}
         </div>
 
         <div className = {styles.centeredBlock}>

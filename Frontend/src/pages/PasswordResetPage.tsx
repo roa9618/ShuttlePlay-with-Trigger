@@ -11,10 +11,25 @@ import { styles } from './PasswordResetPage.styles';
 export default function PasswordResetPage() {
   const [email, setEmail] = useState('');
   const [emailSent, setEmailSent] = useState(false);
+  const [emailFeedback, setEmailFeedback] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    const trimmedEmail = email.trim();
+
+    if (!trimmedEmail) {
+      setEmailFeedback('이메일을 입력해주세요.');
+      return;
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      setEmailFeedback('올바른 이메일 형식으로 입력해주세요.');
+      return;
+    }
+
     // 이메일 전송 처리
+    setEmailFeedback('');
     setEmailSent(true);
   };
 
@@ -48,10 +63,20 @@ export default function PasswordResetPage() {
 
         <div className = {styles.header}>
           {!emailSent ? (
-            <form onSubmit = {handleSubmit} className = {styles.form}>
+            <form onSubmit = {handleSubmit} className = {styles.form} noValidate>
               <div className = {styles.stack}>
-                <Label htmlFor = "email">이메일</Label>
-                <Input id = "email" type = "email" placeholder = "example@email.com" value = {email} onChange = {(e) => setEmail(e.target.value)}
+                <div className = {styles.labelRow}>
+                  <Label htmlFor = "email">이메일</Label>
+                  {emailFeedback && (
+                    <span className = {styles.fieldMessage}>
+                      {emailFeedback}
+                    </span>
+                  )}
+                </div>
+                <Input id = "email" type = "email" placeholder = "example@email.com" value = {email} onChange = {(e) => {
+                  setEmail(e.target.value);
+                  setEmailFeedback('');
+                }}
                   required className = {styles.roundedControl}
                 />
                 <p className = {styles.inputGuideText}>
