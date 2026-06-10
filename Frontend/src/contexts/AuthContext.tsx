@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { ApiClientError } from '../utils/apiClient';
+import { logoutAuth } from '../utils/authApi';
 import {
   endAuthSession,
   getAuthAccessToken,
@@ -82,7 +83,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(() => {
-    clearSession();
+    const accessToken = getAuthAccessToken();
+
+    if (!accessToken) {
+      clearSession();
+      return;
+    }
+
+    void logoutAuth().finally(() => {
+      clearSession();
+    });
   }, [clearSession]);
 
   useEffect(() => {
