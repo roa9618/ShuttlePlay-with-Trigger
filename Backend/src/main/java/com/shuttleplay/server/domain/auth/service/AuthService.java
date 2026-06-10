@@ -113,6 +113,7 @@ public class AuthService {
     public RegisterResponse register(RegisterRequest request) {
         validateEmailAvailable(request.getEmail());
         validatePasswordConfirm(request.getPassword(), request.getPasswordConfirm());
+        validateSignupAgreement(request.getAgreementAccepted());
         validateEmailVerified(request.getEmail());
 
         String encodedPassword = passwordEncoder.encode(request.getPassword());
@@ -292,6 +293,12 @@ public class AuthService {
     private void validateEmailAvailable(String email) {
         if (userRepository.existsByEmail(email)) {
             throw new BusinessException(ErrorCode.DUPLICATE_EMAIL);
+        }
+    }
+
+    private void validateSignupAgreement(Boolean agreementAccepted) {
+        if (!Boolean.TRUE.equals(agreementAccepted)) {
+            throw new BusinessException(ErrorCode.SIGNUP_AGREEMENT_REQUIRED);
         }
     }
 

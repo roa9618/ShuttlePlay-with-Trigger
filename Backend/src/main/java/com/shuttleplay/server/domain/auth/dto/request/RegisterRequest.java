@@ -41,4 +41,6 @@ public class RegisterRequest {
 
     @NotNull(message = "급수는 필수입니다.")
     private Grade grade;
+
+    private Boolean agreementAccepted;
 }

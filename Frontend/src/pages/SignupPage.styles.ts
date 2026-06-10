@@ -45,6 +45,13 @@ export const styles = {
   ruleDefault: 'rounded-full border border-border bg-muted px-2 py-0.5 text-xs text-muted-foreground',
   ruleValid: 'rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary',
 
+  agreementArea: 'space-y-1',
+  agreementRow: 'flex items-center gap-2',
+  agreementCheckbox: 'h-4 w-4 shrink-0 cursor-pointer accent-primary',
+  agreementText: 'min-w-0 text-xs leading-5 text-muted-foreground',
+  agreementLinkButton: 'cursor-pointer border-0 bg-transparent p-0 text-xs font-medium text-primary hover:underline',
+  agreementMessageRow: 'flex justify-end',
+
   buttonRow: 'grid grid-cols-[0.8fr_1.2fr] gap-2 pt-2',
   backButton: 'h-10 w-full cursor-pointer rounded-full border-primary/30 text-primary hover:bg-primary/10 hover:text-primary',
   submitButton: 'h-10 w-full cursor-pointer rounded-full shadow-lg shadow-primary/20',

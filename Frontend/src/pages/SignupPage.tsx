@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import FooterModal from '../components/FooterModal';
 import Logo from '../components/Logo';
 import ShuttlecockIcon from '../components/ShuttlecockIcon';
 import { Button } from '../components/ui/button';
@@ -7,12 +8,13 @@ import { Label } from '../components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Sparkles } from 'lucide-react';
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { footerDocuments, type FooterDocumentKey } from '../utils/footerContent';
 import { styles } from './SignupPage.styles';
 
 type SignupStep = 1 | 2;
 type EmailCheckStatus = 'idle' | 'checking' | 'available' | 'duplicate';
 type EmailVerificationStatus = 'idle' | 'sending' | 'sent' | 'verifying' | 'verified';
-type FeedbackField = 'name' | 'email' | 'verification' | 'password' | 'passwordConfirm' | 'gender' | 'ageGroup' | 'grade';
+type FeedbackField = 'name' | 'email' | 'verification' | 'password' | 'passwordConfirm' | 'gender' | 'ageGroup' | 'grade' | 'agreement';
 type FieldFeedback = {
   field: FeedbackField;
   message: string;
@@ -44,6 +46,8 @@ export default function SignupPage() {
   const [step, setStep] = useState<SignupStep>(1);
   const [signupCompleted, setSignupCompleted] = useState(false);
   const [fieldFeedback, setFieldFeedback] = useState<FieldFeedback>(null);
+  const [agreementChecked, setAgreementChecked] = useState(false);
+  const [selectedDocument, setSelectedDocument] = useState<FooterDocumentKey | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -301,318 +305,368 @@ export default function SignupPage() {
       return;
     }
 
+    if (!agreementChecked) {
+      showFieldFeedback('agreement', '이용약관 및 개인정보 처리방침에 동의해주세요.');
+      return;
+    }
+
     setSignupCompleted(true);
   };
 
   return (
-    <div className = {styles.page}>
-      <div className = {styles.decorativeShape} />
+    <>
+      <div className = {styles.page}>
+        <div className = {styles.decorativeShape} />
 
-      <div className = {styles.decorativeShape2}>
-        <ShuttlecockIcon size = {120} className = {styles.shuttlecockIcon} />
-      </div>
-      <div className = {styles.decorativeShape3}>
-        <ShuttlecockIcon size = {80} className = {styles.shuttlecockIcon} />
-      </div>
-      <div className = {styles.decorativeShape4}>
-        <Sparkles className = {styles.sparklesIcon} />
-      </div>
+        <div className = {styles.decorativeShape2}>
+          <ShuttlecockIcon size = {120} className = {styles.shuttlecockIcon} />
+        </div>
+        <div className = {styles.decorativeShape3}>
+          <ShuttlecockIcon size = {80} className = {styles.shuttlecockIcon} />
+        </div>
+        <div className = {styles.decorativeShape4}>
+          <Sparkles className = {styles.sparklesIcon} />
+        </div>
 
-      <div className = {styles.stack}>
-        <div className = {styles.stack2}>
-          <div className = {styles.row}>
-            <Logo size = "lg" />
+        <div className = {styles.stack}>
+          <div className = {styles.stack2}>
+            <div className = {styles.row}>
+              <Logo size = "lg" />
+            </div>
+
+            <div className = {styles.titleGroup}>
+              <h1 className = {styles.pageTitle}>
+                {signupCompleted ? '회원가입이 완료되었습니다' : '회원가입'}
+              </h1>
+              <p className = {styles.descriptionText}>
+                {signupCompleted
+                  ? '이제 셔틀플레이를 시작할 수 있습니다'
+                  : step === 1
+                    ? '계정 정보를 입력해주세요'
+                    : '플레이 정보를 입력해주세요'}
+              </p>
+            </div>
+
+            {!signupCompleted && (
+              <div className = {styles.stepIndicator}>
+                <div className = {step === 1 ? styles.stepActive : styles.stepDone}>1</div>
+                <div className = {styles.stepLine} />
+                <div className = {step === 2 ? styles.stepActive : styles.stepInactive}>2</div>
+              </div>
+            )}
           </div>
 
-          <div className = {styles.titleGroup}>
-            <h1 className = {styles.pageTitle}>
-              {signupCompleted ? '회원가입이 완료되었습니다' : '회원가입'}
-            </h1>
-            <p className = {styles.descriptionText}>
-              {signupCompleted
-                ? '이제 셔틀플레이를 시작할 수 있습니다'
-                : step === 1
-                  ? '계정 정보를 입력해주세요'
-                  : '플레이 정보를 입력해주세요'}
-            </p>
+          <div className = {styles.header}>
+            {signupCompleted ? (
+              <div className = {styles.completionContent}>
+                <p className = {styles.completionText}>
+                  가입한 이메일과 비밀번호로 로그인해주세요.
+                </p>
+                <Link to = "/login">
+                  <Button type = "button" className = {styles.completionButton} size = "lg">
+                    로그인하러 가기
+                  </Button>
+                </Link>
+              </div>
+            ) : (
+              <form onSubmit = {handleSubmit} className = {styles.form}>
+                {step === 1 && (
+                  <>
+                    <div className = {styles.stack3}>
+                      <div className = {styles.labelRow}>
+                        <Label htmlFor = "name">이름</Label>
+                        {renderFieldFeedback('name')}
+                      </div>
+                      <Input
+                        id = "name"
+                        type = "text"
+                        placeholder = "이름을 입력하세요"
+                        className = {styles.input}
+                        value = {formData.name}
+                        onChange = {(e) => {
+                          setFormData({ ...formData, name: e.target.value });
+                          clearFieldFeedback('name');
+                        }}
+                        required
+                      />
+                    </div>
+
+                    <div className = {styles.stack3}>
+                      <div className = {styles.labelRow}>
+                        <Label htmlFor = "email">이메일</Label>
+                        {renderFieldFeedback('email')}
+                      </div>
+                      <div className = {styles.actionRow}>
+                        <Input
+                          id = "email"
+                          type = "email"
+                          placeholder = "이메일을 입력하세요"
+                          className = {styles.input}
+                          value = {formData.email}
+                          onChange = {(e) => resetEmailValidation(e.target.value)}
+                          disabled = {isEmailLocked}
+                          required
+                        />
+                        <Button
+                          type = "button"
+                          variant = "outline"
+                          className = {styles.inlineButton}
+                          onClick = {handleCheckEmail}
+                          disabled = {emailCheckStatus === 'checking' || isEmailLocked}
+                        >
+                          {emailCheckStatus === 'checking' ? '확인 중' : '중복 확인'}
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className = {styles.stack3}>
+                      <div className = {styles.labelRow}>
+                        <Label htmlFor = "verification-code">이메일 인증</Label>
+                        <div className = {styles.verificationStatus}>
+                          {(emailVerificationStatus === 'sent' || emailVerificationStatus === 'verifying') && (
+                            <span className = {styles.verificationTimer}>
+                              {formattedVerificationTime}
+                            </span>
+                          )}
+                          {renderFieldFeedback('verification')}
+                        </div>
+                      </div>
+                      <div className = {styles.verificationRow}>
+                        <Input
+                          id = "verification-code"
+                          type = "text"
+                          inputMode = "numeric"
+                          maxLength = {6}
+                          placeholder = "인증코드 6자리"
+                          className = {styles.input}
+                          value = {formData.verificationCode}
+                          onChange = {(e) => {
+                            setFormData({ ...formData, verificationCode: e.target.value });
+                            clearFieldFeedback('verification');
+                          }}
+                          disabled = {isVerificationCodeLocked}
+                          required
+                        />
+                        <Button
+                          type = "button"
+                          variant = "outline"
+                          className = {styles.inlineButton}
+                          onClick = {handleSendVerificationCode}
+                          disabled = {!isEmailChecked || emailVerificationStatus === 'sending' || emailVerificationStatus === 'verified'}
+                        >
+                          {emailVerificationStatus === 'sending'
+                            ? '발송 중'
+                            : emailVerificationStatus === 'sent' || emailVerificationStatus === 'verifying'
+                              ? '재발송'
+                              : '코드 발송'}
+                        </Button>
+                        <Button
+                          type = "button"
+                          variant = "outline"
+                          className = {styles.inlineButton}
+                          onClick = {handleVerifyEmailCode}
+                          disabled = {emailVerificationStatus !== 'sent'}
+                        >
+                          {emailVerificationStatus === 'verifying' ? '확인 중' : '인증 확인'}
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className = {styles.stack3}>
+                      <div className = {styles.labelRow}>
+                        <Label htmlFor = "password">비밀번호</Label>
+                        {renderFieldFeedback('password')}
+                      </div>
+                      <Input
+                        id = "password"
+                        type = "password"
+                        placeholder = "영문+숫자 포함 8자 이상"
+                        className = {styles.input}
+                        value = {formData.password}
+                        onChange = {(e) => {
+                          setFormData({ ...formData, password: e.target.value });
+                          clearFieldFeedback('password');
+                        }}
+                        required
+                      />
+                      <div className = {styles.ruleList}>
+                        {passwordRules.map((rule) => {
+                          const isValid = rule.validate(formData.password);
+
+                          return (
+                            <span key = {rule.key} className = {isValid ? styles.ruleValid : styles.ruleDefault}>
+                              {rule.label}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <div className = {styles.stack3}>
+                      <div className = {styles.labelRow}>
+                        <Label htmlFor = "password-confirm">비밀번호 확인</Label>
+                        {renderFieldFeedback('passwordConfirm')}
+                      </div>
+                      <Input
+                        id = "password-confirm"
+                        type = "password"
+                        placeholder = "비밀번호를 다시 입력하세요"
+                        className = {styles.input}
+                        value = {formData.passwordConfirm}
+                        onChange = {(e) => {
+                          setFormData({ ...formData, passwordConfirm: e.target.value });
+                          clearFieldFeedback('passwordConfirm');
+                        }}
+                        required
+                      />
+                    </div>
+
+                    <Button type = "button" className = {styles.submitButton} size = "lg" onClick = {handleNextStep}>
+                      다음 단계
+                    </Button>
+                  </>
+                )}
+
+                {step === 2 && (
+                  <>
+                    <div className = {styles.stack3}>
+                      <div className = {styles.labelRow}>
+                        <Label htmlFor = "gender">성별</Label>
+                        {renderFieldFeedback('gender')}
+                      </div>
+                      <Select value = {formData.gender} onValueChange = {(value) => {
+                        setFormData({ ...formData, gender: value });
+                        clearFieldFeedback('gender');
+                      }} required>
+                        <SelectTrigger id = "gender" className = {styles.input}>
+                          <SelectValue placeholder = "성별 선택" />
+                        </SelectTrigger>
+                        <SelectContent className = {styles.selectContent}>
+                          <SelectItem className = {styles.selectItem} value = "MALE">남성</SelectItem>
+                          <SelectItem className = {styles.selectItem} value = "FEMALE">여성</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className = {styles.stack3}>
+                      <div className = {styles.labelRow}>
+                        <Label htmlFor = "age-group">나이대</Label>
+                        {renderFieldFeedback('ageGroup')}
+                      </div>
+                      <Select value = {formData.ageGroup} onValueChange = {(value) => {
+                        setFormData({ ...formData, ageGroup: value });
+                        clearFieldFeedback('ageGroup');
+                      }} required>
+                        <SelectTrigger id = "age-group" className = {styles.input}>
+                          <SelectValue placeholder = "나이대 선택" />
+                        </SelectTrigger>
+                        <SelectContent className = {styles.selectContent}>
+                          <SelectItem className = {styles.selectItem} value = "TEENS">10대</SelectItem>
+                          <SelectItem className = {styles.selectItem} value = "TWENTIES">20대</SelectItem>
+                          <SelectItem className = {styles.selectItem} value = "THIRTIES">30대</SelectItem>
+                          <SelectItem className = {styles.selectItem} value = "FORTIES">40대</SelectItem>
+                          <SelectItem className = {styles.selectItem} value = "FIFTIES">50대</SelectItem>
+                          <SelectItem className = {styles.selectItem} value = "SIXTIES_AND_ABOVE">60대 이상</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className = {styles.stack3}>
+                      <div className = {styles.labelRow}>
+                        <Label htmlFor = "grade">급수</Label>
+                        {renderFieldFeedback('grade')}
+                      </div>
+                      <Select value = {formData.grade} onValueChange = {(value) => {
+                        setFormData({ ...formData, grade: value });
+                        clearFieldFeedback('grade');
+                      }} required>
+                        <SelectTrigger id = "grade" className = {styles.input}>
+                          <SelectValue placeholder = "급수 선택" />
+                        </SelectTrigger>
+                        <SelectContent className = {styles.selectContent}>
+                          <SelectItem className = {styles.selectItem} value = "E">E</SelectItem>
+                          <SelectItem className = {styles.selectItem} value = "D">D</SelectItem>
+                          <SelectItem className = {styles.selectItem} value = "C">C</SelectItem>
+                          <SelectItem className = {styles.selectItem} value = "B">B</SelectItem>
+                          <SelectItem className = {styles.selectItem} value = "A">A</SelectItem>
+                          <SelectItem className = {styles.selectItem} value = "S">S</SelectItem>
+                          <SelectItem className = {styles.selectItem} value = "SS">SS</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className = {styles.agreementArea}>
+                      <div className = {styles.agreementRow}>
+                        <input
+                          id = "signup-agreement"
+                          type = "checkbox"
+                          className = {styles.agreementCheckbox}
+                          checked = {agreementChecked}
+                          onChange = {(e) => {
+                            setAgreementChecked(e.target.checked);
+                            clearFieldFeedback('agreement');
+                          }}
+                        />
+                        <p className = {styles.agreementText}>
+                          <button
+                            type = "button"
+                            className = {styles.agreementLinkButton}
+                            onClick = {() => setSelectedDocument('terms')}
+                          >
+                            이용약관
+                          </button>
+                          {' 및 '}
+                          <button
+                            type = "button"
+                            className = {styles.agreementLinkButton}
+                            onClick = {() => setSelectedDocument('privacy')}
+                          >
+                            개인정보 처리방침
+                          </button>
+                          에 동의합니다.
+                        </p>
+                      </div>
+
+                      <div className = {styles.agreementMessageRow}>
+                        {renderFieldFeedback('agreement')}
+                      </div>
+                    </div>
+
+                    <div className = {styles.buttonRow}>
+                      <Button
+                        type = "button"
+                        variant = "outline"
+                        className = {styles.backButton}
+                        onClick = {() => setStep(1)}
+                      >
+                        이전
+                      </Button>
+                      <Button type = "submit" className = {styles.submitButton} size = "lg">
+                        회원가입 완료
+                      </Button>
+                    </div>
+                  </>
+                )}
+              </form>
+            )}
           </div>
 
           {!signupCompleted && (
-            <div className = {styles.stepIndicator}>
-              <div className = {step === 1 ? styles.stepActive : styles.stepDone}>1</div>
-              <div className = {styles.stepLine} />
-              <div className = {step === 2 ? styles.stepActive : styles.stepInactive}>2</div>
-            </div>
-          )}
-        </div>
-
-        <div className = {styles.header}>
-          {signupCompleted ? (
-            <div className = {styles.completionContent}>
-              <p className = {styles.completionText}>
-                가입한 이메일과 비밀번호로 로그인해주세요.
-              </p>
-              <Link to = "/login">
-                <Button type = "button" className = {styles.completionButton} size = "lg">
-                  로그인하러 가기
-                </Button>
+            <div className = {styles.centeredBlock}>
+              <span className = {styles.mutedText}>이미 회원이신가요? </span>
+              <Link to = "/login" className = {styles.primaryLink}>
+                로그인
               </Link>
             </div>
-          ) : (
-            <form onSubmit = {handleSubmit} className = {styles.form}>
-            {step === 1 && (
-              <>
-                <div className = {styles.stack3}>
-                  <div className = {styles.labelRow}>
-                    <Label htmlFor = "name">이름</Label>
-                    {renderFieldFeedback('name')}
-                  </div>
-                  <Input
-                    id = "name"
-                    type = "text"
-                    placeholder = "이름을 입력하세요"
-                    className = {styles.input}
-                    value = {formData.name}
-                    onChange = {(e) => {
-                      setFormData({ ...formData, name: e.target.value });
-                      clearFieldFeedback('name');
-                    }}
-                    required
-                  />
-                </div>
-
-                <div className = {styles.stack3}>
-                  <div className = {styles.labelRow}>
-                    <Label htmlFor = "email">이메일</Label>
-                    {renderFieldFeedback('email')}
-                  </div>
-                  <div className = {styles.actionRow}>
-                    <Input
-                      id = "email"
-                      type = "email"
-                      placeholder = "이메일을 입력하세요"
-                      className = {styles.input}
-                      value = {formData.email}
-                      onChange = {(e) => resetEmailValidation(e.target.value)}
-                      disabled = {isEmailLocked}
-                      required
-                    />
-                    <Button
-                      type = "button"
-                      variant = "outline"
-                      className = {styles.inlineButton}
-                      onClick = {handleCheckEmail}
-                      disabled = {emailCheckStatus === 'checking' || isEmailLocked}
-                    >
-                      {emailCheckStatus === 'checking' ? '확인 중' : '중복 확인'}
-                    </Button>
-                  </div>
-                </div>
-
-                <div className = {styles.stack3}>
-                  <div className = {styles.labelRow}>
-                    <Label htmlFor = "verification-code">이메일 인증</Label>
-                    <div className = {styles.verificationStatus}>
-                      {(emailVerificationStatus === 'sent' || emailVerificationStatus === 'verifying') && (
-                        <span className = {styles.verificationTimer}>
-                          {formattedVerificationTime}
-                        </span>
-                      )}
-                      {renderFieldFeedback('verification')}
-                    </div>
-                  </div>
-                  <div className = {styles.verificationRow}>
-                    <Input
-                      id = "verification-code"
-                      type = "text"
-                      inputMode = "numeric"
-                      maxLength = {6}
-                      placeholder = "인증코드 6자리"
-                      className = {styles.input}
-                      value = {formData.verificationCode}
-                      onChange = {(e) => {
-                        setFormData({ ...formData, verificationCode: e.target.value });
-                        clearFieldFeedback('verification');
-                      }}
-                      disabled = {isVerificationCodeLocked}
-                      required
-                    />
-                    <Button
-                      type = "button"
-                      variant = "outline"
-                      className = {styles.inlineButton}
-                      onClick = {handleSendVerificationCode}
-                      disabled = {!isEmailChecked || emailVerificationStatus === 'sending' || emailVerificationStatus === 'verified'}
-                    >
-                      {emailVerificationStatus === 'sending'
-                        ? '발송 중'
-                        : emailVerificationStatus === 'sent' || emailVerificationStatus === 'verifying'
-                          ? '재발송'
-                          : '코드 발송'}
-                    </Button>
-                    <Button
-                      type = "button"
-                      variant = "outline"
-                      className = {styles.inlineButton}
-                      onClick = {handleVerifyEmailCode}
-                      disabled = {emailVerificationStatus !== 'sent'}
-                    >
-                      {emailVerificationStatus === 'verifying' ? '확인 중' : '인증 확인'}
-                    </Button>
-                  </div>
-                </div>
-
-                <div className = {styles.stack3}>
-                  <div className = {styles.labelRow}>
-                    <Label htmlFor = "password">비밀번호</Label>
-                    {renderFieldFeedback('password')}
-                  </div>
-                  <Input
-                    id = "password"
-                    type = "password"
-                    placeholder = "영문+숫자 포함 8자 이상"
-                    className = {styles.input}
-                    value = {formData.password}
-                    onChange = {(e) => {
-                      setFormData({ ...formData, password: e.target.value });
-                      clearFieldFeedback('password');
-                    }}
-                    required
-                  />
-                  <div className = {styles.ruleList}>
-                    {passwordRules.map((rule) => {
-                      const isValid = rule.validate(formData.password);
-
-                      return (
-                        <span key = {rule.key} className = {isValid ? styles.ruleValid : styles.ruleDefault}>
-                          {rule.label}
-                        </span>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div className = {styles.stack3}>
-                  <div className = {styles.labelRow}>
-                    <Label htmlFor = "password-confirm">비밀번호 확인</Label>
-                    {renderFieldFeedback('passwordConfirm')}
-                  </div>
-                  <Input
-                    id = "password-confirm"
-                    type = "password"
-                    placeholder = "비밀번호를 다시 입력하세요"
-                    className = {styles.input}
-                    value = {formData.passwordConfirm}
-                    onChange = {(e) => {
-                      setFormData({ ...formData, passwordConfirm: e.target.value });
-                      clearFieldFeedback('passwordConfirm');
-                    }}
-                    required
-                  />
-                </div>
-
-                <Button type = "button" className = {styles.submitButton} size = "lg" onClick = {handleNextStep}>
-                  다음 단계
-                </Button>
-              </>
-            )}
-
-            {step === 2 && (
-              <>
-                <div className = {styles.stack3}>
-                  <div className = {styles.labelRow}>
-                    <Label htmlFor = "gender">성별</Label>
-                    {renderFieldFeedback('gender')}
-                  </div>
-                  <Select value = {formData.gender} onValueChange = {(value) => {
-                    setFormData({ ...formData, gender: value });
-                    clearFieldFeedback('gender');
-                  }} required>
-                    <SelectTrigger id = "gender" className = {styles.input}>
-                      <SelectValue placeholder = "성별 선택" />
-                    </SelectTrigger>
-                    <SelectContent className = {styles.selectContent}>
-                      <SelectItem className = {styles.selectItem} value = "MALE">남성</SelectItem>
-                      <SelectItem className = {styles.selectItem} value = "FEMALE">여성</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className = {styles.stack3}>
-                  <div className = {styles.labelRow}>
-                    <Label htmlFor = "age-group">나이대</Label>
-                    {renderFieldFeedback('ageGroup')}
-                  </div>
-                  <Select value = {formData.ageGroup} onValueChange = {(value) => {
-                    setFormData({ ...formData, ageGroup: value });
-                    clearFieldFeedback('ageGroup');
-                  }} required>
-                    <SelectTrigger id = "age-group" className = {styles.input}>
-                      <SelectValue placeholder = "나이대 선택" />
-                    </SelectTrigger>
-                    <SelectContent className = {styles.selectContent}>
-                      <SelectItem className = {styles.selectItem} value = "TEENS">10대</SelectItem>
-                      <SelectItem className = {styles.selectItem} value = "TWENTIES">20대</SelectItem>
-                      <SelectItem className = {styles.selectItem} value = "THIRTIES">30대</SelectItem>
-                      <SelectItem className = {styles.selectItem} value = "FORTIES">40대</SelectItem>
-                      <SelectItem className = {styles.selectItem} value = "FIFTIES">50대</SelectItem>
-                      <SelectItem className = {styles.selectItem} value = "SIXTIES_AND_ABOVE">60대 이상</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className = {styles.stack3}>
-                  <div className = {styles.labelRow}>
-                    <Label htmlFor = "grade">급수</Label>
-                    {renderFieldFeedback('grade')}
-                  </div>
-                  <Select value = {formData.grade} onValueChange = {(value) => {
-                    setFormData({ ...formData, grade: value });
-                    clearFieldFeedback('grade');
-                  }} required>
-                    <SelectTrigger id = "grade" className = {styles.input}>
-                      <SelectValue placeholder = "급수 선택" />
-                    </SelectTrigger>
-                    <SelectContent className = {styles.selectContent}>
-                      <SelectItem className = {styles.selectItem} value = "E">E</SelectItem>
-                      <SelectItem className = {styles.selectItem} value = "D">D</SelectItem>
-                      <SelectItem className = {styles.selectItem} value = "C">C</SelectItem>
-                      <SelectItem className = {styles.selectItem} value = "B">B</SelectItem>
-                      <SelectItem className = {styles.selectItem} value = "A">A</SelectItem>
-                      <SelectItem className = {styles.selectItem} value = "S">S</SelectItem>
-                      <SelectItem className = {styles.selectItem} value = "SS">SS</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className = {styles.buttonRow}>
-                  <Button
-                    type = "button"
-                    variant = "outline"
-                    className = {styles.backButton}
-                    onClick = {() => setStep(1)}
-                  >
-                    이전
-                  </Button>
-                  <Button type = "submit" className = {styles.submitButton} size = "lg">
-                    회원가입 완료
-                  </Button>
-                </div>
-              </>
-            )}
-            </form>
           )}
         </div>
-
-        {!signupCompleted && (
-          <div className = {styles.centeredBlock}>
-            <span className = {styles.mutedText}>이미 회원이신가요? </span>
-            <Link to = "/login" className = {styles.primaryLink}>
-              로그인
-            </Link>
-          </div>
-        )}
       </div>
-    </div>
+
+      <FooterModal
+        documentKey = {selectedDocument}
+        document = {selectedDocument ? footerDocuments[selectedDocument] : null}
+        onClose = {() => setSelectedDocument(null)}
+      />
+    </>
   );
 }

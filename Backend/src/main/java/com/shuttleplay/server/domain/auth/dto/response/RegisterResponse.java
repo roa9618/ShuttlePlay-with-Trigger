@@ -13,6 +13,8 @@ public class RegisterResponse {
     private final Grade grade;
     private final Integer doublesMmr;
     private final Integer mixedMmr;
+    private final boolean termsAgreed;
+    private final boolean privacyPolicyAgreed;
 
     @Builder
     private RegisterResponse(
@@ -21,7 +23,9 @@ public class RegisterResponse {
             String name,
             Grade grade,
             Integer doublesMmr,
-            Integer mixedMmr
+            Integer mixedMmr,
+            boolean termsAgreed,
+            boolean privacyPolicyAgreed
     ) {
         this.userId = userId;
         this.email = email;
@@ -29,6 +33,8 @@ public class RegisterResponse {
         this.grade = grade;
         this.doublesMmr = doublesMmr;
         this.mixedMmr = mixedMmr;
+        this.termsAgreed = termsAgreed;
+        this.privacyPolicyAgreed = privacyPolicyAgreed;
     }
 
     public static RegisterResponse from(User user) {
@@ -39,6 +45,8 @@ public class RegisterResponse {
                 .grade(user.getGrade())
                 .doublesMmr(user.getDoublesMmr())
                 .mixedMmr(user.getMixedMmr())
+                .termsAgreed(user.isTermsAgreed())
+                .privacyPolicyAgreed(user.isPrivacyPolicyAgreed())
                 .build();
     }
 }
