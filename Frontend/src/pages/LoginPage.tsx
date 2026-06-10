@@ -5,14 +5,40 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Sparkles } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import googleLogo from '../assets/social/google_logo.svg';
 import kakaoLogo from '../assets/social/kakao_logo.png';
 import naverLogo from '../assets/social/naver_logo.svg';
-import { authenticateMockAccount, startAuthSession } from '../utils/authSession';
+import { API_ORIGIN, ApiClientError, apiClient } from '../utils/apiClient';
+import { startTokenAuthSession, type AuthSession, type UserRole } from '../utils/authSession';
 import { styles } from './LoginPage.styles';
 
 type FeedbackField = 'email' | 'password';
+
+type SocialProvider = {
+  name: string;
+  loginLabel: string;
+  image?: string;
+  icon?: () => ReactNode;
+  tone: string;
+  path?: string;
+};
+
+type LoginResponse = {
+  accessToken: string;
+  refreshToken: string;
+  tokenType: string;
+  expiresIn: number;
+  refreshTokenExpiresIn: number | null;
+  user: {
+    id: number;
+    name: string;
+    email: string;
+    role: UserRole;
+    provider: string;
+    profileCompleted: boolean;
+  };
+};
 
 function AppleLogo() {
   return (
@@ -30,23 +56,59 @@ export default function LoginPage() {
     password: '',
   });
   const [rememberLogin, setRememberLogin] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [fieldFeedback, setFieldFeedback] = useState<{
     field: FeedbackField;
     message: string;
   } | null>(null);
 
-  const socialProviders = [
-    { name: '구글', loginLabel: '구글로 로그인', image: googleLogo, tone: 'google' },
-    { name: '카카오', loginLabel: '카카오로 로그인', image: kakaoLogo, tone: 'kakao' },
-    { name: '네이버', loginLabel: '네이버로 로그인', image: naverLogo, tone: 'naver' },
-    { name: '애플', loginLabel: '애플로 로그인', icon: AppleLogo, tone: 'apple' },
+  const socialProviders: SocialProvider[] = [
+    {
+      name: '구글',
+      loginLabel: '구글로 로그인',
+      image: googleLogo,
+      tone: 'google',
+      path: '/oauth2/authorization/google',
+    },
+    {
+      name: '카카오',
+      loginLabel: '카카오로 로그인',
+      image: kakaoLogo,
+      tone: 'kakao',
+      path: '/oauth2/authorization/kakao',
+    },
+    {
+      name: '네이버',
+      loginLabel: '네이버로 로그인',
+      image: naverLogo,
+      tone: 'naver',
+      path: '/oauth2/authorization/naver',
+    },
+    {
+      name: '애플',
+      loginLabel: '애플로 로그인',
+      icon: AppleLogo,
+      tone: 'apple',
+    },
   ];
 
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSocialLogin = (provider: SocialProvider) => {
+    if (!provider.path) {
+      setFieldFeedback({
+        field: 'password',
+        message: '아직 지원하지 않는 소셜 로그인입니다.',
+      });
+      return;
+    }
+
+    window.location.href = `${API_ORIGIN}${provider.path}`;
+  };
+
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
 
     const trimmedEmail = formData.email.trim();
@@ -75,22 +137,45 @@ export default function LoginPage() {
       return;
     }
 
-    const account = authenticateMockAccount(trimmedEmail, formData.password);
+    try {
+      setIsSubmitting(true);
+      setFieldFeedback(null);
 
-    if (!account) {
+      const response = await apiClient.post<LoginResponse>('/auth/login', {
+        email: trimmedEmail,
+        password: formData.password,
+        autoLogin: rememberLogin,
+      });
+
+      const session: AuthSession = {
+        id: response.user.id,
+        email: response.user.email,
+        name: response.user.name,
+        role: response.user.role,
+        provider: response.user.provider,
+        profileCompleted: response.user.profileCompleted,
+      };
+
+      startTokenAuthSession(session, {
+        accessToken: response.accessToken,
+        refreshToken: response.refreshToken,
+      }, rememberLogin);
+
+      navigate(location.state?.from ?? '/', {
+        replace: true,
+      });
+    } catch (error) {
       setFieldFeedback({
         field: 'password',
-        message: '이메일 또는 비밀번호를 확인해주세요.',
+        message: error instanceof ApiClientError
+          ? error.detail ?? error.message
+          : '로그인 중 오류가 발생했습니다.',
       });
-      return;
+    } finally {
+      setIsSubmitting(false);
     }
-
-    setFieldFeedback(null);
-    startAuthSession(account, rememberLogin);
-    navigate(location.state?.from ?? '/', {
-      replace: true,
-    });
   };
+
   return (
     <div className = {styles.page}>
       {/* Background Pattern */}
@@ -131,10 +216,16 @@ export default function LoginPage() {
                   </span>
                 )}
               </div>
-              <Input id = "email" type = "email" placeholder = "이메일을 입력하세요" className = {styles.input} value = {formData.email} onChange = {(e) => {
-                setFormData({ ...formData, email: e.target.value });
-                setFieldFeedback((current) => current?.field === 'email' ? null : current);
-              }}
+              <Input
+                id = "email"
+                type = "email"
+                placeholder = "이메일을 입력하세요"
+                className = {styles.input}
+                value = {formData.email}
+                onChange = {(e) => {
+                  setFormData({ ...formData, email: e.target.value });
+                  setFieldFeedback((current) => current?.field === 'email' ? null : current);
+                }}
                 required
               />
             </div>
@@ -148,10 +239,16 @@ export default function LoginPage() {
                   </span>
                 )}
               </div>
-              <Input id = "password" type = "password" placeholder = "비밀번호를 입력하세요" className = {styles.input} value = {formData.password} onChange = {(e) => {
-                setFormData({ ...formData, password: e.target.value });
-                setFieldFeedback((current) => current?.field === 'password' ? null : current);
-              }}
+              <Input
+                id = "password"
+                type = "password"
+                placeholder = "비밀번호를 입력하세요"
+                className = {styles.input}
+                value = {formData.password}
+                onChange = {(e) => {
+                  setFormData({ ...formData, password: e.target.value });
+                  setFieldFeedback((current) => current?.field === 'password' ? null : current);
+                }}
                 required
               />
             </div>
@@ -172,7 +269,7 @@ export default function LoginPage() {
               </Link>
             </div>
 
-            <Button type = "submit" className = {styles.submitButton} size = "lg">
+            <Button type = "submit" className = {styles.submitButton} size = "lg" disabled = {isSubmitting}>
               로그인
             </Button>
           </form>
@@ -185,7 +282,13 @@ export default function LoginPage() {
 
           <div className = {styles.stack4}>
             {socialProviders.map((provider) => (
-              <Button key = {provider.name} type = "button" variant = "outline" className = {styles.socialButton(provider.tone)}>
+              <Button
+                key = {provider.name}
+                type = "button"
+                variant = "outline"
+                className = {styles.socialButton(provider.tone)}
+                onClick = {() => handleSocialLogin(provider)}
+              >
                 <span className = {styles.inlineText}>
                   {provider.image ? (
                     <img src = {provider.image} alt = "" className = {styles.image} />
@@ -197,7 +300,6 @@ export default function LoginPage() {
               </Button>
             ))}
           </div>
-
         </div>
 
         <div className = {styles.centeredBlock}>
@@ -206,7 +308,6 @@ export default function LoginPage() {
             회원가입
           </Link>
         </div>
-
       </div>
     </div>
   );

@@ -5,6 +5,8 @@ export type AuthSession = {
   email: string;
   name: string;
   role: UserRole;
+  provider?: string;
+  profileCompleted?: boolean;
 };
 
 export type AuthTokens = {
