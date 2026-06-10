@@ -1,22 +1,26 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import Logo from '../components/Logo';
 import ShuttlecockIcon from '../components/ShuttlecockIcon';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 import { Calendar, ChevronDown, ChevronRight, ClipboardCheck, Download, LogIn, LogOut, QrCode, Settings, UserPlus, Users } from 'lucide-react';
-import { endAuthSession, getAuthSession, isAuthenticated, type AuthSession } from '../utils/authSession';
+import { useAuth } from '../contexts/AuthContext';
+import { getAuthAccessToken, getAuthSession, updateAuthTokens } from '../utils/authSession';
 import { usePwaInstall } from '../utils/usePwaInstall';
 import { styles } from './HomePage.styles';
 
 export default function HomePage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { install, isInstalled, installGuide } = usePwaInstall();
+  const { session, isAuthenticated, refreshSession, setSessionFromStorage, logout } = useAuth();
   const [toastMessage, setToastMessage] = useState('');
-  const [session, setSession] = useState<AuthSession | null>(() => getAuthSession());
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const profileMenuRef = useRef<HTMLDivElement | null>(null);
+  const oauthHandledRef = useRef(false);
+  const displaySession = session ?? (getAuthAccessToken() ? getAuthSession() : null);
 
   const mainActions = [
     {
@@ -45,6 +49,62 @@ export default function HomePage() {
     { title: '내 기록', path: '/my-record', icon: ClipboardCheck },
     { title: '설정', path: '/settings', icon: Settings },
   ];
+
+  useEffect(() => {
+    if (oauthHandledRef.current) {
+      return;
+    }
+
+    const accessToken = searchParams.get('accessToken') ?? searchParams.get('access_token');
+    const refreshToken = searchParams.get('refreshToken') ?? searchParams.get('refresh_token');
+    const profileCompleted = searchParams.get('profileCompleted');
+
+    if (!accessToken || !refreshToken) {
+      return;
+    }
+
+    oauthHandledRef.current = true;
+
+    const handleOAuthRedirect = async () => {
+      updateAuthTokens({
+        accessToken,
+        refreshToken,
+      });
+
+      window.history.replaceState(null, '', window.location.pathname);
+
+      if (profileCompleted === 'false') {
+        navigate('/social-signup', {
+          replace: true,
+        });
+        return;
+      }
+
+      const nextSession = await refreshSession();
+
+      if (nextSession) {
+        navigate('/', {
+          replace: true,
+        });
+        return;
+      }
+
+      navigate('/login', {
+        replace: true,
+        state: {
+          error: '소셜 로그인 정보를 확인할 수 없습니다.',
+        },
+      });
+    };
+
+    handleOAuthRedirect();
+  }, [searchParams, refreshSession, navigate]);
+
+  useEffect(() => {
+    if (!session && getAuthAccessToken()) {
+      setSessionFromStorage();
+    }
+  }, [session, setSessionFromStorage]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -100,7 +160,13 @@ export default function HomePage() {
   };
 
   const handleProtectedNavigation = (path: string) => {
-    if (isAuthenticated()) {
+    const hasAccessToken = getAuthAccessToken() !== null;
+
+    if (isAuthenticated || hasAccessToken) {
+      if (!session) {
+        setSessionFromStorage();
+      }
+
       navigate(path);
       return;
     }
@@ -118,8 +184,7 @@ export default function HomePage() {
   };
 
   const handleLogout = () => {
-    endAuthSession();
-    setSession(null);
+    logout();
     setProfileMenuOpen(false);
     navigate('/', {
       replace: true,
@@ -132,7 +197,7 @@ export default function HomePage() {
         <div className = {styles.headerInner}>
           <Logo size = "md" />
 
-          {session ? (
+          {displaySession ? (
             <div ref = {profileMenuRef} className = {styles.profileMenuWrapper}>
               <button
                 type = "button"
@@ -141,7 +206,7 @@ export default function HomePage() {
                 aria-expanded = {profileMenuOpen}
                 aria-haspopup = "menu"
               >
-                <span className = {styles.profileName}>{session.name}</span>
+                <span className = {styles.profileName}>{displaySession.name}</span>
                 <ChevronDown className = {styles.chevronDownIcon(profileMenuOpen)} />
               </button>
 
@@ -149,11 +214,11 @@ export default function HomePage() {
                 <div className = {styles.profileDropdown} role = "menu">
                   <div className = {styles.profileSummary}>
                     <div className = {styles.profileSummaryAvatar}>
-                      {session.name.slice(0, 1)}
+                      {displaySession.name.slice(0, 1)}
                     </div>
                     <div className = {styles.profileSummaryText}>
-                      <strong className = {styles.profileSummaryName}>{session.name}</strong>
-                      <span className = {styles.profileSummaryEmail}>{session.email}</span>
+                      <strong className = {styles.profileSummaryName}>{displaySession.name}</strong>
+                      <span className = {styles.profileSummaryEmail}>{displaySession.email}</span>
                     </div>
                   </div>
 

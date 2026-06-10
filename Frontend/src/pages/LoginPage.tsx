@@ -9,6 +9,7 @@ import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import googleLogo from '../assets/social/google_logo.svg';
 import kakaoLogo from '../assets/social/kakao_logo.png';
 import naverLogo from '../assets/social/naver_logo.svg';
+import { useAuth } from '../contexts/AuthContext';
 import { API_ORIGIN, ApiClientError, apiClient } from '../utils/apiClient';
 import { startTokenAuthSession, type AuthSession, type UserRole } from '../utils/authSession';
 import { styles } from './LoginPage.styles';
@@ -51,6 +52,7 @@ function AppleLogo() {
 export default function LoginPage() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { setSessionFromStorage } = useAuth();
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -161,6 +163,8 @@ export default function LoginPage() {
         refreshToken: response.refreshToken,
       }, rememberLogin);
 
+      setSessionFromStorage();
+
       navigate(location.state?.from ?? '/', {
         replace: true,
       });
@@ -178,10 +182,8 @@ export default function LoginPage() {
 
   return (
     <div className = {styles.page}>
-      {/* Background Pattern */}
       <div className = {styles.decorativeShape} />
 
-      {/* Decorative Elements */}
       <div className = {styles.decorativeShape2}>
         <ShuttlecockIcon size = {120} className = {styles.shuttlecockIcon} />
       </div>

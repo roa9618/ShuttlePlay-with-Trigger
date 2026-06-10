@@ -9,12 +9,13 @@ import {
   Grid3x3
 } from 'lucide-react';
 import { Button } from './ui/button';
-import { endAuthSession } from '../utils/authSession';
+import { useAuth } from '../contexts/AuthContext';
 import { styles } from './DesktopSidebar.styles';
 
 export default function DesktopSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { logout } = useAuth();
 
   const navigation = [
     { name: '홈', path: '/', icon: Home },
@@ -30,7 +31,7 @@ export default function DesktopSidebar() {
   };
 
   const handleLogout = () => {
-    endAuthSession();
+    logout();
     navigate('/', {
       replace: true,
     });
