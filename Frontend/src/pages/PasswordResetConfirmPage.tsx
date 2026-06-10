@@ -1,11 +1,13 @@
-import { Link } from 'react-router-dom';
-import { useMemo, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { useMemo, useState, type FormEvent } from 'react';
 import Logo from '../components/Logo';
 import ShuttlecockIcon from '../components/ShuttlecockIcon';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Sparkles } from 'lucide-react';
+import { ApiClientError } from '../utils/apiClient';
+import { confirmPasswordReset } from '../utils/authApi';
 import { styles } from './PasswordResetPage.styles';
 
 type FeedbackField = 'password' | 'passwordConfirm';
@@ -29,6 +31,8 @@ const passwordRules = [
 ];
 
 export default function PasswordResetConfirmPage() {
+  const [searchParams] = useSearchParams();
+  const resetToken = searchParams.get('token') ?? '';
   const [formData, setFormData] = useState({
     password: '',
     passwordConfirm: '',
@@ -38,13 +42,22 @@ export default function PasswordResetConfirmPage() {
     message: string;
   } | null>(null);
   const [resetCompleted, setResetCompleted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const isPasswordValid = useMemo(
     () => passwordRules.every((rule) => rule.validate(formData.password)),
     [formData.password],
   );
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+
+    if (!resetToken) {
+      setFieldFeedback({
+        field: 'password',
+        message: '비밀번호 재설정 링크가 올바르지 않습니다.',
+      });
+      return;
+    }
 
     if (!isPasswordValid) {
       setFieldFeedback({
@@ -62,8 +75,35 @@ export default function PasswordResetConfirmPage() {
       return;
     }
 
-    setFieldFeedback(null);
-    setResetCompleted(true);
+    try {
+      setIsSubmitting(true);
+      setFieldFeedback(null);
+
+      const response = await confirmPasswordReset(
+        resetToken,
+        formData.password,
+        formData.passwordConfirm,
+      );
+
+      if (response.resetCompleted === false) {
+        setFieldFeedback({
+          field: 'password',
+          message: '비밀번호 변경에 실패했습니다. 다시 시도해주세요.',
+        });
+        return;
+      }
+
+      setResetCompleted(true);
+    } catch (error) {
+      setFieldFeedback({
+        field: 'password',
+        message: error instanceof ApiClientError
+          ? error.detail ?? error.message
+          : '비밀번호 변경 중 오류가 발생했습니다.',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -108,54 +148,66 @@ export default function PasswordResetConfirmPage() {
             </div>
           ) : (
             <form onSubmit = {handleSubmit} className = {styles.form} noValidate>
-            <div className = {styles.stack}>
-              <div className = {styles.labelRow}>
-                <Label htmlFor = "password">새 비밀번호</Label>
-                {fieldFeedback?.field === 'password' && (
-                  <span className = {styles.fieldMessage}>
-                    {fieldFeedback.message}
-                  </span>
-                )}
-              </div>
-              <Input id = "password" type = "password" placeholder = "새 비밀번호를 입력하세요" value = {formData.password} onChange = {(e) => {
-                setFormData({ ...formData, password: e.target.value });
-                setFieldFeedback((current) => current?.field === 'password' ? null : current);
-              }}
-                required className = {styles.roundedControl}
-              />
-              <div className = {styles.ruleList}>
-                {passwordRules.map((rule) => {
-                  const isValid = rule.validate(formData.password);
-
-                  return (
-                    <span key = {rule.key} className = {isValid ? styles.ruleValid : styles.ruleDefault}>
-                      {rule.label}
+              <div className = {styles.stack}>
+                <div className = {styles.labelRow}>
+                  <Label htmlFor = "password">새 비밀번호</Label>
+                  {fieldFeedback?.field === 'password' && (
+                    <span className = {styles.fieldMessage}>
+                      {fieldFeedback.message}
                     </span>
-                  );
-                })}
-              </div>
-            </div>
+                  )}
+                </div>
+                <Input
+                  id = "password"
+                  type = "password"
+                  placeholder = "새 비밀번호를 입력하세요"
+                  value = {formData.password}
+                  onChange = {(e) => {
+                    setFormData({ ...formData, password: e.target.value });
+                    setFieldFeedback((current) => current?.field === 'password' ? null : current);
+                  }}
+                  required
+                  className = {styles.roundedControl}
+                />
+                <div className = {styles.ruleList}>
+                  {passwordRules.map((rule) => {
+                    const isValid = rule.validate(formData.password);
 
-            <div className = {styles.stack}>
-              <div className = {styles.labelRow}>
-                <Label htmlFor = "password-confirm">새 비밀번호 확인</Label>
-                {fieldFeedback?.field === 'passwordConfirm' && (
-                  <span className = {styles.fieldMessage}>
-                    {fieldFeedback.message}
-                  </span>
-                )}
+                    return (
+                      <span key = {rule.key} className = {isValid ? styles.ruleValid : styles.ruleDefault}>
+                        {rule.label}
+                      </span>
+                    );
+                  })}
+                </div>
               </div>
-              <Input id = "password-confirm" type = "password" placeholder = "새 비밀번호를 다시 입력하세요" value = {formData.passwordConfirm} onChange = {(e) => {
-                setFormData({ ...formData, passwordConfirm: e.target.value });
-                setFieldFeedback((current) => current?.field === 'passwordConfirm' ? null : current);
-              }}
-                required className = {styles.roundedControl}
-              />
-            </div>
 
-            <Button type = "submit" className = {styles.submitButton} size = "lg">
-              비밀번호 변경하기
-            </Button>
+              <div className = {styles.stack}>
+                <div className = {styles.labelRow}>
+                  <Label htmlFor = "password-confirm">새 비밀번호 확인</Label>
+                  {fieldFeedback?.field === 'passwordConfirm' && (
+                    <span className = {styles.fieldMessage}>
+                      {fieldFeedback.message}
+                    </span>
+                  )}
+                </div>
+                <Input
+                  id = "password-confirm"
+                  type = "password"
+                  placeholder = "새 비밀번호를 다시 입력하세요"
+                  value = {formData.passwordConfirm}
+                  onChange = {(e) => {
+                    setFormData({ ...formData, passwordConfirm: e.target.value });
+                    setFieldFeedback((current) => current?.field === 'passwordConfirm' ? null : current);
+                  }}
+                  required
+                  className = {styles.roundedControl}
+                />
+              </div>
+
+              <Button type = "submit" className = {styles.submitButton} size = "lg" disabled = {isSubmitting}>
+                {isSubmitting ? '변경 중' : '비밀번호 변경하기'}
+              </Button>
             </form>
           )}
         </div>

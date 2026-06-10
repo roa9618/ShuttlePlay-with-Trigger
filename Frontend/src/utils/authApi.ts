@@ -36,6 +36,16 @@ export type RegisterResponse = {
   name: string;
 };
 
+export type PasswordResetSendResponse = {
+  email: string;
+  expiresInMinutes: number;
+};
+
+export type PasswordResetConfirmResponse = {
+  email: string;
+  resetCompleted: boolean;
+};
+
 export function logoutAuth() {
   return apiClient.post<LogoutResponse>('/auth/logout', undefined, {
     auth: true,
@@ -63,4 +73,18 @@ export function confirmEmailVerification(email: string, code: string) {
 
 export function registerAuth(request: RegisterRequest) {
   return apiClient.post<RegisterResponse>('/auth/register', request);
+}
+
+export function sendPasswordResetLink(email: string) {
+  return apiClient.post<PasswordResetSendResponse>('/auth/password-reset/send', {
+    email,
+  });
+}
+
+export function confirmPasswordReset(token: string, newPassword: string, newPasswordConfirm: string) {
+  return apiClient.post<PasswordResetConfirmResponse>('/auth/password-reset/confirm', {
+    token,
+    newPassword,
+    newPasswordConfirm,
+  });
 }
