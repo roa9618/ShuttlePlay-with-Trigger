@@ -1,4 +1,9 @@
-import { getAuthAccessToken } from './authSession';
+import {
+  endAuthSession,
+  getAuthAccessToken,
+  getAuthRefreshToken,
+  updateAuthTokens,
+} from './authSession';
 
 export const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api').replace(/\/$/, '');
 export const API_ORIGIN = API_BASE_URL.replace(/\/api$/, '');
@@ -23,6 +28,14 @@ export type ApiResponse<T> = ApiSuccessResponse<T> | ApiErrorResponse;
 type ApiRequestOptions = Omit<RequestInit, 'body'> & {
   body?: unknown;
   auth?: boolean;
+};
+
+type TokenReissueResponse = {
+  accessToken: string;
+  refreshToken: string;
+  tokenType: string;
+  expiresIn: number;
+  refreshTokenExpiresIn: number | null;
 };
 
 export class ApiClientError extends Error {
@@ -61,7 +74,46 @@ async function parseResponse<T>(response: Response): Promise<ApiResponse<T> | nu
   return response.json() as Promise<ApiResponse<T>>;
 }
 
-export async function apiRequest<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
+async function requestTokenReissue() {
+  const refreshToken = getAuthRefreshToken();
+
+  if (!refreshToken) {
+    endAuthSession();
+    return null;
+  }
+
+  const response = await fetch(buildApiUrl('/auth/token/reissue'), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      refreshToken,
+    }),
+  });
+
+  const parsedResponse = await parseResponse<TokenReissueResponse>(response);
+
+  if (!response.ok || !parsedResponse || !parsedResponse.success) {
+    endAuthSession();
+    return null;
+  }
+
+  const nextTokens = {
+    accessToken: parsedResponse.data.accessToken,
+    refreshToken: parsedResponse.data.refreshToken,
+  };
+
+  updateAuthTokens(nextTokens);
+
+  return nextTokens;
+}
+
+async function executeRequest<T>(
+  path: string,
+  options: ApiRequestOptions = {},
+  retried = false,
+): Promise<T> {
   const { body, auth = false, headers, ...requestOptions } = options;
   const requestHeaders = new Headers(headers);
 
@@ -90,6 +142,14 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions = {
 
   const parsedResponse = await parseResponse<T>(response);
 
+  if (response.status === 401 && auth && !retried) {
+    const nextTokens = await requestTokenReissue();
+
+    if (nextTokens) {
+      return executeRequest<T>(path, options, true);
+    }
+  }
+
   if (!response.ok) {
     throw new ApiClientError(
       parsedResponse?.message ?? '요청 처리 중 오류가 발생했습니다.',
@@ -113,6 +173,10 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions = {
   }
 
   return parsedResponse.data;
+}
+
+export async function apiRequest<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
+  return executeRequest<T>(path, options);
 }
 
 export const apiClient = {
