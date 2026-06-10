@@ -97,7 +97,7 @@ export function getAuthRefreshToken() {
 }
 
 export function isAuthenticated() {
-  return getAuthSession() !== null;
+  return getAuthSession() !== null && getAuthAccessToken() !== null;
 }
 
 export function hasRole(role: UserRole) {

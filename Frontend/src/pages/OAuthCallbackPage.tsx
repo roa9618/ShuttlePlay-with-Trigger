@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import Logo from '../components/Logo';
 import ShuttlecockIcon from '../components/ShuttlecockIcon';
 import { Sparkles } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 import { startTokenAuthSession, type AuthSession, type UserRole } from '../utils/authSession';
 import { styles } from './LoginPage.styles';
 
@@ -21,6 +22,7 @@ function normalizeProfileCompleted(value: string | null) {
 export default function OAuthCallbackPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { setSessionFromStorage } = useAuth();
 
   useEffect(() => {
     const error = searchParams.get('error');
@@ -63,10 +65,12 @@ export default function OAuthCallbackPage() {
       refreshToken,
     });
 
+    setSessionFromStorage();
+
     navigate(profileCompleted ? '/groups' : '/social-signup', {
       replace: true,
     });
-  }, [navigate, searchParams]);
+  }, [navigate, searchParams, setSessionFromStorage]);
 
   return (
     <div className = {styles.page}>
