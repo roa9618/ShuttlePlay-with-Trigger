@@ -33,9 +33,9 @@ type ApiRequestOptions = Omit<RequestInit, 'body'> & {
 type TokenReissueResponse = {
   accessToken: string;
   refreshToken: string;
-  tokenType: string;
-  expiresIn: number;
-  refreshTokenExpiresIn: number | null;
+  tokenType?: string;
+  expiresIn?: number;
+  refreshTokenExpiresIn?: number | null;
 };
 
 export class ApiClientError extends Error {
@@ -64,14 +64,43 @@ function isFormData(body: unknown): body is FormData {
   return typeof FormData !== 'undefined' && body instanceof FormData;
 }
 
-async function parseResponse<T>(response: Response): Promise<ApiResponse<T> | null> {
-  const contentType = response.headers.get('content-type');
+function isObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
 
-  if (!contentType?.includes('application/json')) {
+function isWrappedApiResponse<T>(value: unknown): value is ApiResponse<T> {
+  return isObject(value) && typeof value.success === 'boolean';
+}
+
+async function parseJsonResponse(response: Response): Promise<unknown | null> {
+  const text = await response.text();
+
+  if (!text) {
     return null;
   }
 
-  return response.json() as Promise<ApiResponse<T>>;
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
+}
+
+function unwrapResponseData<T>(parsedResponse: unknown, status: number): T {
+  if (!isWrappedApiResponse<T>(parsedResponse)) {
+    return parsedResponse as T;
+  }
+
+  if (!parsedResponse.success) {
+    throw new ApiClientError(
+      parsedResponse.message,
+      status,
+      parsedResponse.error?.code,
+      parsedResponse.error?.detail,
+    );
+  }
+
+  return parsedResponse.data;
 }
 
 async function requestTokenReissue() {
@@ -92,16 +121,23 @@ async function requestTokenReissue() {
     }),
   });
 
-  const parsedResponse = await parseResponse<TokenReissueResponse>(response);
+  const parsedResponse = await parseJsonResponse(response);
 
-  if (!response.ok || !parsedResponse || !parsedResponse.success) {
+  if (!response.ok) {
+    endAuthSession();
+    return null;
+  }
+
+  const reissueData = unwrapResponseData<TokenReissueResponse>(parsedResponse, response.status);
+
+  if (!reissueData?.accessToken || !reissueData?.refreshToken) {
     endAuthSession();
     return null;
   }
 
   const nextTokens = {
-    accessToken: parsedResponse.data.accessToken,
-    refreshToken: parsedResponse.data.refreshToken,
+    accessToken: reissueData.accessToken,
+    refreshToken: reissueData.refreshToken,
   };
 
   updateAuthTokens(nextTokens);
@@ -140,7 +176,7 @@ async function executeRequest<T>(
     body: requestBody,
   });
 
-  const parsedResponse = await parseResponse<T>(response);
+  const parsedResponse = await parseJsonResponse(response);
 
   if (response.status === 401 && auth && !retried) {
     const nextTokens = await requestTokenReissue();
@@ -151,28 +187,23 @@ async function executeRequest<T>(
   }
 
   if (!response.ok) {
-    throw new ApiClientError(
-      parsedResponse?.message ?? '요청 처리 중 오류가 발생했습니다.',
-      response.status,
-      parsedResponse && !parsedResponse.success ? parsedResponse.error?.code : undefined,
-      parsedResponse && !parsedResponse.success ? parsedResponse.error?.detail : undefined,
-    );
+    if (isWrappedApiResponse<T>(parsedResponse) && !parsedResponse.success) {
+      throw new ApiClientError(
+        parsedResponse.message,
+        response.status,
+        parsedResponse.error?.code,
+        parsedResponse.error?.detail,
+      );
+    }
+
+    throw new ApiClientError('요청 처리 중 오류가 발생했습니다.', response.status);
   }
 
-  if (!parsedResponse) {
+  if (parsedResponse === null) {
     return undefined as T;
   }
 
-  if (!parsedResponse.success) {
-    throw new ApiClientError(
-      parsedResponse.message,
-      response.status,
-      parsedResponse.error?.code,
-      parsedResponse.error?.detail,
-    );
-  }
-
-  return parsedResponse.data;
+  return unwrapResponseData<T>(parsedResponse, response.status);
 }
 
 export async function apiRequest<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {

@@ -11,7 +11,13 @@ import kakaoLogo from '../assets/social/kakao_logo.png';
 import naverLogo from '../assets/social/naver_logo.svg';
 import { useAuth } from '../contexts/AuthContext';
 import { API_ORIGIN, ApiClientError, apiClient } from '../utils/apiClient';
-import { startTokenAuthSession, type AuthSession, type UserRole } from '../utils/authSession';
+import {
+  consumeAuthRedirectPath,
+  setAuthRedirectPath,
+  startTokenAuthSession,
+  type AuthSession,
+  type UserRole,
+} from '../utils/authSession';
 import { styles } from './LoginPage.styles';
 
 type FeedbackField = 'email' | 'password';
@@ -94,9 +100,21 @@ export default function LoginPage() {
     },
   ];
 
+  const getReturnPath = () => {
+    if (typeof location.state?.from === 'string') {
+      return location.state.from;
+    }
+
+    return consumeAuthRedirectPath();
+  };
+
   useEffect(() => {
     window.scrollTo(0, 0);
-  }, []);
+
+    if (typeof location.state?.from === 'string') {
+      setAuthRedirectPath(location.state.from);
+    }
+  }, [location.state]);
 
   const handleSocialLogin = (provider: SocialProvider) => {
     if (!provider.path) {
@@ -106,6 +124,8 @@ export default function LoginPage() {
       });
       return;
     }
+
+    setAuthRedirectPath(getReturnPath());
 
     window.location.href = `${API_ORIGIN}${provider.path}`;
   };
@@ -165,7 +185,7 @@ export default function LoginPage() {
 
       setSessionFromStorage();
 
-      navigate(location.state?.from ?? '/', {
+      navigate(getReturnPath(), {
         replace: true,
       });
     } catch (error) {

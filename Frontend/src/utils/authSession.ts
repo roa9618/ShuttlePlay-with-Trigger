@@ -16,6 +16,7 @@ export type AuthTokens = {
 
 const AUTH_SESSION_KEY = 'shuttleplay-auth-session';
 const AUTH_TOKENS_KEY = 'shuttleplay-auth-tokens';
+const AUTH_REDIRECT_PATH_KEY = 'shuttleplay-auth-redirect-path';
 
 function parseStoredValue<T>(storedValue: string | null, storage: Storage, key: string): T | null {
   if (!storedValue) {
@@ -57,6 +58,14 @@ function getActiveStorage() {
     return window.localStorage;
   }
 
+  if (window.sessionStorage.getItem(AUTH_TOKENS_KEY)) {
+    return window.sessionStorage;
+  }
+
+  if (window.localStorage.getItem(AUTH_TOKENS_KEY)) {
+    return window.localStorage;
+  }
+
   return window.sessionStorage;
 }
 
@@ -80,6 +89,23 @@ function persistSession(session: AuthSession, tokens: AuthTokens | null, remembe
   }
 }
 
+function normalizeRedirectPath(path: string | null | undefined) {
+  if (!path || !path.startsWith('/')) {
+    return '/';
+  }
+
+  if (
+    path.startsWith('/login')
+    || path.startsWith('/signup')
+    || path.startsWith('/social-signup')
+    || path.startsWith('/password-reset')
+  ) {
+    return '/';
+  }
+
+  return path;
+}
+
 export function getAuthSession(): AuthSession | null {
   return getStoredValue<AuthSession>(AUTH_SESSION_KEY);
 }
@@ -97,7 +123,7 @@ export function getAuthRefreshToken() {
 }
 
 export function isAuthenticated() {
-  return getAuthSession() !== null && getAuthAccessToken() !== null;
+  return getAuthSession() !== null;
 }
 
 export function hasRole(role: UserRole) {
@@ -131,6 +157,22 @@ export function updateAuthSession(session: AuthSession) {
 
   getInactiveStorage(storage).removeItem(AUTH_SESSION_KEY);
   getInactiveStorage(storage).removeItem(AUTH_TOKENS_KEY);
+}
+
+export function setAuthRedirectPath(path: string | null | undefined) {
+  window.sessionStorage.setItem(AUTH_REDIRECT_PATH_KEY, normalizeRedirectPath(path));
+}
+
+export function getAuthRedirectPath() {
+  return normalizeRedirectPath(window.sessionStorage.getItem(AUTH_REDIRECT_PATH_KEY));
+}
+
+export function consumeAuthRedirectPath() {
+  const redirectPath = getAuthRedirectPath();
+
+  window.sessionStorage.removeItem(AUTH_REDIRECT_PATH_KEY);
+
+  return redirectPath;
 }
 
 export function endAuthSession() {
