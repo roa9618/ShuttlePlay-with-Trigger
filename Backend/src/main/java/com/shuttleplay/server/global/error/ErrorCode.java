@@ -19,6 +19,8 @@ public enum ErrorCode {
     INACTIVE_USER(HttpStatus.FORBIDDEN, "INACTIVE_USER", "비활성화된 사용자입니다."),
     DELETED_USER(HttpStatus.FORBIDDEN, "DELETED_USER", "탈퇴한 사용자입니다."),
     SOCIAL_ACCOUNT_LOGIN_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "SOCIAL_ACCOUNT_LOGIN_NOT_ALLOWED", "소셜 로그인 계정은 일반 로그인을 사용할 수 없습니다."),
+    SOCIAL_ACCOUNT_CANNOT_LOGIN_WITH_PASSWORD(HttpStatus.BAD_REQUEST, "SOCIAL_ACCOUNT_CANNOT_LOGIN_WITH_PASSWORD", "소셜 로그인으로 가입된 계정입니다. 소셜 로그인을 이용해주세요."),
+    SOCIAL_ACCOUNT_CANNOT_RESET_PASSWORD(HttpStatus.BAD_REQUEST, "SOCIAL_ACCOUNT_CANNOT_RESET_PASSWORD", "소셜 로그인 계정은 비밀번호 재설정을 사용할 수 없습니다."),
 
     INVALID_TOKEN(HttpStatus.UNAUTHORIZED, "INVALID_TOKEN", "유효하지 않은 토큰입니다."),
     EXPIRED_TOKEN(HttpStatus.UNAUTHORIZED, "EXPIRED_TOKEN", "만료된 토큰입니다."),
