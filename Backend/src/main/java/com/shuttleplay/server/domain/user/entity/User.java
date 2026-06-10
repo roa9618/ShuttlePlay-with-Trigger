@@ -17,6 +17,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
+import java.time.LocalDateTime;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -94,6 +95,15 @@ public class User extends BaseEntity {
     @Column(nullable = false)
     private boolean profileCompleted;
 
+    @Column(nullable = false)
+    private boolean termsAgreed;
+
+    @Column(nullable = false)
+    private boolean privacyPolicyAgreed;
+
+    @Column
+    private LocalDateTime agreementAgreedAt;
+
     @Builder
     private User(
             String email,
@@ -109,7 +119,10 @@ public class User extends BaseEntity {
             AuthProvider provider,
             String providerId,
             String profileImageUrl,
-            boolean profileCompleted
+            boolean profileCompleted,
+            boolean termsAgreed,
+            boolean privacyPolicyAgreed,
+            LocalDateTime agreementAgreedAt
     ) {
         this.email = email;
         this.password = password;
@@ -125,6 +138,9 @@ public class User extends BaseEntity {
         this.providerId = providerId;
         this.profileImageUrl = profileImageUrl;
         this.profileCompleted = profileCompleted;
+        this.termsAgreed = termsAgreed;
+        this.privacyPolicyAgreed = privacyPolicyAgreed;
+        this.agreementAgreedAt = agreementAgreedAt;
     }
 
     public static User createLocalUser(
@@ -151,6 +167,9 @@ public class User extends BaseEntity {
                 .providerId(null)
                 .profileImageUrl(null)
                 .profileCompleted(true)
+                .termsAgreed(true)
+                .privacyPolicyAgreed(true)
+                .agreementAgreedAt(LocalDateTime.now())
                 .build();
     }
 
@@ -176,6 +195,9 @@ public class User extends BaseEntity {
                 .providerId(providerId)
                 .profileImageUrl(profileImageUrl)
                 .profileCompleted(false)
+                .termsAgreed(false)
+                .privacyPolicyAgreed(false)
+                .agreementAgreedAt(null)
                 .build();
     }
 
