@@ -8,6 +8,12 @@ import { Label } from '../components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Sparkles } from 'lucide-react';
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { ApiClientError } from '../utils/apiClient';
+import {
+  checkEmailAvailability,
+  confirmEmailVerification,
+  sendEmailVerification,
+} from '../utils/authApi';
 import { footerDocuments, type FooterDocumentKey } from '../utils/footerContent';
 import { styles } from './SignupPage.styles';
 
@@ -21,7 +27,6 @@ type FieldFeedback = {
   tone: 'error' | 'success';
 } | null;
 
-const MOCK_REGISTERED_EMAILS = ['test@shuttleplay.kr', 'admin@shuttleplay.kr'];
 const VERIFICATION_TIME_LIMIT = 10 * 60;
 
 const passwordRules = [
@@ -61,7 +66,6 @@ export default function SignupPage() {
 
   const [emailCheckStatus, setEmailCheckStatus] = useState<EmailCheckStatus>('idle');
   const [emailVerificationStatus, setEmailVerificationStatus] = useState<EmailVerificationStatus>('idle');
-  const [issuedVerificationCode, setIssuedVerificationCode] = useState('');
   const [verifiedEmail, setVerifiedEmail] = useState('');
   const [remainingVerificationSeconds, setRemainingVerificationSeconds] = useState(0);
 
@@ -97,7 +101,6 @@ export default function SignupPage() {
     }
 
     setEmailVerificationStatus('idle');
-    setIssuedVerificationCode('');
     setFormData((current) => ({
       ...current,
       verificationCode: '',
@@ -133,7 +136,6 @@ export default function SignupPage() {
     }));
     setEmailCheckStatus('idle');
     setEmailVerificationStatus('idle');
-    setIssuedVerificationCode('');
     setVerifiedEmail('');
     setRemainingVerificationSeconds(0);
     clearFieldFeedback('email');
@@ -153,49 +155,73 @@ export default function SignupPage() {
       return;
     }
 
-    setEmailCheckStatus('checking');
+    try {
+      setEmailCheckStatus('checking');
 
-    await new Promise((resolve) => {
-      window.setTimeout(resolve, 300);
-    });
+      const response = await checkEmailAvailability(trimmedEmail);
 
-    const isDuplicate = MOCK_REGISTERED_EMAILS.includes(trimmedEmail.toLowerCase());
+      if (!response.available) {
+        setEmailCheckStatus('duplicate');
+        showFieldFeedback('email', '이미 사용 중인 이메일입니다.');
+        return;
+      }
 
-    if (isDuplicate) {
-      setEmailCheckStatus('duplicate');
-      showFieldFeedback('email', '이미 사용 중인 이메일입니다.');
-      return;
+      setFormData((current) => ({
+        ...current,
+        email: trimmedEmail,
+      }));
+      setEmailCheckStatus('available');
+      showFieldFeedback('email', '사용 가능한 이메일입니다.', 'success');
+    } catch (error) {
+      setEmailCheckStatus('idle');
+      showFieldFeedback(
+        'email',
+        error instanceof ApiClientError
+          ? error.detail ?? error.message
+          : '이메일 중복 확인 중 오류가 발생했습니다.',
+      );
     }
-
-    setEmailCheckStatus('available');
-    showFieldFeedback('email', '사용 가능한 이메일입니다.', 'success');
   };
 
   const handleSendVerificationCode = async () => {
+    const trimmedEmail = formData.email.trim();
+
     if (!isEmailChecked) {
       showFieldFeedback('email', '먼저 중복 확인을 완료해주세요.');
       return;
     }
 
-    setEmailVerificationStatus('sending');
-    setRemainingVerificationSeconds(VERIFICATION_TIME_LIMIT);
-    setFormData((current) => ({
-      ...current,
-      verificationCode: '',
-    }));
+    try {
+      setEmailVerificationStatus('sending');
+      setFormData((current) => ({
+        ...current,
+        verificationCode: '',
+      }));
 
-    await new Promise((resolve) => {
-      window.setTimeout(resolve, 300);
-    });
+      const response = await sendEmailVerification(trimmedEmail);
+      const expiresInSeconds = response.expiresInMinutes > 0
+        ? response.expiresInMinutes * 60
+        : VERIFICATION_TIME_LIMIT;
 
-    const code = String(Math.floor(100000 + Math.random() * 900000));
-
-    setIssuedVerificationCode(code);
-    setEmailVerificationStatus('sent');
-    showFieldFeedback('verification', `발송 완료 · 개발용 코드 ${code}`, 'success');
+      setRemainingVerificationSeconds(expiresInSeconds);
+      setEmailVerificationStatus('sent');
+      showFieldFeedback('verification', '인증코드를 이메일로 발송했습니다.', 'success');
+    } catch (error) {
+      setEmailVerificationStatus('idle');
+      setRemainingVerificationSeconds(0);
+      showFieldFeedback(
+        'verification',
+        error instanceof ApiClientError
+          ? error.detail ?? error.message
+          : '인증코드 발송 중 오류가 발생했습니다.',
+      );
+    }
   };
 
   const handleVerifyEmailCode = async () => {
+    const trimmedEmail = formData.email.trim();
+    const trimmedCode = formData.verificationCode.trim();
+
     if (emailVerificationStatus !== 'sent') {
       showFieldFeedback('verification', '먼저 인증코드를 발송해주세요.');
       return;
@@ -206,37 +232,40 @@ export default function SignupPage() {
       return;
     }
 
-    if (!formData.verificationCode.trim()) {
+    if (!trimmedCode) {
       showFieldFeedback('verification', '인증코드를 입력해주세요.');
       return;
     }
 
-    setEmailVerificationStatus('verifying');
-
-    await new Promise((resolve) => {
-      window.setTimeout(resolve, 300);
-    });
-
-    if (remainingVerificationSeconds <= 0) {
-      setEmailVerificationStatus('idle');
-      setIssuedVerificationCode('');
-      setFormData((current) => ({
-        ...current,
-        verificationCode: '',
-      }));
-      showFieldFeedback('verification', '인증 시간이 만료되었습니다. 코드를 다시 발송해주세요.');
+    if (!/^\d{6}$/.test(trimmedCode)) {
+      showFieldFeedback('verification', '인증코드는 6자리 숫자로 입력해주세요.');
       return;
     }
 
-    if (formData.verificationCode.trim() !== issuedVerificationCode) {
+    try {
+      setEmailVerificationStatus('verifying');
+
+      const response = await confirmEmailVerification(trimmedEmail, trimmedCode);
+
+      if (!response.verified) {
+        setEmailVerificationStatus('sent');
+        showFieldFeedback('verification', '인증코드가 일치하지 않습니다.');
+        return;
+      }
+
+      setVerifiedEmail(response.email);
+      setEmailVerificationStatus('verified');
+      setRemainingVerificationSeconds(0);
+      showFieldFeedback('verification', '이메일 인증이 완료되었습니다.', 'success');
+    } catch (error) {
       setEmailVerificationStatus('sent');
-      showFieldFeedback('verification', '인증코드가 일치하지 않습니다.');
-      return;
+      showFieldFeedback(
+        'verification',
+        error instanceof ApiClientError
+          ? error.detail ?? error.message
+          : '이메일 인증 확인 중 오류가 발생했습니다.',
+      );
     }
-
-    setVerifiedEmail(formData.email);
-    setEmailVerificationStatus('verified');
-    showFieldFeedback('verification', '이메일 인증이 완료되었습니다.', 'success');
   };
 
   const validateAccountStep = () => {
@@ -452,7 +481,7 @@ export default function SignupPage() {
                           variant = "outline"
                           className = {styles.inlineButton}
                           onClick = {handleSendVerificationCode}
-                          disabled = {!isEmailChecked || emailVerificationStatus === 'sending' || emailVerificationStatus === 'verified'}
+                          disabled = {!isEmailChecked || emailVerificationStatus === 'sending' || emailVerificationStatus === 'verifying' || emailVerificationStatus === 'verified'}
                         >
                           {emailVerificationStatus === 'sending'
                             ? '발송 중'
