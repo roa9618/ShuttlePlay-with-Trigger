@@ -1,3 +1,4 @@
+import { useEffect, useState, type FormEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import FooterModal from '../components/FooterModal';
 import Logo from '../components/Logo';
@@ -7,29 +8,128 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Sparkles } from 'lucide-react';
-import { useState, type FormEvent } from 'react';
+import { useAuth } from '../contexts/AuthContext';
+import { ApiClientError } from '../utils/apiClient';
+import { updateAuthTokens } from '../utils/authSession';
 import { footerDocuments, type FooterDocumentKey } from '../utils/footerContent';
+import { getCurrentUser, getProfileCompletion, updateProfileCompletion } from '../utils/userApi';
 import { styles } from './SignupPage.styles';
 
 type FeedbackField = 'name' | 'gender' | 'ageGroup' | 'grade' | 'agreement';
+
 type FieldFeedback = {
   field: FeedbackField;
   message: string;
   tone: 'error' | 'success';
 } | null;
 
+function getSocialNameFromParams(searchParams: URLSearchParams) {
+  return searchParams.get('name')
+    ?? searchParams.get('nickname')
+    ?? searchParams.get('displayName')
+    ?? searchParams.get('display_name')
+    ?? '';
+}
+
 export default function SocialSignupPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { refreshSession, setSessionFromStorage } = useAuth();
   const [fieldFeedback, setFieldFeedback] = useState<FieldFeedback>(null);
   const [agreementChecked, setAgreementChecked] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<FooterDocumentKey | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
-    name: searchParams.get('name') ?? '',
+    name: getSocialNameFromParams(searchParams),
     gender: '',
     ageGroup: '',
     grade: '',
   });
+
+  const moveToMainPage = () => {
+    navigate('/', {
+      replace: true,
+    });
+
+    window.setTimeout(() => {
+      window.location.replace('/');
+    }, 0);
+  };
+
+  useEffect(() => {
+    const accessToken = searchParams.get('accessToken') ?? searchParams.get('access_token');
+    const refreshToken = searchParams.get('refreshToken') ?? searchParams.get('refresh_token');
+    const socialName = getSocialNameFromParams(searchParams);
+
+    if (socialName) {
+      setFormData((current) => ({
+        ...current,
+        name: current.name || socialName,
+      }));
+    }
+
+    if (!accessToken || !refreshToken) {
+      return;
+    }
+
+    updateAuthTokens({
+      accessToken,
+      refreshToken,
+    });
+
+    window.history.replaceState(null, '', window.location.pathname);
+  }, [searchParams]);
+
+  useEffect(() => {
+    let ignore = false;
+
+    const loadProfileCompletion = async () => {
+      try {
+        const [profile, currentUser] = await Promise.allSettled([
+          getProfileCompletion(),
+          getCurrentUser(),
+        ]);
+
+        if (ignore) {
+          return;
+        }
+
+        const profileData = profile.status === 'fulfilled' ? profile.value : null;
+        const userData = currentUser.status === 'fulfilled' ? currentUser.value : null;
+
+        setFormData((current) => ({
+          name: profileData?.name ?? userData?.name ?? current.name,
+          gender: profileData?.gender ?? userData?.gender ?? current.gender,
+          ageGroup: profileData?.ageGroup ?? userData?.ageGroup ?? current.ageGroup,
+          grade: profileData?.grade ?? userData?.grade ?? current.grade,
+        }));
+
+        setAgreementChecked(profileData?.agreementAccepted ?? false);
+
+        if (profileData?.profileCompleted || userData?.profileCompleted) {
+          void refreshSession()
+            .catch(() => null)
+            .finally(() => {
+              setSessionFromStorage();
+            });
+
+          if (!ignore) {
+            moveToMainPage();
+          }
+        }
+      } catch {
+        if (ignore) {
+          return;
+        }
+      }
+    };
+
+    loadProfileCompletion();
+
+    return () => {
+      ignore = true;
+    };
+  }, [refreshSession, setSessionFromStorage]);
 
   const showFieldFeedback = (field: FeedbackField, message: string, tone: 'error' | 'success' = 'error') => {
     setFieldFeedback({ field, message, tone });
@@ -51,7 +151,7 @@ export default function SocialSignupPage() {
     );
   };
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
 
     if (!formData.name.trim()) {
@@ -79,9 +179,34 @@ export default function SocialSignupPage() {
       return;
     }
 
-    navigate('/groups', {
-      replace: true,
-    });
+    try {
+      setIsSubmitting(true);
+      setFieldFeedback(null);
+
+      await updateProfileCompletion({
+        name: formData.name.trim(),
+        gender: formData.gender,
+        ageGroup: formData.ageGroup,
+        grade: formData.grade,
+        agreementAccepted: agreementChecked,
+      });
+
+      void refreshSession()
+        .catch(() => null)
+        .finally(() => {
+          setSessionFromStorage();
+        });
+
+      moveToMainPage();
+    } catch (error) {
+      showFieldFeedback(
+        'agreement',
+        error instanceof ApiClientError
+          ? error.detail ?? error.message
+          : '기본 정보 저장 중 오류가 발생했습니다.',
+      );
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -237,8 +362,8 @@ export default function SocialSignupPage() {
                 </div>
               </div>
 
-              <Button type = "submit" className = {styles.submitButton} size = "lg">
-                시작하기
+              <Button type = "submit" className = {styles.submitButton} size = "lg" disabled = {isSubmitting}>
+                {isSubmitting ? '저장 중' : '시작하기'}
               </Button>
             </form>
           </div>
