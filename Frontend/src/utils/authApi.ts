@@ -18,6 +18,24 @@ export type EmailVerificationConfirmResponse = {
   verified: boolean;
 };
 
+export type RegisterRequest = {
+  name: string;
+  email: string;
+  password: string;
+  passwordConfirm: string;
+  gender: string;
+  ageGroup: string;
+  grade: string;
+  agreementAccepted: boolean;
+};
+
+export type RegisterResponse = {
+  id?: number;
+  userId?: number;
+  email: string;
+  name: string;
+};
+
 export function logoutAuth() {
   return apiClient.post<LogoutResponse>('/auth/logout', undefined, {
     auth: true,
@@ -41,4 +59,8 @@ export function confirmEmailVerification(email: string, code: string) {
     email,
     code,
   });
+}
+
+export function registerAuth(request: RegisterRequest) {
+  return apiClient.post<RegisterResponse>('/auth/register', request);
 }

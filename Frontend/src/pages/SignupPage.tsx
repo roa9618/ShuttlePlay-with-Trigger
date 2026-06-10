@@ -12,6 +12,7 @@ import { ApiClientError } from '../utils/apiClient';
 import {
   checkEmailAvailability,
   confirmEmailVerification,
+  registerAuth,
   sendEmailVerification,
 } from '../utils/authApi';
 import { footerDocuments, type FooterDocumentKey } from '../utils/footerContent';
@@ -52,6 +53,7 @@ export default function SignupPage() {
   const [signupCompleted, setSignupCompleted] = useState(false);
   const [fieldFeedback, setFieldFeedback] = useState<FieldFeedback>(null);
   const [agreementChecked, setAgreementChecked] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<FooterDocumentKey | null>(null);
   const [formData, setFormData] = useState({
     name: '',
@@ -302,6 +304,30 @@ export default function SignupPage() {
     return true;
   };
 
+  const validateProfileStep = () => {
+    if (!formData.gender) {
+      showFieldFeedback('gender', '성별을 선택해주세요.');
+      return false;
+    }
+
+    if (!formData.ageGroup) {
+      showFieldFeedback('ageGroup', '나이대를 선택해주세요.');
+      return false;
+    }
+
+    if (!formData.grade) {
+      showFieldFeedback('grade', '급수를 선택해주세요.');
+      return false;
+    }
+
+    if (!agreementChecked) {
+      showFieldFeedback('agreement', '이용약관 및 개인정보 처리방침에 동의해주세요.');
+      return false;
+    }
+
+    return true;
+  };
+
   const handleNextStep = () => {
     if (!validateAccountStep()) {
       return;
@@ -311,35 +337,44 @@ export default function SignupPage() {
     setFieldFeedback(null);
   };
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
 
-    if (!validateAccountStep()) {
-      setStep(1);
+    if (step === 1) {
+      handleNextStep();
       return;
     }
 
-    if (!formData.gender) {
-      showFieldFeedback('gender', '성별을 선택해주세요.');
+    if (!validateProfileStep()) {
       return;
     }
 
-    if (!formData.ageGroup) {
-      showFieldFeedback('ageGroup', '나이대를 선택해주세요.');
-      return;
-    }
+    try {
+      setIsSubmitting(true);
+      setFieldFeedback(null);
 
-    if (!formData.grade) {
-      showFieldFeedback('grade', '급수를 선택해주세요.');
-      return;
-    }
+      await registerAuth({
+        name: formData.name.trim(),
+        email: formData.email.trim(),
+        password: formData.password,
+        passwordConfirm: formData.passwordConfirm,
+        gender: formData.gender,
+        ageGroup: formData.ageGroup,
+        grade: formData.grade,
+        agreementAccepted: agreementChecked,
+      });
 
-    if (!agreementChecked) {
-      showFieldFeedback('agreement', '이용약관 및 개인정보 처리방침에 동의해주세요.');
-      return;
+      setSignupCompleted(true);
+    } catch (error) {
+      showFieldFeedback(
+        'agreement',
+        error instanceof ApiClientError
+          ? error.detail ?? error.message
+          : '회원가입 중 오류가 발생했습니다.',
+      );
+    } finally {
+      setIsSubmitting(false);
     }
-
-    setSignupCompleted(true);
   };
 
   return (
@@ -667,11 +702,12 @@ export default function SignupPage() {
                         variant = "outline"
                         className = {styles.backButton}
                         onClick = {() => setStep(1)}
+                        disabled = {isSubmitting}
                       >
                         이전
                       </Button>
-                      <Button type = "submit" className = {styles.submitButton} size = "lg">
-                        회원가입 완료
+                      <Button type = "submit" className = {styles.submitButton} size = "lg" disabled = {isSubmitting}>
+                        {isSubmitting ? '가입 중' : '회원가입 완료'}
                       </Button>
                     </div>
                   </>
