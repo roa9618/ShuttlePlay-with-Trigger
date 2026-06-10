@@ -4,6 +4,7 @@ import RequireAuth from "../components/RequireAuth";
 import HomePage from "../pages/HomePage";
 import LoginPage from "../pages/LoginPage";
 import SignupPage from "../pages/SignupPage";
+import SocialSignupPage from "../pages/SocialSignupPage";
 import PasswordResetPage from "../pages/PasswordResetPage";
 import PasswordResetConfirmPage from "../pages/PasswordResetConfirmPage";
 import GroupListPage from "../pages/GroupListPage";
@@ -40,6 +41,7 @@ export const router = createBrowserRouter([
       { index: true, Component: HomePage },
       { path: "login", Component: LoginPage, handle: { title: "로그인" } },
       { path: "signup", Component: SignupPage, handle: { title: "회원가입" } },
+      { path: "social-signup", Component: SocialSignupPage, handle: { title: "소셜 기본 정보 입력" } },
       { path: "password-reset", Component: PasswordResetPage, handle: { title: "비밀번호 재설정" } },
       { path: "password-reset/confirm", Component: PasswordResetConfirmPage, handle: { title: "새 비밀번호 설정" } },
 

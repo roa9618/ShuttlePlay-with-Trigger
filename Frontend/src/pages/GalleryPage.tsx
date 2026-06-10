@@ -10,6 +10,7 @@ export default function GalleryPage() {
     { name: '메인 페이지', path: '/', description: '서비스 시작 화면과 빠른 액션' },
     { name: '로그인', path: '/login', description: '이메일 로그인 화면' },
     { name: '회원가입', path: '/signup', description: '회원가입 및 프로필 입력' },
+    { name: '소셜 기본 정보 입력', path: '/social-signup', description: '소셜 계정 최초 로그인 후 추가 정보 입력' },
     { name: '비밀번호 찾기', path: '/password-reset', description: '이메일 인증을 통한 비밀번호 재설정' },
     { name: '새 비밀번호 설정', path: '/password-reset/confirm', description: '재설정 링크 진입 후 새 비밀번호 입력' },
     { name: '모임 목록', path: '/groups', description: '참여 중인 모임 목록' },

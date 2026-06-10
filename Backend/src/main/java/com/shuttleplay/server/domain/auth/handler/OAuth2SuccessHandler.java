@@ -29,8 +29,11 @@ public class OAuth2SuccessHandler implements org.springframework.security.web.au
     private final RefreshTokenRepository refreshTokenRepository;
     private final JwtTokenProvider jwtTokenProvider;
 
-    @Value("${app.oauth2-redirect-url}")
-    private String oauth2RedirectUrl;
+    @Value("${app.oauth2-profile-completion-redirect-url}")
+    private String oauth2ProfileCompletionRedirectUrl;
+
+    @Value("${app.oauth2-main-redirect-url}")
+    private String oauth2MainRedirectUrl;
 
     @Override
     @Transactional
@@ -96,7 +99,11 @@ public class OAuth2SuccessHandler implements org.springframework.security.web.au
             String refreshToken,
             boolean profileCompleted
     ) {
-        return oauth2RedirectUrl
+        String baseRedirectUrl = profileCompleted
+                ? oauth2MainRedirectUrl
+                : oauth2ProfileCompletionRedirectUrl;
+
+        return baseRedirectUrl
                 + "?accessToken=" + encode(accessToken)
                 + "&refreshToken=" + encode(refreshToken)
                 + "&profileCompleted=" + profileCompleted;
