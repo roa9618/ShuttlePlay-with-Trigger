@@ -1,19 +1,22 @@
 import { Link } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import Logo from '../components/Logo';
 import ShuttlecockIcon from '../components/ShuttlecockIcon';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Sparkles } from 'lucide-react';
+import { ApiClientError } from '../utils/apiClient';
+import { sendPasswordResetLink } from '../utils/authApi';
 import { styles } from './PasswordResetPage.styles';
 
 export default function PasswordResetPage() {
   const [email, setEmail] = useState('');
   const [emailSent, setEmailSent] = useState(false);
   const [emailFeedback, setEmailFeedback] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
 
     const trimmedEmail = email.trim();
@@ -28,9 +31,23 @@ export default function PasswordResetPage() {
       return;
     }
 
-    // 이메일 전송 처리
-    setEmailFeedback('');
-    setEmailSent(true);
+    try {
+      setIsSubmitting(true);
+      setEmailFeedback('');
+
+      const response = await sendPasswordResetLink(trimmedEmail);
+
+      setEmail(response.email ?? trimmedEmail);
+      setEmailSent(true);
+    } catch (error) {
+      setEmailFeedback(
+        error instanceof ApiClientError
+          ? error.detail ?? error.message
+          : '비밀번호 재설정 링크 발송 중 오류가 발생했습니다.',
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -73,20 +90,30 @@ export default function PasswordResetPage() {
                     </span>
                   )}
                 </div>
-                <Input id = "email" type = "email" placeholder = "example@email.com" value = {email} onChange = {(e) => {
-                  setEmail(e.target.value);
-                  setEmailFeedback('');
-                }}
-                  required className = {styles.roundedControl}
+                <Input
+                  id = "email"
+                  type = "email"
+                  placeholder = "example@email.com"
+                  value = {email}
+                  onChange = {(e) => {
+                    setEmail(e.target.value);
+                    setEmailFeedback('');
+                  }}
+                  required
+                  className = {styles.roundedControl}
                 />
                 <p className = {styles.inputGuideText}>
                   비밀번호 재설정 링크를 보내드립니다
                 </p>
               </div>
 
-              <Button type = "submit" className = {styles.submitButton} size = "lg"
+              <Button
+                type = "submit"
+                className = {styles.submitButton}
+                size = "lg"
+                disabled = {isSubmitting}
               >
-                재설정 링크 보내기
+                {isSubmitting ? '발송 중' : '재설정 링크 보내기'}
               </Button>
             </form>
           ) : (
@@ -105,7 +132,14 @@ export default function PasswordResetPage() {
                 <p className = {styles.descriptionText3}>
                   이메일이 오지 않았나요?
                 </p>
-                <Button variant = "outline" className = {styles.secondaryButton} onClick = {() => setEmailSent(false)}
+                <Button
+                  type = "button"
+                  variant = "outline"
+                  className = {styles.secondaryButton}
+                  onClick = {() => {
+                    setEmailSent(false);
+                    setEmailFeedback('');
+                  }}
                 >
                   다시 보내기
                 </Button>

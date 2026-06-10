@@ -171,9 +171,11 @@ export default function LoginPage() {
     } catch (error) {
       setFieldFeedback({
         field: 'password',
-        message: error instanceof ApiClientError
-          ? error.detail ?? error.message
-          : '로그인 중 오류가 발생했습니다.',
+        message: error instanceof ApiClientError && error.status === 401
+          ? '이메일 또는 비밀번호가 올바르지 않습니다.'
+          : error instanceof ApiClientError
+            ? error.detail ?? error.message
+            : '로그인 중 오류가 발생했습니다.',
       });
     } finally {
       setIsSubmitting(false);
@@ -272,7 +274,7 @@ export default function LoginPage() {
             </div>
 
             <Button type = "submit" className = {styles.submitButton} size = "lg" disabled = {isSubmitting}>
-              로그인
+              {isSubmitting ? '로그인 중' : '로그인'}
             </Button>
           </form>
 
