@@ -28,16 +28,15 @@ import lombok.NoArgsConstructor;
         name = "users",
         uniqueConstraints = {
                 @UniqueConstraint(
-                        name = "uk_users_provider_provider_id",
-                        columnNames = {"provider", "provider_id"}
+                        name = "uk_users_email",
+                        columnNames = {"email"}
                 ),
                 @UniqueConstraint(
-                        name = "uk_users_email_provider",
-                        columnNames = {"email", "provider"}
+                        name = "uk_users_provider_provider_id",
+                        columnNames = {"provider", "provider_id"}
                 )
         },
         indexes = {
-                @Index(name = "idx_users_email", columnList = "email"),
                 @Index(name = "idx_users_status", columnList = "status")
         }
 )

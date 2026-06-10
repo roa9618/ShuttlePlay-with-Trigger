@@ -135,10 +135,9 @@ public class AuthService {
 
     @Transactional
     public LoginResponse login(LoginRequest request) {
-        User user = userRepository.findByEmailAndProvider(request.getEmail(), AuthProvider.LOCAL)
-                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+        User user = findLocalUserForLogin(request.getEmail());
 
-        validateLoginAvailable(user);
+        validateAccountStatus(user);
         validatePassword(request.getPassword(), user.getPassword());
 
         String accessToken = jwtTokenProvider.createAccessToken(user);
@@ -172,7 +171,7 @@ public class AuthService {
         User user = userRepository.findById(refreshToken.getUserId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
-        validateLoginAvailable(user);
+        validateAccountStatus(user);
 
         refreshToken.revoke();
 
@@ -199,10 +198,9 @@ public class AuthService {
 
     @Transactional
     public PasswordResetSendResponse sendPasswordResetLink(PasswordResetSendRequest request) {
-        User user = userRepository.findByEmailAndProvider(request.getEmail(), AuthProvider.LOCAL)
-                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+        User user = findLocalUserForPasswordReset(request.getEmail());
 
-        validateLoginAvailable(user);
+        validateAccountStatus(user);
 
         String token = PasswordResetTokenGenerator.generate();
         LocalDateTime expiresAt = LocalDateTime.now().plusMinutes(PASSWORD_RESET_TOKEN_EXPIRE_MINUTES);
@@ -241,7 +239,7 @@ public class AuthService {
         User user = userRepository.findByEmailAndProvider(passwordResetToken.getEmail(), AuthProvider.LOCAL)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
-        validateLoginAvailable(user);
+        validateAccountStatus(user);
 
         String encodedPassword = passwordEncoder.encode(request.getNewPassword());
 
@@ -326,17 +324,35 @@ public class AuthService {
         }
     }
 
-    private void validateLoginAvailable(User user) {
+    private User findLocalUserForLogin(String email) {
+        return userRepository.findByEmailAndProvider(email, AuthProvider.LOCAL)
+                .orElseThrow(() -> {
+                    if (userRepository.existsByEmail(email)) {
+                        return new BusinessException(ErrorCode.SOCIAL_ACCOUNT_CANNOT_LOGIN_WITH_PASSWORD);
+                    }
+
+                    return new BusinessException(ErrorCode.USER_NOT_FOUND);
+                });
+    }
+
+    private User findLocalUserForPasswordReset(String email) {
+        return userRepository.findByEmailAndProvider(email, AuthProvider.LOCAL)
+                .orElseThrow(() -> {
+                    if (userRepository.existsByEmail(email)) {
+                        return new BusinessException(ErrorCode.SOCIAL_ACCOUNT_CANNOT_RESET_PASSWORD);
+                    }
+
+                    return new BusinessException(ErrorCode.USER_NOT_FOUND);
+                });
+    }
+
+    private void validateAccountStatus(User user) {
         if (user.getStatus() == UserStatus.DELETED) {
             throw new BusinessException(ErrorCode.DELETED_USER);
         }
 
         if (user.getStatus() == UserStatus.INACTIVE) {
             throw new BusinessException(ErrorCode.INACTIVE_USER);
-        }
-
-        if (!user.isLocalAccount()) {
-            throw new BusinessException(ErrorCode.SOCIAL_ACCOUNT_LOGIN_NOT_ALLOWED);
         }
     }
 

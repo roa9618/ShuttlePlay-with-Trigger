@@ -108,6 +108,8 @@ public class CustomOidcUserService extends OidcUserService {
             String name,
             String profileImageUrl
     ) {
+        validateEmailNotUsed(email);
+
         String socialName = StringUtils.hasText(name)
                 ? name
                 : provider.name() + " 사용자";
@@ -121,5 +123,17 @@ public class CustomOidcUserService extends OidcUserService {
         );
 
         return userRepository.save(user);
+    }
+
+    private void validateEmailNotUsed(String email) {
+        if (userRepository.existsByEmail(email)) {
+            throw new OAuth2AuthenticationException(
+                    new OAuth2Error(
+                            "oauth2_email_already_registered",
+                            "이미 가입된 이메일입니다. 기존 로그인 방식을 이용해주세요.",
+                            null
+                    )
+            );
+        }
     }
 }
