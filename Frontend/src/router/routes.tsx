@@ -11,8 +11,6 @@ import PasswordResetConfirmPage from "../pages/PasswordResetConfirmPage";
 import GroupListPage from "../pages/GroupListPage";
 import GroupNewPage from "../pages/GroupNewPage";
 import GroupDetailPage from "../pages/GroupDetailPage";
-import GroupMembersPage from "../pages/GroupMembersPage";
-import GroupSettingsPage from "../pages/GroupSettingsPage";
 import CreateSessionPage from "../pages/CreateSessionPage";
 import JoinSessionPage from "../pages/JoinSessionPage";
 import GuestJoinPage from "../pages/GuestJoinPage";
@@ -66,8 +64,12 @@ export const router = createBrowserRouter([
           { path: "groups", Component: GroupListPage, handle: { title: "내 모임" } },
           { path: "groups/new", Component: GroupNewPage, handle: { title: "모임 만들기" } },
           { path: "groups/:groupId", Component: GroupDetailPage, handle: { title: "모임 상세" } },
-          { path: "groups/:groupId/members", Component: GroupMembersPage, handle: { title: "구성원 관리" } },
-          { path: "groups/:groupId/settings", Component: GroupSettingsPage, handle: { title: "모임 설정" } },
+          { path: "groups/:groupId/schedule", Component: GroupDetailPage, handle: { title: "모임 일정" } },
+          { path: "groups/:groupId/board", Component: GroupDetailPage, handle: { title: "모임 게시판" } },
+          { path: "groups/:groupId/members", Component: GroupDetailPage, handle: { title: "모임 멤버" } },
+          { path: "groups/:groupId/requests", Component: GroupDetailPage, handle: { title: "모임 가입 요청" } },
+          { path: "groups/:groupId/history", Component: GroupDetailPage, handle: { title: "모임 운영 기록" } },
+          { path: "groups/:groupId/settings", Component: GroupDetailPage, handle: { title: "모임 설정" } },
           { path: "groups/:groupId/create-session", Component: CreateSessionPage, handle: { title: "운동 일정 만들기" } },
           { path: "sessions/:sessionId/dashboard", Component: OrganizerDashboardPage, handle: { title: "운영 대시보드" } },
           { path: "sessions/:sessionId/participants", Component: ParticipantManagementPage, handle: { title: "참가자 관리" } },
