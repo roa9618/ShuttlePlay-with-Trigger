@@ -315,6 +315,8 @@ export const styles = {
     '[&_span]:text-muted-foreground',
   ].join(' '),
 
+  emptyGroupRow: 'h-[124px] bg-primary/[0.02]',
+
   paginationBar: [
     'flex items-center justify-center',
     'px-7 py-4',

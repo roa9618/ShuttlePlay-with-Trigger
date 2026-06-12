@@ -174,6 +174,7 @@ function formatCreatedAt(dateTime: string) {
 }
 
 const PAGE_SIZE = 5;
+const MINIMUM_VISIBLE_ROWS = 3;
 
 const initialOverview: GroupOverviewResponse = {
   nearestSchedule: null,
@@ -683,11 +684,21 @@ export default function GroupListPage() {
                 );
               })}
 
-              {groups.length === 0 && (
+              {groups.length === 0 ? (
                 <div className = {styles.emptyRow}>
                   <p>조건에 맞는 모임이 없습니다.</p>
                   <span>검색어를 지우거나 필터를 변경해주세요.</span>
                 </div>
+              ) : (
+                Array.from({
+                  length: Math.max(0, MINIMUM_VISIBLE_ROWS - groups.length),
+                }).map((_, index) => (
+                  <div
+                    key = {`empty-group-row-${index}`}
+                    className = {styles.emptyGroupRow}
+                    aria-hidden = "true"
+                  />
+                ))
               )}
             </div>
 

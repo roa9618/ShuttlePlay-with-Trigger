@@ -71,6 +71,10 @@ export type CreateGroupResponse = {
   name: string;
 };
 
+export type GroupImageUploadResponse = {
+  imageUrl: string;
+};
+
 type GetMyGroupsParams = {
   keyword: string;
   role: GroupRole | null;
@@ -116,6 +120,15 @@ export function getGroupActivitySummary(groupId: number) {
 
 export function createGroup(request: CreateGroupRequest) {
   return apiClient.post<CreateGroupResponse>('/groups', request, {
+    auth: true,
+  });
+}
+
+export function uploadGroupImage(image: File) {
+  const formData = new FormData();
+  formData.append('image', image);
+
+  return apiClient.post<GroupImageUploadResponse>('/groups/images', formData, {
     auth: true,
   });
 }

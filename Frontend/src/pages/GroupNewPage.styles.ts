@@ -142,6 +142,10 @@ export const styles = {
   input: [
     'h-12 rounded-xl border-primary/10',
     'bg-input-background px-4 text-sm',
+    '[&:not(:placeholder-shown)]:bg-input-background',
+    '[&:-webkit-autofill]:[-webkit-text-fill-color:var(--foreground)]',
+    '[&:-webkit-autofill]:[box-shadow:0_0_0_1000px_var(--input-background)_inset]',
+    '[&:-webkit-autofill:focus]:[box-shadow:0_0_0_1000px_var(--input-background)_inset]',
   ].join(' '),
 
   textarea: [

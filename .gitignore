@@ -81,6 +81,7 @@ replay_pid*
 *.mv.db
 *.trace.db
 mysql-data/
+Backend/uploads/
 
 # Temporary files
 tmp/

@@ -26,7 +26,7 @@ import {
 } from '../components/ui/select';
 import { Textarea } from '../components/ui/textarea';
 import { koreanRegions, provinceOptions } from '../utils/koreanRegions';
-import { createGroup } from '../utils/groupApi';
+import { createGroup, uploadGroupImage } from '../utils/groupApi';
 import { styles } from './GroupNewPage.styles';
 
 const GROUP_NAME_MAX_LENGTH = 40;
@@ -43,7 +43,7 @@ type FieldFeedback = {
 } | null;
 
 function createSquareImagePreview(file: File) {
-  return new Promise<string>((resolve, reject) => {
+  return new Promise<{ previewUrl: string; imageFile: File }>((resolve, reject) => {
     const image = new Image();
     const sourceUrl = URL.createObjectURL(file);
 
@@ -77,7 +77,12 @@ function createSquareImagePreview(file: File) {
           return;
         }
 
-        resolve(URL.createObjectURL(blob));
+        resolve({
+          previewUrl: URL.createObjectURL(blob),
+          imageFile: new File([blob], 'group-profile.webp', {
+            type: 'image/webp',
+          }),
+        });
       }, 'image/webp', 0.86);
     };
 
@@ -94,6 +99,7 @@ export default function GroupNewPage() {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
   const [isImageDragging, setIsImageDragging] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fieldFeedback, setFieldFeedback] = useState<FieldFeedback>(null);
@@ -149,9 +155,10 @@ export default function GroupNewPage() {
     }
 
     try {
-      const nextPreviewUrl = await createSquareImagePreview(file);
+      const processedImage = await createSquareImagePreview(file);
 
-      setImagePreviewUrl(nextPreviewUrl);
+      setImagePreviewUrl(processedImage.previewUrl);
+      setImageFile(processedImage.imageFile);
       clearFieldFeedback('image');
     } catch {
       setFieldFeedback({
@@ -199,6 +206,7 @@ export default function GroupNewPage() {
 
   const handleRemoveImage = () => {
     setImagePreviewUrl(null);
+    setImageFile(null);
     clearFieldFeedback('image');
   };
 
@@ -241,9 +249,13 @@ export default function GroupNewPage() {
     setIsSubmitting(true);
 
     try {
+      const uploadedImage = imageFile
+        ? await uploadGroupImage(imageFile)
+        : null;
+
       await createGroup({
         name: formData.name.trim(),
-        profileImageUrl: null,
+        profileImageUrl: uploadedImage?.imageUrl ?? null,
         activityRegion: formData.district && formData.district !== '전체'
           ? `${formData.province} ${formData.district}`
           : formData.province,
@@ -251,6 +263,11 @@ export default function GroupNewPage() {
         operationNotice: formData.operationNotice.trim() || null,
       });
       navigate('/groups');
+    } catch {
+      setFieldFeedback({
+        field: imageFile ? 'image' : 'name',
+        message: '모임을 생성하지 못했습니다. 잠시 후 다시 시도해주세요.',
+      });
     } finally {
       setIsSubmitting(false);
     }
