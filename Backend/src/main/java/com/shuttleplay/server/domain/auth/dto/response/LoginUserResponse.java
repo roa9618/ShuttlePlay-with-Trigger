@@ -2,6 +2,9 @@ package com.shuttleplay.server.domain.auth.dto.response;
 
 import com.shuttleplay.server.domain.user.entity.User;
 import com.shuttleplay.server.domain.user.enums.AuthProvider;
+import com.shuttleplay.server.domain.user.enums.AgeGroup;
+import com.shuttleplay.server.domain.user.enums.Gender;
+import com.shuttleplay.server.domain.user.enums.Grade;
 import com.shuttleplay.server.domain.user.enums.UserRole;
 import lombok.Builder;
 import lombok.Getter;
@@ -14,6 +17,10 @@ public class LoginUserResponse {
     private final UserRole role;
     private final AuthProvider provider;
     private final boolean profileCompleted;
+    private final Gender gender;
+    private final AgeGroup ageGroup;
+    private final Grade grade;
+    private final String profileImageUrl;
 
     @Builder
     private LoginUserResponse(
@@ -22,7 +29,11 @@ public class LoginUserResponse {
             String email,
             UserRole role,
             AuthProvider provider,
-            boolean profileCompleted
+            boolean profileCompleted,
+            Gender gender,
+            AgeGroup ageGroup,
+            Grade grade,
+            String profileImageUrl
     ) {
         this.id = id;
         this.name = name;
@@ -30,6 +41,10 @@ public class LoginUserResponse {
         this.role = role;
         this.provider = provider;
         this.profileCompleted = profileCompleted;
+        this.gender = gender;
+        this.ageGroup = ageGroup;
+        this.grade = grade;
+        this.profileImageUrl = profileImageUrl;
     }
 
     public static LoginUserResponse from(User user) {
@@ -40,6 +55,10 @@ public class LoginUserResponse {
                 .role(user.getRole())
                 .provider(user.getProvider())
                 .profileCompleted(user.isProfileCompleted())
+                .gender(user.getGender())
+                .ageGroup(user.getAgeGroup())
+                .grade(user.getGrade())
+                .profileImageUrl(user.getProfileImageUrl())
                 .build();
     }
 }

@@ -8,6 +8,7 @@ export type AuthSession = {
   provider?: string;
   profileCompleted?: boolean;
   gender?: string | null;
+  ageGroup?: string | null;
   grade?: string | null;
   profileImageUrl?: string | null;
 };

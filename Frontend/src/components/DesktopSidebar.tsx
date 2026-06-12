@@ -23,6 +23,10 @@ import {
   type AppNotification,
 } from '../utils/notificationStore';
 import { styles } from './DesktopSidebar.styles';
+import {
+  connectNotificationSocket,
+  disconnectNotificationSocket,
+} from '../utils/notificationSocket';
 
 function formatGender(gender?: string | null) {
   if (gender === 'MALE' || gender === '남성' || gender === '남') {
@@ -34,6 +38,19 @@ function formatGender(gender?: string | null) {
   }
 
   return '성별 미설정';
+}
+
+function formatAgeGroup(ageGroup?: string | null) {
+  const labels: Record<string, string> = {
+    TEENS: '10대',
+    TWENTIES: '20대',
+    THIRTIES: '30대',
+    FORTIES: '40대',
+    FIFTIES: '50대',
+    SIXTIES_AND_ABOVE: '60대 이상',
+  };
+
+  return ageGroup ? labels[ageGroup] ?? ageGroup : '연령대 미설정';
 }
 
 export default function DesktopSidebar() {
@@ -80,7 +97,10 @@ export default function DesktopSidebar() {
   useEffect(() => {
     if (isAuthenticated) {
       void loadNotifications();
+      connectNotificationSocket();
     }
+
+    return () => disconnectNotificationSocket();
   }, [isAuthenticated]);
 
   useEffect(() => {
@@ -127,6 +147,9 @@ export default function DesktopSidebar() {
             <div className = {styles.profileBadges}>
               <span className = {styles.profileBadge}>
                 {formatGender(session?.gender)}
+              </span>
+              <span className = {styles.profileBadge}>
+                {formatAgeGroup(session?.ageGroup)}
               </span>
               <span className = {styles.profileBadge}>
                 {session?.grade ? `${session.grade}급` : '급수 미설정'}

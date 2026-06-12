@@ -190,8 +190,7 @@ public class AuthService {
 
     @Transactional
     public LogoutResponse logout(Long userId, String accessToken) {
-        refreshTokenRepository.findByUserIdAndRevokedFalse(userId)
-                .ifPresent(RefreshToken::revoke);
+        revokeActiveRefreshTokens(userId);
 
         blacklistAccessToken(accessToken);
 
@@ -265,8 +264,7 @@ public class AuthService {
         user.updatePassword(encodedPassword);
         passwordResetToken.use();
 
-        refreshTokenRepository.findByUserIdAndRevokedFalse(user.getId())
-                .ifPresent(RefreshToken::revoke);
+        revokeActiveRefreshTokens(user.getId());
 
         return PasswordResetConfirmResponse.of(user.getEmail(), true);
     }
@@ -293,8 +291,7 @@ public class AuthService {
     }
 
     private RefreshToken createRefreshToken(Long userId) {
-        refreshTokenRepository.findByUserIdAndRevokedFalse(userId)
-                .ifPresent(RefreshToken::revoke);
+        revokeActiveRefreshTokens(userId);
 
         LocalDateTime expiresAt = LocalDateTime.now()
                 .plusNanos(jwtTokenProvider.getRefreshTokenExpirationMillis() * 1_000_000);
@@ -306,6 +303,11 @@ public class AuthService {
         );
 
         return refreshTokenRepository.save(refreshToken);
+    }
+
+    private void revokeActiveRefreshTokens(Long userId) {
+        refreshTokenRepository.findAllByUserIdAndRevokedFalse(userId)
+                .forEach(RefreshToken::revoke);
     }
 
     private void validateEmailAvailable(String email) {

@@ -77,4 +77,16 @@ public class Notification extends BaseEntity {
             readAt = LocalDateTime.now();
         }
     }
+
+    public static Notification create(User user, NotificationType type, String title,
+                                      String message, String targetPath) {
+        return Notification.builder()
+                .user(user)
+                .type(type)
+                .title(title)
+                .message(message)
+                .targetPath(targetPath)
+                .read(false)
+                .build();
+    }
 }

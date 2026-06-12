@@ -71,3 +71,11 @@ export async function markAllNotificationsAsRead() {
   }));
   emitChange();
 }
+
+export function receiveNotification(notification: NotificationItemResponse) {
+  notifications = [
+    toAppNotification(notification),
+    ...notifications.filter(current => current.id !== notification.id),
+  ];
+  emitChange();
+}

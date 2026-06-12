@@ -215,13 +215,6 @@ export const styles = {
     'rounded-[22px] object-cover',
   ].join(' '),
 
-  groupInitial: [
-    'flex h-[76px] w-[76px] shrink-0',
-    'items-center justify-center rounded-[22px]',
-    'bg-primary/10',
-    'text-xl font-semibold text-primary',
-  ].join(' '),
-
   groupTextBox: 'min-w-0 flex-1',
 
   groupName: [
@@ -315,6 +308,8 @@ export const styles = {
     '[&_span]:text-muted-foreground',
   ].join(' '),
 
+  emptyGroupRow: 'h-[124px] bg-primary/[0.02]',
+
   paginationBar: [
     'flex items-center justify-center',
     'px-7 py-4',
@@ -380,13 +375,6 @@ export const styles = {
   modalProfileImage: [
     'h-[68px] w-[68px] shrink-0',
     'rounded-[20px] object-cover',
-  ].join(' '),
-
-  modalInitial: [
-    'flex h-[68px] w-[68px] shrink-0',
-    'items-center justify-center',
-    'rounded-[20px] bg-primary/10',
-    'text-xl font-semibold text-primary',
   ].join(' '),
 
   modalTitle: [

@@ -129,6 +129,7 @@ Content-Type: application/json
 | Method | Path | 설명 | 우선순위 |
 | --- | --- | --- | --- |
 | `POST` | `/groups` | 모임 생성 | P0 |
+| `POST` | `/groups/images` | 모임 대표 이미지 업로드 | P0 |
 | `GET` | `/groups` | 내 모임 목록 조회 | P1 |
 | `GET` | `/groups/{groupId}` | 모임 상세 조회 | P1 |
 | `PATCH` | `/groups/{groupId}` | 모임 정보 수정 | P1 |
@@ -419,6 +420,17 @@ QR 이미지 응답은 `image/png`입니다.
 | `/topic/sessions/{sessionId}/admin` | 운영자 전용 이벤트 | 운영자 |
 | `/topic/sessions/{sessionId}/display` | 큰 화면 경기판 이벤트 | 디스플레이 |
 | `/user/queue/notifications` | 개인 알림 | 특정 사용자 |
+
+알림 발송 기준:
+
+- 모임 생성 완료
+- 모임 일정 등록, 변경, 취소
+- 모임 운영 안내 변경
+- 경기 배정, 경기 시작, 코트 이동
+- 프로필 및 시스템 필수 안내
+
+현재 모임 생성 완료 알림은 DB 저장 후 `/user/queue/notifications`로 즉시 발송합니다.
+나머지 알림은 해당 일정, 경기, 운영 기능 구현 시 동일한 알림 발송 서비스를 호출합니다.
 | `/user/queue/session-status` | 개인 세션 상태 | 특정 참가자 |
 
 ## 공통 이벤트 형식

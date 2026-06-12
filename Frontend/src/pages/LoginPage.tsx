@@ -44,6 +44,10 @@ type LoginResponse = {
     role: UserRole;
     provider: string;
     profileCompleted: boolean;
+    gender: string | null;
+    ageGroup: string | null;
+    grade: string | null;
+    profileImageUrl: string | null;
   };
 };
 
@@ -176,6 +180,10 @@ export default function LoginPage() {
         role: response.user.role,
         provider: response.user.provider,
         profileCompleted: response.user.profileCompleted,
+        gender: response.user.gender,
+        ageGroup: response.user.ageGroup,
+        grade: response.user.grade,
+        profileImageUrl: response.user.profileImageUrl,
       };
 
       startTokenAuthSession(session, {

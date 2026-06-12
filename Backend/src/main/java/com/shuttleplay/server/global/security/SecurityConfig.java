@@ -54,7 +54,9 @@ public class SecurityConfig {
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
                                 "/v3/api-docs",
-                                "/error"
+                                "/error",
+                                "/uploads/**",
+                                "/ws/**"
                         ).permitAll()
                         .requestMatchers("/oauth2/**", "/login/oauth2/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/auth/check-email").permitAll()

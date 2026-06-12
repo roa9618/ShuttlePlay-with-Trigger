@@ -135,10 +135,6 @@ function getRoleLabel(role: GroupRole) {
     : '멤버';
 }
 
-function getGroupInitial(name: string) {
-  return name.trim().slice(0, 1);
-}
-
 function formatRelativeDate(dateTime: string | null) {
   if (!dateTime) {
     return '기록 없음';
@@ -174,6 +170,7 @@ function formatCreatedAt(dateTime: string) {
 }
 
 const PAGE_SIZE = 5;
+const MINIMUM_VISIBLE_ROWS = 3;
 
 const initialOverview: GroupOverviewResponse = {
   nearestSchedule: null,
@@ -602,17 +599,11 @@ export default function GroupListPage() {
                       to = {`/groups/${group.id}`}
                       className = {styles.groupMain}
                     >
-                      {group.profileImageUrl ? (
-                        <img
-                          src = {group.profileImageUrl}
-                          alt = ""
-                          className = {styles.groupProfileImage}
-                        />
-                      ) : (
-                        <div className = {styles.groupInitial}>
-                          {getGroupInitial(group.name)}
-                        </div>
-                      )}
+                      <img
+                        src = {group.profileImageUrl ?? '/shuttleplay-maskable-icon-512.png'}
+                        alt = ""
+                        className = {styles.groupProfileImage}
+                      />
 
                       <div className = {styles.groupTextBox}>
                         <h2 className = {styles.groupName}>
@@ -683,11 +674,21 @@ export default function GroupListPage() {
                 );
               })}
 
-              {groups.length === 0 && (
+              {groups.length === 0 ? (
                 <div className = {styles.emptyRow}>
                   <p>조건에 맞는 모임이 없습니다.</p>
                   <span>검색어를 지우거나 필터를 변경해주세요.</span>
                 </div>
+              ) : (
+                Array.from({
+                  length: Math.max(0, MINIMUM_VISIBLE_ROWS - groups.length),
+                }).map((_, index) => (
+                  <div
+                    key = {`empty-group-row-${index}`}
+                    className = {styles.emptyGroupRow}
+                    aria-hidden = "true"
+                  />
+                ))
               )}
             </div>
 
@@ -749,17 +750,11 @@ export default function GroupListPage() {
           >
             <div className = {styles.modalHeader}>
               <div className = {styles.modalTitleBox}>
-                {selectedGroup.profileImageUrl ? (
-                  <img
-                    src = {selectedGroup.profileImageUrl}
-                    alt = ""
-                    className = {styles.modalProfileImage}
-                  />
-                ) : (
-                  <div className = {styles.modalInitial}>
-                    {getGroupInitial(selectedGroup.name)}
-                  </div>
-                )}
+                <img
+                  src = {selectedGroup.profileImageUrl ?? '/shuttleplay-maskable-icon-512.png'}
+                  alt = ""
+                  className = {styles.modalProfileImage}
+                />
 
                 <div className = {styles.modalTitleContent}>
                   <h2 className = {styles.modalTitle}>

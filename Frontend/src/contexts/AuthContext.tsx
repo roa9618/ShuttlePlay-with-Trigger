@@ -30,6 +30,7 @@ function toAuthSession(user: Awaited<ReturnType<typeof getCurrentUser>>): AuthSe
     provider: user.provider,
     profileCompleted: user.profileCompleted,
     gender: user.gender,
+    ageGroup: user.ageGroup,
     grade: user.grade,
     profileImageUrl: user.profileImageUrl,
   };

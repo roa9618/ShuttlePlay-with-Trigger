@@ -79,8 +79,8 @@ public class OAuth2SuccessHandler implements org.springframework.security.web.au
     }
 
     private RefreshToken createRefreshToken(Long userId) {
-        refreshTokenRepository.findByUserIdAndRevokedFalse(userId)
-                .ifPresent(RefreshToken::revoke);
+        refreshTokenRepository.findAllByUserIdAndRevokedFalse(userId)
+                .forEach(RefreshToken::revoke);
 
         LocalDateTime expiresAt = LocalDateTime.now()
                 .plusNanos(jwtTokenProvider.getRefreshTokenExpirationMillis() * 1_000_000);
