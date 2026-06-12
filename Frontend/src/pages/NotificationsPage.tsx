@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Bell,
@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import {
+  loadNotifications,
   markAllNotificationsAsRead,
   markNotificationAsRead,
   useNotifications,
@@ -35,8 +36,12 @@ export default function NotificationsPage() {
     ? notifications.filter(notification => !notification.read)
     : notifications;
 
+  useEffect(() => {
+    void loadNotifications();
+  }, []);
+
   const openNotification = (notification: AppNotification) => {
-    markNotificationAsRead(notification.id);
+    void markNotificationAsRead(notification.id);
     navigate(notification.targetPath);
   };
 
@@ -56,7 +61,7 @@ export default function NotificationsPage() {
             variant = "outline"
             className = {styles.markAllButton}
             disabled = {unreadCount === 0}
-            onClick = {markAllNotificationsAsRead}
+            onClick = {() => void markAllNotificationsAsRead()}
           >
             <CheckCheck />
             전체 읽음 처리

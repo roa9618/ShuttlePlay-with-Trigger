@@ -1,57 +1,16 @@
 import { useSyncExternalStore } from 'react';
+import {
+  getNotifications,
+  readAllNotifications,
+  readNotification,
+  type NotificationItemResponse,
+  type NotificationType,
+} from './notificationApi';
 
-export type NotificationType = 'SCHEDULE' | 'MATCH' | 'GROUP' | 'SYSTEM';
+export type { NotificationType };
+export type AppNotification = NotificationItemResponse;
 
-export type AppNotification = {
-  id: number;
-  type: NotificationType;
-  title: string;
-  message: string;
-  createdAt: string;
-  targetPath: string;
-  read: boolean;
-};
-
-const initialNotifications: AppNotification[] = [
-  {
-    id: 1,
-    type: 'MATCH',
-    title: '다음 경기가 배정되었습니다',
-    message: '2번 코트에서 경기가 곧 시작됩니다. 경기 준비를 해주세요.',
-    createdAt: '방금 전',
-    targetPath: '/sessions/demo/next-match',
-    read: false,
-  },
-  {
-    id: 2,
-    type: 'SCHEDULE',
-    title: '이번 주 운동 일정이 등록되었습니다',
-    message: '금요일 오후 8시 판교 배드민턴 동호회 일정이 등록되었습니다.',
-    createdAt: '10분 전',
-    targetPath: '/groups',
-    read: false,
-  },
-  {
-    id: 3,
-    type: 'GROUP',
-    title: '모임 운영 안내가 변경되었습니다',
-    message: '참석 등록 마감 시간이 운동 시작 2시간 전으로 변경되었습니다.',
-    createdAt: '어제',
-    targetPath: '/groups/1',
-    read: true,
-  },
-  {
-    id: 4,
-    type: 'SYSTEM',
-    title: '프로필 정보를 확인해주세요',
-    message: '정확한 매칭을 위해 급수와 활동 정보를 최신 상태로 유지해주세요.',
-    createdAt: '3일 전',
-    targetPath: '/settings',
-    read: true,
-  },
-];
-
-let notifications = initialNotifications;
+let notifications: AppNotification[] = [];
 const listeners = new Set<() => void>();
 
 function emitChange() {
@@ -60,7 +19,6 @@ function emitChange() {
 
 function subscribe(listener: () => void) {
   listeners.add(listener);
-
   return () => listeners.delete(listener);
 }
 
@@ -68,20 +26,45 @@ function getSnapshot() {
   return notifications;
 }
 
+function formatCreatedAt(createdAt: string) {
+  const elapsedMinutes = Math.floor(
+    (Date.now() - new Date(createdAt).getTime()) / (1000 * 60),
+  );
+
+  if (elapsedMinutes < 1) return '방금 전';
+  if (elapsedMinutes < 60) return `${elapsedMinutes}분 전`;
+  if (elapsedMinutes < 1440) return `${Math.floor(elapsedMinutes / 60)}시간 전`;
+  if (elapsedMinutes < 2880) return '어제';
+  return `${Math.floor(elapsedMinutes / 1440)}일 전`;
+}
+
+function toAppNotification(notification: NotificationItemResponse) {
+  return {
+    ...notification,
+    createdAt: formatCreatedAt(notification.createdAt),
+  };
+}
+
 export function useNotifications() {
   return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 }
 
-export function markNotificationAsRead(notificationId: number) {
-  notifications = notifications.map(notification => (
-    notification.id === notificationId
-      ? { ...notification, read: true }
-      : notification
+export async function loadNotifications() {
+  const response = await getNotifications();
+  notifications = response.items.map(toAppNotification);
+  emitChange();
+}
+
+export async function markNotificationAsRead(notificationId: number) {
+  const notification = toAppNotification(await readNotification(notificationId));
+  notifications = notifications.map(current => (
+    current.id === notificationId ? notification : current
   ));
   emitChange();
 }
 
-export function markAllNotificationsAsRead() {
+export async function markAllNotificationsAsRead() {
+  await readAllNotifications();
   notifications = notifications.map(notification => ({
     ...notification,
     read: true,

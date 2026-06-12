@@ -16,6 +16,7 @@ import {
 import { Button } from './ui/button';
 import { useAuth } from '../contexts/AuthContext';
 import {
+  loadNotifications,
   markAllNotificationsAsRead,
   markNotificationAsRead,
   useNotifications,
@@ -66,7 +67,7 @@ export default function DesktopSidebar() {
   };
 
   const openNotification = (notification: AppNotification) => {
-    markNotificationAsRead(notification.id);
+    void markNotificationAsRead(notification.id);
     setNotificationOpen(false);
     navigate(notification.targetPath);
   };
@@ -75,6 +76,12 @@ export default function DesktopSidebar() {
     setNotificationOpen(false);
     navigate('/notifications');
   };
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      void loadNotifications();
+    }
+  }, [isAuthenticated]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -155,7 +162,7 @@ export default function DesktopSidebar() {
                   <button
                     type = "button"
                     disabled = {unreadCount === 0}
-                    onClick = {markAllNotificationsAsRead}
+                    onClick = {() => void markAllNotificationsAsRead()}
                   >
                     <CheckCheck />
                     전체 읽음
