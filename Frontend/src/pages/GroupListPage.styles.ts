@@ -305,7 +305,7 @@ export const styles = {
   chevronIcon: 'h-3.5 w-3.5 shrink-0',
 
   emptyRow: [
-    'flex h-32 flex-col items-center justify-center',
+    'flex h-[372px] flex-col items-center justify-center',
     'bg-primary/[0.02] text-center',
     '[&_p]:text-sm',
     '[&_p]:font-medium',

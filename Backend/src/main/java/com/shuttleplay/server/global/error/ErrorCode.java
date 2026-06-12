@@ -39,7 +39,9 @@ public enum ErrorCode {
 
     PASSWORD_RESET_TOKEN_NOT_FOUND(HttpStatus.NOT_FOUND, "PASSWORD_RESET_TOKEN_NOT_FOUND", "비밀번호 재설정 토큰을 찾을 수 없습니다."),
     INVALID_PASSWORD_RESET_TOKEN(HttpStatus.BAD_REQUEST, "INVALID_PASSWORD_RESET_TOKEN", "유효하지 않은 비밀번호 재설정 토큰입니다."),
-    EXPIRED_PASSWORD_RESET_TOKEN(HttpStatus.BAD_REQUEST, "EXPIRED_PASSWORD_RESET_TOKEN", "비밀번호 재설정 토큰이 만료되었습니다.");
+    EXPIRED_PASSWORD_RESET_TOKEN(HttpStatus.BAD_REQUEST, "EXPIRED_PASSWORD_RESET_TOKEN", "비밀번호 재설정 토큰이 만료되었습니다."),
+
+    GROUP_NOT_FOUND(HttpStatus.NOT_FOUND, "GROUP_NOT_FOUND", "모임을 찾을 수 없습니다.");
 
     private final HttpStatus httpStatus;
     private final String code;
