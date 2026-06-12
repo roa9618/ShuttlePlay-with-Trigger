@@ -19,6 +19,7 @@ import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import java.time.LocalDateTime;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -76,4 +77,35 @@ public class GroupMember extends BaseEntity {
 
     @Column(nullable = false)
     private int averageParticipationIntervalDays;
+
+    @Builder
+    private GroupMember(Group group, User user, GroupMemberRole role, GroupMemberStatus status,
+                        int participationCount, LocalDateTime lastParticipationAt,
+                        LocalDateTime lastAccessedAt, int monthlyParticipationRate,
+                        int recentFourWeekParticipationCount, int averageParticipationIntervalDays) {
+        this.group = group;
+        this.user = user;
+        this.role = role;
+        this.status = status;
+        this.participationCount = participationCount;
+        this.lastParticipationAt = lastParticipationAt;
+        this.lastAccessedAt = lastAccessedAt;
+        this.monthlyParticipationRate = monthlyParticipationRate;
+        this.recentFourWeekParticipationCount = recentFourWeekParticipationCount;
+        this.averageParticipationIntervalDays = averageParticipationIntervalDays;
+    }
+
+    public static GroupMember createOwner(Group group, User user) {
+        return GroupMember.builder()
+                .group(group)
+                .user(user)
+                .role(GroupMemberRole.OWNER)
+                .status(GroupMemberStatus.ACTIVE)
+                .participationCount(0)
+                .lastAccessedAt(LocalDateTime.now())
+                .monthlyParticipationRate(0)
+                .recentFourWeekParticipationCount(0)
+                .averageParticipationIntervalDays(0)
+                .build();
+    }
 }

@@ -16,6 +16,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -56,4 +57,29 @@ public class Group extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private GroupStatus status;
+
+    @Builder
+    private Group(User owner, String name, String profileImageUrl, String activityRegion,
+                  String description, String operationNotice, GroupStatus status) {
+        this.owner = owner;
+        this.name = name;
+        this.profileImageUrl = profileImageUrl;
+        this.activityRegion = activityRegion;
+        this.description = description;
+        this.operationNotice = operationNotice;
+        this.status = status;
+    }
+
+    public static Group create(User owner, String name, String profileImageUrl,
+                               String activityRegion, String description, String operationNotice) {
+        return Group.builder()
+                .owner(owner)
+                .name(name)
+                .profileImageUrl(profileImageUrl)
+                .activityRegion(activityRegion)
+                .description(description)
+                .operationNotice(operationNotice)
+                .status(GroupStatus.ACTIVE)
+                .build();
+    }
 }
