@@ -63,8 +63,8 @@ export const router = createBrowserRouter([
         Component: RequireAuth,
         children: [
           // Desktop-optimized pages (with sidebar) - nested under Layout
-          { path: "groups", Component: GroupListPage, handle: { title: "모임 목록" } },
-          { path: "groups/new", Component: GroupNewPage, handle: { title: "모임 생성" } },
+          { path: "groups", Component: GroupListPage, handle: { title: "내 모임" } },
+          { path: "groups/new", Component: GroupNewPage, handle: { title: "모임 만들기" } },
           { path: "groups/:groupId", Component: GroupDetailPage, handle: { title: "모임 상세" } },
           { path: "groups/:groupId/members", Component: GroupMembersPage, handle: { title: "구성원 관리" } },
           { path: "groups/:groupId/settings", Component: GroupSettingsPage, handle: { title: "모임 설정" } },
@@ -82,7 +82,7 @@ export const router = createBrowserRouter([
           { path: "notifications", Component: NotificationsPage, handle: { title: "전체 알림" } },
         ],
       },
-      { path: "gallery", Component: GalleryPage, handle: { title: "화면 목록" } },
+      { path: "gallery", Component: GalleryPage, handle: { title: "셔틀플레이 페이지 갤러리" } },
       { path: "*", Component: NotFoundPage, handle: { title: "페이지를 찾을 수 없음" } },
     ],
   },
