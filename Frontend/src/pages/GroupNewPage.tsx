@@ -26,6 +26,7 @@ import {
 } from '../components/ui/select';
 import { Textarea } from '../components/ui/textarea';
 import { koreanRegions, provinceOptions } from '../utils/koreanRegions';
+import { createGroup } from '../utils/groupApi';
 import { styles } from './GroupNewPage.styles';
 
 const GROUP_NAME_MAX_LENGTH = 40;
@@ -94,6 +95,7 @@ export default function GroupNewPage() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
   const [isImageDragging, setIsImageDragging] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [fieldFeedback, setFieldFeedback] = useState<FieldFeedback>(null);
   const [formData, setFormData] = useState({
     name: '',
@@ -200,7 +202,7 @@ export default function GroupNewPage() {
     clearFieldFeedback('image');
   };
 
-  const handleSubmit = (event: FormEvent) => {
+  const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
 
     if (!formData.name.trim()) {
@@ -236,7 +238,22 @@ export default function GroupNewPage() {
     }
 
     setFieldFeedback(null);
-    navigate('/groups');
+    setIsSubmitting(true);
+
+    try {
+      await createGroup({
+        name: formData.name.trim(),
+        profileImageUrl: null,
+        activityRegion: formData.district && formData.district !== '전체'
+          ? `${formData.province} ${formData.district}`
+          : formData.province,
+        description: formData.description.trim(),
+        operationNotice: formData.operationNotice.trim() || null,
+      });
+      navigate('/groups');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -517,7 +534,11 @@ export default function GroupNewPage() {
               </Link>
             </Button>
 
-            <Button type = "submit" className = {styles.submitButton}>
+            <Button
+              type = "submit"
+              className = {styles.submitButton}
+              disabled = {isSubmitting}
+            >
               <PlusCircle className = {styles.buttonIcon} />
               모임 만들기
             </Button>

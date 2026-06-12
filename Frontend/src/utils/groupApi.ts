@@ -58,6 +58,19 @@ export type GroupActivitySummaryResponse = {
   peakActivityTime: string;
 };
 
+export type CreateGroupRequest = {
+  name: string;
+  profileImageUrl: string | null;
+  activityRegion: string;
+  description: string;
+  operationNotice: string | null;
+};
+
+export type CreateGroupResponse = {
+  id: number;
+  name: string;
+};
+
 type GetMyGroupsParams = {
   keyword: string;
   role: GroupRole | null;
@@ -99,4 +112,10 @@ export function getGroupActivitySummary(groupId: number) {
       auth: true,
     },
   );
+}
+
+export function createGroup(request: CreateGroupRequest) {
+  return apiClient.post<CreateGroupResponse>('/groups', request, {
+    auth: true,
+  });
 }
