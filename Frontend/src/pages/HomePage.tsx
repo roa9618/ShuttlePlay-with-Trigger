@@ -7,6 +7,7 @@ import { Button } from '../components/ui/button';
 import { Calendar, ChevronDown, ChevronRight, ClipboardCheck, Download, LogIn, LogOut, QrCode, Settings, UserPlus, Users } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getAuthAccessToken, getAuthSession, updateAuthTokens } from '../utils/authSession';
+import { getMyGroups } from '../utils/groupApi';
 import { usePwaInstall } from '../utils/usePwaInstall';
 import { styles } from './HomePage.styles';
 
@@ -35,11 +36,12 @@ export default function HomePage() {
     {
       title: '모임 운영',
       description: '출석, 매칭, 결과 입력을 한곳에서 관리하세요',
-      path: '/sessions/demo/dashboard',
+      path: '/groups',
       icon: ClipboardCheck,
       badge: '운영자',
       tone: 'primary',
       requiresAuth: true,
+      managesGroups: true,
     },
   ];
 
@@ -176,6 +178,46 @@ export default function HomePage() {
         from: path,
       },
     });
+  };
+
+  const handleGroupManagementNavigation = async () => {
+    const hasAccessToken = getAuthAccessToken() !== null;
+
+    if (!isAuthenticated && !hasAccessToken) {
+      navigate('/login', {
+        state: {
+          from: '/groups',
+        },
+      });
+      return;
+    }
+
+    if (!session) {
+      setSessionFromStorage();
+    }
+
+    try {
+      const response = await getMyGroups({
+        keyword: '',
+        role: 'OWNER',
+        page: 0,
+        size: 2,
+      });
+
+      if (response.totalElements === 0) {
+        navigate('/groups/new');
+        return;
+      }
+
+      if (response.totalElements === 1 && response.items[0]) {
+        navigate(`/groups/${response.items[0].id}`);
+        return;
+      }
+
+      navigate('/groups');
+    } catch {
+      navigate('/groups');
+    }
   };
 
   const handleProfileNavigation = (path: string) => {
@@ -316,7 +358,9 @@ export default function HomePage() {
                     key = {action.title}
                     type = "button"
                     className = {styles.cardButton}
-                    onClick = {() => handleProtectedNavigation(action.path)}
+                    onClick = {() => action.managesGroups
+                      ? void handleGroupManagementNavigation()
+                      : handleProtectedNavigation(action.path)}
                   >
                     <div className = {styles.actionCard(action.tone)}>
                       <div className = {styles.betweenRow}>
