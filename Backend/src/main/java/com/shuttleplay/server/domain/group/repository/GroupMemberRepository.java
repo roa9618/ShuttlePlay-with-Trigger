@@ -3,6 +3,7 @@ package com.shuttleplay.server.domain.group.repository;
 import com.shuttleplay.server.domain.group.entity.GroupMember;
 import com.shuttleplay.server.domain.group.enums.GroupMemberRole;
 import com.shuttleplay.server.domain.group.enums.GroupMemberStatus;
+import com.shuttleplay.server.domain.user.enums.Grade;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
@@ -46,6 +47,8 @@ public interface GroupMemberRepository extends JpaRepository<GroupMember, Long> 
             GroupMemberStatus status
     );
 
+    Optional<GroupMember> findByGroupIdAndUserId(Long groupId, Long userId);
+
     @Query("""
             select gm.group.id as groupId, count(gm.id) as memberCount
             from GroupMember gm
@@ -57,4 +60,31 @@ public interface GroupMemberRepository extends JpaRepository<GroupMember, Long> 
             @Param("groupIds") List<Long> groupIds,
             @Param("status") GroupMemberStatus status
     );
+
+    @EntityGraph(attributePaths = {"user", "group"})
+    Page<GroupMember> findAllByGroupIdAndStatus(Long groupId, GroupMemberStatus status, Pageable pageable);
+
+    @EntityGraph(attributePaths = {"user", "group"})
+    List<GroupMember> findAllByGroupIdAndStatus(Long groupId, GroupMemberStatus status);
+
+    @EntityGraph(attributePaths = {"user", "group"})
+    @Query("""
+            select gm
+            from GroupMember gm
+            where gm.group.id = :groupId
+              and gm.status = :status
+              and (:keyword = '' or lower(gm.user.name) like lower(concat('%', :keyword, '%')))
+              and (:role is null or gm.role = :role)
+              and (:grade is null or gm.user.grade = :grade)
+            """)
+    Page<GroupMember> findGroupMembers(
+            @Param("groupId") Long groupId,
+            @Param("status") GroupMemberStatus status,
+            @Param("keyword") String keyword,
+            @Param("role") GroupMemberRole role,
+            @Param("grade") Grade grade,
+            Pageable pageable
+    );
+
+    long countByGroupIdAndStatus(Long groupId, GroupMemberStatus status);
 }

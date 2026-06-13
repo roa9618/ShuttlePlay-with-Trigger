@@ -142,7 +142,7 @@ public class GroupQueryService {
 
         LocalDateTime now = LocalDateTime.now();
         List<GroupSession> recentSessions = groupSessionRepository
-                .findAllByGroupIdAndStartsAtBetweenAndStatusNot(
+                .findAllByGroupIdAndStartsAtBetweenAndStatusNotAndIsDeletedFalse(
                         groupId,
                         now.minusDays(RECENT_ACTIVITY_DAYS),
                         now,

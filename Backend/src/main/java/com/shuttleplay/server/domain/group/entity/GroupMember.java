@@ -78,6 +78,27 @@ public class GroupMember extends BaseEntity {
     @Column(nullable = false)
     private int averageParticipationIntervalDays;
 
+    @Column(length = 1000)
+    private String memo;
+
+    @Column(nullable = false)
+    private boolean schedulePermission;
+
+    @Column(nullable = false)
+    private boolean noticePermission;
+
+    @Column(nullable = false)
+    private boolean joinRequestPermission;
+
+    @Column(nullable = false)
+    private boolean memberPermission;
+
+    @Column(nullable = false)
+    private boolean postPermission;
+
+    @Column(nullable = false, columnDefinition = "boolean default false")
+    private boolean operationLogPermission;
+
     @Builder
     private GroupMember(Group group, User user, GroupMemberRole role, GroupMemberStatus status,
                         int participationCount, LocalDateTime lastParticipationAt,
@@ -107,5 +128,42 @@ public class GroupMember extends BaseEntity {
                 .recentFourWeekParticipationCount(0)
                 .averageParticipationIntervalDays(0)
                 .build();
+    }
+
+    public static GroupMember createMember(Group group, User user) {
+        return GroupMember.builder()
+                .group(group).user(user).role(GroupMemberRole.MEMBER).status(GroupMemberStatus.ACTIVE)
+                .participationCount(0).lastAccessedAt(LocalDateTime.now()).monthlyParticipationRate(0)
+                .recentFourWeekParticipationCount(0).averageParticipationIntervalDays(0).build();
+    }
+
+    public void updateRole(GroupMemberRole role) {
+        this.role = role;
+    }
+
+    public void updatePermissions(boolean schedule, boolean notice, boolean joinRequest, boolean member, boolean post,
+                                  boolean operationLog) {
+        this.schedulePermission = schedule;
+        this.noticePermission = notice;
+        this.joinRequestPermission = joinRequest;
+        this.memberPermission = member;
+        this.postPermission = post;
+        this.operationLogPermission = operationLog;
+    }
+
+    public void updateMemo(String memo) {
+        this.memo = memo;
+    }
+
+    public void leave() {
+        this.status = GroupMemberStatus.INACTIVE;
+        softDelete();
+    }
+
+    public void reactivate() {
+        this.status = GroupMemberStatus.ACTIVE;
+        this.role = GroupMemberRole.MEMBER;
+        this.lastAccessedAt = LocalDateTime.now();
+        restore();
     }
 }

@@ -44,10 +44,39 @@ public class GroupSession extends BaseEntity {
     @Column(name = "starts_at", nullable = false)
     private LocalDateTime startsAt;
 
+    @Column
+    private LocalDateTime endsAt;
+
+    @Column(length = 200)
+    private String place;
+
+    @Column
+    private LocalDateTime voteDeadline;
+
     @Column(nullable = false)
     private int attendanceCount;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private GroupSessionStatus status;
+
+    public void update(String title, LocalDateTime startsAt, LocalDateTime endsAt, String place, LocalDateTime voteDeadline) {
+        this.title = title;
+        this.startsAt = startsAt;
+        this.endsAt = endsAt;
+        this.place = place;
+        this.voteDeadline = voteDeadline;
+    }
+
+    public void cancel() {
+        this.status = GroupSessionStatus.CANCELLED;
+    }
+
+    public void deleteSession() {
+        softDelete();
+    }
+
+    public void updateAttendanceCount(int attendanceCount) {
+        this.attendanceCount = attendanceCount;
+    }
 }

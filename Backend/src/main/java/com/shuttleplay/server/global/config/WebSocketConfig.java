@@ -1,11 +1,15 @@
 package com.shuttleplay.server.global.config;
 
+import com.shuttleplay.server.domain.group.enums.GroupMemberStatus;
+import com.shuttleplay.server.domain.group.repository.GroupMemberRepository;
 import com.shuttleplay.server.global.security.CustomUserDetails;
 import com.shuttleplay.server.global.security.CustomUserDetailsService;
 import com.shuttleplay.server.global.security.JwtTokenProvider;
 import com.shuttleplay.server.global.error.BusinessException;
 import com.shuttleplay.server.global.error.ErrorCode;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.Message;
@@ -26,13 +30,15 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
 @RequiredArgsConstructor
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     private static final String BEARER_PREFIX = "Bearer ";
+    private static final Pattern GROUP_TOPIC = Pattern.compile("^/topic/groups/(\\d+)(?:/.*)?$");
 
     private final JwtTokenProvider jwtTokenProvider;
     private final CustomUserDetailsService customUserDetailsService;
+    private final GroupMemberRepository groupMemberRepository;
 
     @Override
     public void configureMessageBroker(MessageBrokerRegistry registry) {
-        registry.enableSimpleBroker("/queue");
+        registry.enableSimpleBroker("/topic", "/queue");
         registry.setUserDestinationPrefix("/user");
     }
 
@@ -70,6 +76,20 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                             null,
                             userDetails.getAuthorities()
                     ));
+                }
+
+                if (accessor != null && StompCommand.SUBSCRIBE.equals(accessor.getCommand())) {
+                    Matcher matcher = GROUP_TOPIC.matcher(String.valueOf(accessor.getDestination()));
+                    if (matcher.matches()
+                            && (!(accessor.getUser() instanceof UsernamePasswordAuthenticationToken authentication)
+                            || !(authentication.getPrincipal() instanceof CustomUserDetails userDetails)
+                            || groupMemberRepository.findByGroupIdAndUserIdAndStatus(
+                                    Long.parseLong(matcher.group(1)),
+                                    userDetails.getId(),
+                                    GroupMemberStatus.ACTIVE
+                            ).isEmpty())) {
+                        throw new BusinessException(ErrorCode.FORBIDDEN);
+                    }
                 }
 
                 return message;

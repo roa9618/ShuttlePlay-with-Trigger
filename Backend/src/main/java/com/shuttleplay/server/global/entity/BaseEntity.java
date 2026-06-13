@@ -3,6 +3,7 @@ package com.shuttleplay.server.global.entity;
 import jakarta.persistence.Column;
 import jakarta.persistence.EntityListeners;
 import jakarta.persistence.MappedSuperclass;
+import jakarta.persistence.Version;
 import java.time.LocalDateTime;
 import lombok.Getter;
 import org.springframework.data.annotation.CreatedDate;
@@ -27,8 +28,16 @@ public abstract class BaseEntity {
     @Column(nullable = false)
     private boolean isDeleted = false;
 
+    @Version
+    private Long version;
+
     public void softDelete() {
         this.isDeleted = true;
         this.deletedAt = LocalDateTime.now();
+    }
+
+    protected void restore() {
+        this.isDeleted = false;
+        this.deletedAt = null;
     }
 }

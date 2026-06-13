@@ -58,6 +58,30 @@ public class Group extends BaseEntity {
     @Column(nullable = false, length = 20)
     private GroupStatus status;
 
+    @Column(nullable = false)
+    private boolean newJoinAllowed = true;
+
+    @Column(nullable = false)
+    private boolean approvalRequired = true;
+
+    @Column(nullable = false)
+    private boolean guestAllowed = true;
+
+    @Column(nullable = false)
+    private boolean sameDayVoteChangeAllowed = true;
+
+    @Column(nullable = false)
+    private boolean postDeadlineVoteChangeAllowed;
+
+    @Column(nullable = false)
+    private boolean memberPostAllowed = true;
+
+    @Column(nullable = false)
+    private boolean memberCommentAllowed = true;
+
+    @Column(nullable = false)
+    private boolean postAttachmentAllowed = true;
+
     @Builder
     private Group(User owner, String name, String profileImageUrl, String activityRegion,
                   String description, String operationNotice, GroupStatus status) {
@@ -68,6 +92,13 @@ public class Group extends BaseEntity {
         this.description = description;
         this.operationNotice = operationNotice;
         this.status = status;
+        this.newJoinAllowed = true;
+        this.approvalRequired = true;
+        this.guestAllowed = true;
+        this.sameDayVoteChangeAllowed = true;
+        this.memberPostAllowed = true;
+        this.memberCommentAllowed = true;
+        this.postAttachmentAllowed = true;
     }
 
     public static Group create(User owner, String name, String profileImageUrl,
@@ -81,5 +112,45 @@ public class Group extends BaseEntity {
                 .operationNotice(operationNotice)
                 .status(GroupStatus.ACTIVE)
                 .build();
+    }
+
+    public void updateBasic(String name, String activityRegion, String description) {
+        this.name = name;
+        this.activityRegion = activityRegion;
+        this.description = description;
+    }
+
+    public void updateOperationNotice(String operationNotice) {
+        this.operationNotice = operationNotice;
+    }
+
+    public void updateJoinSettings(boolean newJoinAllowed, boolean approvalRequired, boolean guestAllowed) {
+        this.newJoinAllowed = newJoinAllowed;
+        this.approvalRequired = approvalRequired;
+        this.guestAllowed = guestAllowed;
+    }
+
+    public void updateScheduleSettings(boolean sameDayVoteChangeAllowed, boolean postDeadlineVoteChangeAllowed) {
+        this.sameDayVoteChangeAllowed = sameDayVoteChangeAllowed;
+        this.postDeadlineVoteChangeAllowed = postDeadlineVoteChangeAllowed;
+    }
+
+    public void updateBoardSettings(boolean memberPostAllowed, boolean memberCommentAllowed, boolean postAttachmentAllowed) {
+        this.memberPostAllowed = memberPostAllowed;
+        this.memberCommentAllowed = memberCommentAllowed;
+        this.postAttachmentAllowed = postAttachmentAllowed;
+    }
+
+    public void updateProfileImageUrl(String profileImageUrl) {
+        this.profileImageUrl = profileImageUrl;
+    }
+
+    public void transferOwnership(User owner) {
+        this.owner = owner;
+    }
+
+    public void deactivate() {
+        this.status = GroupStatus.INACTIVE;
+        softDelete();
     }
 }
