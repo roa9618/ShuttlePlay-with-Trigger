@@ -22,6 +22,7 @@ import {
   UsersRound,
   X,
 } from 'lucide-react';
+import { formatActivityRegion } from '../utils/activityRegion';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -613,7 +614,7 @@ export default function GroupListPage() {
                         <div className = {styles.groupMetaBox}>
                           <p className = {styles.groupRegion}>
                             <MapPin className = {styles.regionIcon} />
-                            {group.activityRegion}
+                            {formatActivityRegion(group.activityRegion)}
                           </p>
 
                           <p className = {styles.groupDescription}>
@@ -763,7 +764,7 @@ export default function GroupListPage() {
 
                   <p className = {styles.modalRegion}>
                     <MapPin className = {styles.modalRegionIcon} />
-                    {selectedGroup.activityRegion}
+                    {formatActivityRegion(selectedGroup.activityRegion)}
                   </p>
                 </div>
               </div>

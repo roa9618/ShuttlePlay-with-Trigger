@@ -256,7 +256,7 @@ export default function GroupNewPage() {
       await createGroup({
         name: formData.name.trim(),
         profileImageUrl: uploadedImage?.imageUrl ?? null,
-        activityRegion: formData.district && formData.district !== '전체'
+        activityRegion: formData.district
           ? `${formData.province} ${formData.district}`
           : formData.province,
         description: formData.description.trim(),
