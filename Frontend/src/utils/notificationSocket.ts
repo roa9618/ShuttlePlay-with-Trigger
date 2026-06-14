@@ -2,6 +2,7 @@ import { Client } from '@stomp/stompjs';
 import { API_ORIGIN } from './apiClient';
 import { getAuthAccessToken } from './authSession';
 import { loadNotifications, receiveNotification } from './notificationStore';
+import { enqueueNotificationToast } from './notificationToastStore';
 import type { NotificationItemResponse } from './notificationApi';
 
 let client: Client | null = null;
@@ -26,7 +27,9 @@ export function connectNotificationSocket() {
     onConnect: () => {
       void loadNotifications();
       client?.subscribe('/user/queue/notifications', message => {
-        receiveNotification(JSON.parse(message.body) as NotificationItemResponse);
+        const notification = JSON.parse(message.body) as NotificationItemResponse;
+        receiveNotification(notification);
+        enqueueNotificationToast(notification);
       });
     },
   });
