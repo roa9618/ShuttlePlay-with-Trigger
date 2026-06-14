@@ -1,4 +1,4 @@
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import Logo from '../components/Logo';
 import ShuttlecockIcon from '../components/ShuttlecockIcon';
 import { Button } from '../components/ui/button';
@@ -13,6 +13,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { API_ORIGIN, ApiClientError, apiClient } from '../utils/apiClient';
 import {
   consumeAuthRedirectPath,
+  getAuthRedirectPath,
+  normalizeAuthRedirectPath,
   setAuthRedirectPath,
   startTokenAuthSession,
   type AuthSession,
@@ -62,6 +64,7 @@ function AppleLogo() {
 export default function LoginPage() {
   const location = useLocation();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { setSessionFromStorage } = useAuth();
   const [formData, setFormData] = useState({
     email: '',
@@ -105,20 +108,37 @@ export default function LoginPage() {
   ];
 
   const getReturnPath = () => {
-    if (typeof location.state?.from === 'string') {
-      return location.state.from;
+    const redirectParam = searchParams.get('redirect');
+
+    const normalizedRedirectParam = normalizeAuthRedirectPath(redirectParam);
+
+    if (normalizedRedirectParam !== '/') {
+      return normalizedRedirectParam;
     }
 
-    return consumeAuthRedirectPath();
+    if (typeof location.state?.from === 'string') {
+      return normalizeAuthRedirectPath(location.state.from);
+    }
+
+    return getAuthRedirectPath();
   };
 
   useEffect(() => {
     window.scrollTo(0, 0);
 
+    const redirectParam = searchParams.get('redirect');
+
+    const normalizedRedirectParam = normalizeAuthRedirectPath(redirectParam);
+
+    if (normalizedRedirectParam !== '/') {
+      setAuthRedirectPath(normalizedRedirectParam);
+      return;
+    }
+
     if (typeof location.state?.from === 'string') {
       setAuthRedirectPath(location.state.from);
     }
-  }, [location.state]);
+  }, [location.state, searchParams]);
 
   const handleSocialLogin = (provider: SocialProvider) => {
     if (!provider.path) {
@@ -193,7 +213,10 @@ export default function LoginPage() {
 
       setSessionFromStorage();
 
-      navigate(getReturnPath(), {
+      const returnPath = getReturnPath();
+      consumeAuthRedirectPath();
+
+      navigate(returnPath, {
         replace: true,
       });
     } catch (error) {

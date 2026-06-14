@@ -6,7 +6,7 @@ import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 import { Calendar, ChevronDown, ChevronRight, ClipboardCheck, Download, LogIn, LogOut, QrCode, Settings, UserPlus, Users } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { getAuthAccessToken, getAuthSession, updateAuthTokens } from '../utils/authSession';
+import { consumeAuthRedirectPath, getAuthAccessToken, getAuthRedirectPath, getAuthSession, setAuthRedirectPath, updateAuthTokens } from '../utils/authSession';
 import { usePwaInstall } from '../utils/usePwaInstall';
 import { styles } from './HomePage.styles';
 
@@ -73,9 +73,10 @@ export default function HomePage() {
       });
 
       window.history.replaceState(null, '', window.location.pathname);
+      const redirectPath = getAuthRedirectPath();
 
       if (profileCompleted === 'false') {
-        navigate('/social-signup', {
+        navigate(`/social-signup?redirect=${encodeURIComponent(redirectPath)}`, {
           replace: true,
         });
         return;
@@ -84,7 +85,8 @@ export default function HomePage() {
       const nextSession = await refreshSession();
 
       if (nextSession) {
-        navigate('/', {
+        consumeAuthRedirectPath();
+        navigate(redirectPath === '/' ? '/groups' : redirectPath, {
           replace: true,
         });
         return;
@@ -172,7 +174,8 @@ export default function HomePage() {
       return;
     }
 
-    navigate('/login', {
+    setAuthRedirectPath(path);
+    navigate(`/login?redirect=${encodeURIComponent(path)}`, {
       state: {
         from: path,
       },

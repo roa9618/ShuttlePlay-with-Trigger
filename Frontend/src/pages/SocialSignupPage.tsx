@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Sparkles } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { ApiClientError } from '../utils/apiClient';
-import { updateAuthTokens } from '../utils/authSession';
+import { consumeAuthRedirectPath, getAuthRedirectPath, normalizeAuthRedirectPath, setAuthRedirectPath, updateAuthTokens } from '../utils/authSession';
 import { footerDocuments, type FooterDocumentKey } from '../utils/footerContent';
 import { getCurrentUser, getProfileCompletion, updateProfileCompletion } from '../utils/userApi';
 import { styles } from './SignupPage.styles';
@@ -46,20 +46,42 @@ export default function SocialSignupPage() {
     grade: '',
   });
 
-  const moveToMainPage = () => {
-    navigate('/', {
+  const getReturnPath = () => {
+    const redirectParam = searchParams.get('redirect');
+
+    const normalizedRedirectParam = normalizeAuthRedirectPath(redirectParam);
+
+    if (normalizedRedirectParam !== '/') {
+      return normalizedRedirectParam;
+    }
+
+    return getAuthRedirectPath();
+  };
+
+  const moveToReturnPath = () => {
+    const returnPath = getReturnPath();
+    consumeAuthRedirectPath();
+
+    navigate(returnPath, {
       replace: true,
     });
 
     window.setTimeout(() => {
-      window.location.replace('/');
+      window.location.replace(returnPath);
     }, 0);
   };
 
   useEffect(() => {
     const accessToken = searchParams.get('accessToken') ?? searchParams.get('access_token');
     const refreshToken = searchParams.get('refreshToken') ?? searchParams.get('refresh_token');
+    const redirectParam = searchParams.get('redirect');
     const socialName = getSocialNameFromParams(searchParams);
+
+    const normalizedRedirectParam = normalizeAuthRedirectPath(redirectParam);
+
+    if (normalizedRedirectParam !== '/') {
+      setAuthRedirectPath(normalizedRedirectParam);
+    }
 
     if (socialName) {
       setFormData((current) => ({
@@ -114,7 +136,7 @@ export default function SocialSignupPage() {
             });
 
           if (!ignore) {
-            moveToMainPage();
+            moveToReturnPath();
           }
         }
       } catch {
@@ -197,7 +219,7 @@ export default function SocialSignupPage() {
           setSessionFromStorage();
         });
 
-      moveToMainPage();
+      moveToReturnPath();
     } catch (error) {
       showFieldFeedback(
         'agreement',

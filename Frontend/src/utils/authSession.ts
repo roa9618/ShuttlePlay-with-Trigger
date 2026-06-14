@@ -93,8 +93,12 @@ function persistSession(session: AuthSession, tokens: AuthTokens | null, remembe
   }
 }
 
-function normalizeRedirectPath(path: string | null | undefined) {
+export function normalizeAuthRedirectPath(path: string | null | undefined) {
   if (!path || !path.startsWith('/')) {
+    return '/';
+  }
+
+  if (path.startsWith('//') || path.startsWith('/\\')) {
     return '/';
   }
 
@@ -164,11 +168,11 @@ export function updateAuthSession(session: AuthSession) {
 }
 
 export function setAuthRedirectPath(path: string | null | undefined) {
-  window.sessionStorage.setItem(AUTH_REDIRECT_PATH_KEY, normalizeRedirectPath(path));
+  window.sessionStorage.setItem(AUTH_REDIRECT_PATH_KEY, normalizeAuthRedirectPath(path));
 }
 
 export function getAuthRedirectPath() {
-  return normalizeRedirectPath(window.sessionStorage.getItem(AUTH_REDIRECT_PATH_KEY));
+  return normalizeAuthRedirectPath(window.sessionStorage.getItem(AUTH_REDIRECT_PATH_KEY));
 }
 
 export function consumeAuthRedirectPath() {

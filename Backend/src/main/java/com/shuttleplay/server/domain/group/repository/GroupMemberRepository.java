@@ -60,13 +60,31 @@ public interface GroupMemberRepository extends JpaRepository<GroupMember, Long> 
     );
 
     @EntityGraph(attributePaths = {"group", "group.owner"})
-    List<GroupMember> findAllByUserIdAndStatus(Long userId, GroupMemberStatus status);
+    @Query("""
+            select gm
+            from GroupMember gm
+            where gm.user.id = :userId
+              and gm.status = :status
+              and gm.group.status = com.shuttleplay.server.domain.group.enums.GroupStatus.ACTIVE
+            """)
+    List<GroupMember> findAllByUserIdAndStatus(
+            @Param("userId") Long userId,
+            @Param("status") GroupMemberStatus status
+    );
 
     @EntityGraph(attributePaths = {"group", "group.owner"})
+    @Query("""
+            select gm
+            from GroupMember gm
+            where gm.group.id = :groupId
+              and gm.user.id = :userId
+              and gm.status = :status
+              and gm.group.status = com.shuttleplay.server.domain.group.enums.GroupStatus.ACTIVE
+            """)
     Optional<GroupMember> findByGroupIdAndUserIdAndStatus(
-            Long groupId,
-            Long userId,
-            GroupMemberStatus status
+            @Param("groupId") Long groupId,
+            @Param("userId") Long userId,
+            @Param("status") GroupMemberStatus status
     );
 
     Optional<GroupMember> findByGroupIdAndUserId(Long groupId, Long userId);
@@ -76,6 +94,7 @@ public interface GroupMemberRepository extends JpaRepository<GroupMember, Long> 
             from GroupMember gm
             where gm.group.id in :groupIds
               and gm.status = :status
+              and gm.group.status = com.shuttleplay.server.domain.group.enums.GroupStatus.ACTIVE
             group by gm.group.id
             """)
     List<ActiveMemberCount> countActiveMembersByGroupIds(

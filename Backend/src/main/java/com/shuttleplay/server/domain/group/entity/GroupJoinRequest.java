@@ -16,6 +16,16 @@ public class GroupJoinRequest extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY, optional = false) private User requester;
     @Column(length = 1000) private String message;
     @Enumerated(EnumType.STRING) @Column(nullable = false, length = 20) private JoinRequestStatus status;
+
+    public static GroupJoinRequest create(Group group, User requester, String message) {
+        GroupJoinRequest request = new GroupJoinRequest();
+        request.group = group;
+        request.requester = requester;
+        request.message = message;
+        request.status = JoinRequestStatus.PENDING;
+        return request;
+    }
+
     public void approve() { status = JoinRequestStatus.APPROVED; }
     public void reject() { status = JoinRequestStatus.REJECTED; }
 }
