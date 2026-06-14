@@ -54,6 +54,23 @@ public class GroupQueryController {
         return ResponseEntity.ok(ApiResponse.success("내 모임 목록을 조회했습니다.", response));
     }
 
+    @GetMapping("/manageable")
+    public ResponseEntity<ApiResponse<GroupListResponse>> getManageableGroups(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @RequestParam(defaultValue = "false") boolean scheduleOnly,
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "5") @Min(1) @Max(100) int size
+    ) {
+        GroupListResponse response = groupQueryService.getManageableGroups(
+                userDetails.getId(),
+                scheduleOnly,
+                page,
+                size
+        );
+
+        return ResponseEntity.ok(ApiResponse.success("운영 가능한 모임 목록을 조회했습니다.", response));
+    }
+
     @GetMapping("/{groupId}/activity-summary")
     public ResponseEntity<ApiResponse<GroupActivitySummaryResponse>> getActivitySummary(
             @AuthenticationPrincipal CustomUserDetails userDetails,

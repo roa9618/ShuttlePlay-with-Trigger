@@ -11,7 +11,7 @@ import PasswordResetConfirmPage from "../pages/PasswordResetConfirmPage";
 import GroupListPage from "../pages/GroupListPage";
 import GroupNewPage from "../pages/GroupNewPage";
 import GroupDetailPage from "../pages/GroupDetailPage";
-import CreateSessionPage from "../pages/CreateSessionPage";
+import GroupEntryRedirectPage from "../pages/GroupEntryRedirectPage";
 import JoinSessionPage from "../pages/JoinSessionPage";
 import GuestJoinPage from "../pages/GuestJoinPage";
 import AttendancePage from "../pages/AttendancePage";
@@ -62,6 +62,8 @@ export const router = createBrowserRouter([
         children: [
           // Desktop-optimized pages (with sidebar) - nested under Layout
           { path: "groups", Component: GroupListPage, handle: { title: "내 모임" } },
+          { path: "groups/entry/manage", element: <GroupEntryRedirectPage />, handle: { title: "모임 운영" } },
+          { path: "groups/entry/create-session", element: <GroupEntryRedirectPage createSession />, handle: { title: "일정 생성" } },
           { path: "groups/new", Component: GroupNewPage, handle: { title: "모임 만들기" } },
           { path: "groups/:groupId", Component: GroupDetailPage, handle: { title: "모임 상세" } },
           { path: "groups/:groupId/schedule", Component: GroupDetailPage, handle: { title: "모임 일정" } },
@@ -70,7 +72,6 @@ export const router = createBrowserRouter([
           { path: "groups/:groupId/requests", Component: GroupDetailPage, handle: { title: "모임 가입 요청" } },
           { path: "groups/:groupId/history", Component: GroupDetailPage, handle: { title: "모임 운영 기록" } },
           { path: "groups/:groupId/settings", Component: GroupDetailPage, handle: { title: "모임 설정" } },
-          { path: "groups/:groupId/create-session", Component: CreateSessionPage, handle: { title: "운동 일정 만들기" } },
           { path: "sessions/:sessionId/dashboard", Component: OrganizerDashboardPage, handle: { title: "운영 대시보드" } },
           { path: "sessions/:sessionId/participants", Component: ParticipantManagementPage, handle: { title: "참가자 관리" } },
           { path: "sessions/:sessionId/queue", Component: MatchQueuePage, handle: { title: "매칭 대기열" } },

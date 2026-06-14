@@ -339,7 +339,7 @@ export const styles = {
 
   paginationIcon: 'h-4 w-4',
 
-  roleBadge: (role: 'OWNER' | 'MEMBER') => [
+  roleBadge: (role: 'OWNER' | 'MANAGER' | 'MEMBER') => [
     'inline-flex h-8 max-w-full items-center gap-1.5',
     'rounded-full px-3 text-xs font-medium',
     role === 'OWNER'
