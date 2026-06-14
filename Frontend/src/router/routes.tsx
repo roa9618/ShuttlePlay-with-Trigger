@@ -11,6 +11,7 @@ import PasswordResetConfirmPage from "../pages/PasswordResetConfirmPage";
 import GroupListPage from "../pages/GroupListPage";
 import GroupNewPage from "../pages/GroupNewPage";
 import GroupDetailPage from "../pages/GroupDetailPage";
+import GroupJoinPage from "../pages/GroupJoinPage";
 import GroupEntryRedirectPage from "../pages/GroupEntryRedirectPage";
 import JoinSessionPage from "../pages/JoinSessionPage";
 import GuestJoinPage from "../pages/GuestJoinPage";
@@ -66,6 +67,7 @@ export const router = createBrowserRouter([
           { path: "groups/entry/create-session", element: <GroupEntryRedirectPage createSession />, handle: { title: "일정 생성" } },
           { path: "groups/new", Component: GroupNewPage, handle: { title: "모임 만들기" } },
           { path: "groups/:groupId", Component: GroupDetailPage, handle: { title: "모임 상세" } },
+          { path: "groups/:groupId/join", Component: GroupJoinPage, handle: { title: "모임 가입" } },
           { path: "groups/:groupId/schedule", Component: GroupDetailPage, handle: { title: "모임 일정" } },
           { path: "groups/:groupId/board", Component: GroupDetailPage, handle: { title: "모임 게시판" } },
           { path: "groups/:groupId/members", Component: GroupDetailPage, handle: { title: "모임 멤버" } },
