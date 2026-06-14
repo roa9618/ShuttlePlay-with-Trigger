@@ -3,6 +3,7 @@ import { Outlet, useLocation, useMatches } from 'react-router-dom';
 import DesktopSidebar from './DesktopSidebar';
 import Footer from './Footer';
 import Logo from './Logo';
+import NotificationToastStack from './NotificationToastStack';
 import { styles } from './Layout.styles';
 
 const defaultDocumentTitle = '셔틀플레이 | 배드민턴 모임 관리';
@@ -56,6 +57,7 @@ export default function Layout() {
         <div className = {styles.desktopContent}>
           <Outlet />
         </div>
+        <NotificationToastStack />
       </div>
     );
   }
@@ -64,6 +66,7 @@ export default function Layout() {
     <div className = {showFooter ? styles.homeShell : styles.mobileShell}>
       <Outlet />
       {showFooter && <Footer />}
+      <NotificationToastStack />
     </div>
   );
 }
