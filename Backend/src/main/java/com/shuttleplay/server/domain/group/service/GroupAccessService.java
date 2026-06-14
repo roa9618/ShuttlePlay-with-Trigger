@@ -69,7 +69,7 @@ public class GroupAccessService {
     public GroupMember targetMember(Long groupId, Long memberId) {
         GroupMember target = memberRepository.findById(memberId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
-        if (!target.getGroup().getId().equals(groupId) || target.getStatus() != GroupMemberStatus.ACTIVE) {
+        if (!target.getGroup().getId().equals(groupId) || target.getStatus() != GroupMemberStatus.ACTIVE || target.getGroup().getStatus() != GroupStatus.ACTIVE) {
             throw new BusinessException(ErrorCode.NOT_FOUND);
         }
         return target;
