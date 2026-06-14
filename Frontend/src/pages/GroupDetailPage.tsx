@@ -31,7 +31,6 @@ import {
   Trash2,
   UserCheck,
   UserMinus,
-  UserRoundCog,
   Users,
   X,
 } from 'lucide-react';
@@ -60,6 +59,7 @@ type GroupRole = 'OWNER' | 'MANAGER' | 'MEMBER';
 type ScheduleStatus = 'VOTING' | 'TODAY' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
 type VoteStatus = 'JOIN' | 'UNDECIDED' | 'ABSENT';
 type ModalState =
+  | { type: 'createSchedule'; initialDate?: string }
   | { type: 'schedule'; id: number }
   | { type: 'post'; id: number }
   | { type: 'member'; id: number }
@@ -95,23 +95,13 @@ const tabPaths: Record<TabKey, string> = {
   settings: 'settings',
 };
 
-type ScheduleItem = { id: number; title: string; date: string; time: string; place: string; joined: number; undecided: number; absent: number; guests: number; deadline: string; status: ScheduleStatus; matches: number | null };
+type ScheduleItem = { id: number; title: string; date: string; time: string; place: string; joined: number; undecided: number; absent: number; guests: number; deadline: string; status: ScheduleStatus; sessionType: string; voteStatus: VoteStatus; matches: number | null; votingAllowed: boolean; guestAllowed: boolean };
 type MemberItem = { id: number; name: string; gender: string; age: string; grade: string; role: string; participation: number; recent: number; rate: number; matches: number | null; winRate: number | null; doublesMmr: number; mixedMmr: number; streak: number | null; absenceRate: number | null };
 type PostItem = { id: number; authorId: number; type: string; pinned: boolean; title: string; author: string; date: string; views: number; comments: number; content: string; attachmentNames: string | null };
 type JoinRequestItem = { id: number; name: string; gender: string; age: string; grade: string; requestedAt: string; message: string };
 type OperationItem = { id: number; actor: string; action: string; time: string; icon: typeof Calendar };
 
-const schedules: ScheduleItem[] = [];
-
-const members: MemberItem[] = [];
-
-const posts: PostItem[] = [];
-
-const joinRequests: JoinRequestItem[] = [];
-
-const operationHistory: OperationItem[] = [];
-
-function toScheduleItem(session: GroupSessionResponse): typeof schedules[number] {
+function toScheduleItem(session: GroupSessionResponse): ScheduleItem {
   const startsAt = new Date(session.startsAt);
   const endsAt = session.endsAt ? new Date(session.endsAt) : null;
   const date = session.startsAt.slice(0, 10);
@@ -137,11 +127,15 @@ function toScheduleItem(session: GroupSessionResponse): typeof schedules[number]
     guests: session.guestCount ?? 0,
     deadline: session.voteDeadline ? new Date(session.voteDeadline).toLocaleString('ko-KR') : '',
     status,
+    sessionType: session.sessionType ?? 'OTHER',
+    voteStatus: normalizeVoteStatus(session.myVoteStatus),
     matches: null,
+    votingAllowed: session.votingAllowed ?? true,
+    guestAllowed: session.guestAllowed ?? true,
   };
 }
 
-function toPostItem(post: GroupPostResponse): typeof posts[number] {
+function toPostItem(post: GroupPostResponse): PostItem {
   return {
     id: post.id,
     authorId: post.authorId,
@@ -157,7 +151,7 @@ function toPostItem(post: GroupPostResponse): typeof posts[number] {
   };
 }
 
-function toMemberItem(member: GroupMemberResponse): typeof members[number] {
+function toMemberItem(member: GroupMemberResponse): MemberItem {
   const role = member.role === 'OWNER' ? '소유자' : member.role === 'MANAGER' ? '매니저' : '멤버';
   const genderLabels: Record<string, string> = { MALE: '남성', FEMALE: '여성' };
   const ageLabels: Record<string, string> = {
@@ -187,7 +181,7 @@ function toMemberItem(member: GroupMemberResponse): typeof members[number] {
   };
 }
 
-function toOperationItem(item: Record<string, unknown>): typeof operationHistory[number] {
+function toOperationItem(item: Record<string, unknown>): OperationItem {
   const action = String(item.action ?? '');
   const detail = String(item.detail ?? '');
   return {
@@ -209,16 +203,15 @@ export default function GroupDetailPage() {
   const [groupInfo, setGroupInfo] = useState<GroupDetailResponse | null>(null);
   const [dashboard, setDashboard] = useState<GroupDashboardResponse | null>(null);
   const [monthlySummary, setMonthlySummary] = useState({ upcomingCount: 0, completedCount: 0, cumulativeAttendance: 0 });
-  const [scheduleItems, setScheduleItems] = useState<typeof schedules>([]);
-  const [postItems, setPostItems] = useState<typeof posts>([]);
-  const [memberItems, setMemberItems] = useState<typeof members>([]);
-  const [operationItems, setOperationItems] = useState<typeof operationHistory>([]);
+  const [scheduleItems, setScheduleItems] = useState<ScheduleItem[]>([]);
+  const [postItems, setPostItems] = useState<PostItem[]>([]);
+  const [memberItems, setMemberItems] = useState<MemberItem[]>([]);
+  const [operationItems, setOperationItems] = useState<OperationItem[]>([]);
   const [notice, setNotice] = useState('');
   const [noticeDraft, setNoticeDraft] = useState(notice);
   const [noticeAuthor, setNoticeAuthor] = useState<string | null>(null);
   const [noticeUpdatedAt, setNoticeUpdatedAt] = useState<string | null>(null);
   const [editingNotice, setEditingNotice] = useState(false);
-  const [voteStatus, setVoteStatus] = useState<VoteStatus>('UNDECIDED');
   const [calendarYear, setCalendarYear] = useState(() => new Date().getFullYear());
   const [calendarMonth, setCalendarMonth] = useState(() => new Date().getMonth() + 1);
   const [selectedDay, setSelectedDay] = useState(() => new Date().getDate());
@@ -227,7 +220,7 @@ export default function GroupDetailPage() {
   const [memberKeyword, setMemberKeyword] = useState('');
   const [memberRole, setMemberRole] = useState('ALL');
   const [memberGrade, setMemberGrade] = useState('ALL');
-  const [requests, setRequests] = useState<typeof joinRequests>([]);
+  const [requests, setRequests] = useState<JoinRequestItem[]>([]);
   const [boardPage, setBoardPage] = useState(1);
   const [boardTotalPages, setBoardTotalPages] = useState(1);
   const [memberPage, setMemberPage] = useState(1);
@@ -289,6 +282,7 @@ export default function GroupDetailPage() {
     setGroupInfo(group);
     setCurrentRole(group.myRole);
     setManagerPermissions(group.permissions);
+    setGuestAllowed(group.guestAllowed);
 
     const [guideResult, dashboardResult, sessionResult, monthlySummaryResult] = await Promise.allSettled([
       groupDetailApi.getOperationGuide(numericGroupId),
@@ -306,8 +300,6 @@ export default function GroupDetailPage() {
     if (dashboardResult.status === 'fulfilled') setDashboard(dashboardResult.value);
     if (sessionResult.status === 'fulfilled') {
       setScheduleItems(sessionResult.value.map(toScheduleItem));
-      const firstVote = sessionResult.value.find(session => session.myVoteStatus)?.myVoteStatus;
-      if (firstVote) setVoteStatus(firstVote === 'ATTENDING' ? 'JOIN' : firstVote as VoteStatus);
     }
     if (monthlySummaryResult.status === 'fulfilled') {
       setMonthlySummary({
@@ -371,11 +363,17 @@ export default function GroupDetailPage() {
       .then(session => {
         const item = toScheduleItem(session);
         setScheduleItems(current => [...current.filter(existing => existing.id !== sessionId), item]);
-        if (session.myVoteStatus) setVoteStatus(session.myVoteStatus === 'ATTENDING' ? 'JOIN' : session.myVoteStatus as VoteStatus);
         setModal({ type: 'schedule', id: sessionId });
       })
       .catch(() => showToast('일정을 불러오지 못했습니다.'));
   }, [activeTab, location.search, numericGroupId, showToast]);
+
+  useEffect(() => {
+    const createSession = new URLSearchParams(location.search).get('createSession');
+    if (activeTab === 'schedule' && createSession === 'true' && canManageSchedule && groupInfo) {
+      setModal({ type: 'createSchedule' });
+    }
+  }, [activeTab, canManageSchedule, groupInfo, location.search]);
 
   useEffect(() => {
     if (!Number.isFinite(numericGroupId)) return;
@@ -430,6 +428,9 @@ export default function GroupDetailPage() {
   const selectedSchedule = modal?.type === 'schedule'
     ? scheduleItems.find(schedule => schedule.id === modal.id)
     : undefined;
+  const upcomingSchedule = dashboard?.upcomingSession
+    ? toScheduleItem(dashboard.upcomingSession)
+    : scheduleItems.find(schedule => schedule.status !== 'COMPLETED' && schedule.status !== 'CANCELLED');
   const selectedPost = modal?.type === 'post'
     ? postItems.find(post => post.id === modal.id)
     : undefined;
@@ -453,7 +454,7 @@ export default function GroupDetailPage() {
   const handleCloseModal = () => {
     setModal(null);
     const searchParams = new URLSearchParams(location.search);
-    if (searchParams.has('postId') || searchParams.has('sessionId')) {
+    if (searchParams.has('postId') || searchParams.has('sessionId') || searchParams.has('createSession')) {
       navigate(location.pathname, { replace: true });
     }
   };
@@ -463,7 +464,10 @@ export default function GroupDetailPage() {
     if (sessionId) {
       void groupDetailApi.vote(numericGroupId, sessionId, nextStatus === 'JOIN' ? 'ATTENDING' : nextStatus)
         .then(() => {
-          setVoteStatus(nextStatus);
+          setScheduleItems(current => current.map(schedule => schedule.id === sessionId ? { ...schedule, voteStatus: nextStatus } : schedule));
+          setDashboard(current => current?.upcomingSession?.id === sessionId
+            ? { ...current, upcomingSession: { ...current.upcomingSession, myVoteStatus: nextStatus === 'JOIN' ? 'ATTENDING' : nextStatus } }
+            : current);
           return loadGroupDetail();
         })
         .catch(() => showToast('참여 상태를 변경하지 못했습니다.'));
@@ -474,7 +478,6 @@ export default function GroupDetailPage() {
     const detail = await groupDetailApi.getSession(numericGroupId, scheduleId);
     const mapped = toScheduleItem(detail);
     setScheduleItems(current => current.map(item => item.id === scheduleId ? mapped : item));
-    if (detail.myVoteStatus) setVoteStatus(detail.myVoteStatus === 'ATTENDING' ? 'JOIN' : detail.myVoteStatus as VoteStatus);
     setModal({ type: 'schedule', id: scheduleId });
   };
 
@@ -604,8 +607,7 @@ export default function GroupDetailPage() {
               editingNotice = {editingNotice}
               canManageNotice = {canManageNotice}
               canManageSchedule = {canManageSchedule}
-              canChangeVote = {canChangeVoteForSchedule(scheduleItems[0], sameDayVoteChangeAllowed, postDeadlineVoteChangeAllowed)}
-              voteStatus = {voteStatus}
+              canChangeVote = {canChangeVoteForSchedule(upcomingSchedule, sameDayVoteChangeAllowed, postDeadlineVoteChangeAllowed)}
               onNoticeDraftChange = {setNoticeDraft}
               onEditNotice = {() => setEditingNotice(true)}
               onCancelNotice = {() => {
@@ -625,7 +627,7 @@ export default function GroupDetailPage() {
               }}
               onVote = {handleVote}
               onOpenSchedule = {handleScheduleTabSelection}
-              onCreateSchedule = {() => navigate(`/groups/${groupId}/create-session`)}
+              onCreateSchedule = {() => setModal({ type: 'createSchedule' })}
               onNavigateReport = {id => navigate(`/sessions/${id}/report`)}
             />
           )}
@@ -646,7 +648,7 @@ export default function GroupDetailPage() {
                 setSelectedDay(1);
               }}
               onOpenSchedule = {handleScheduleTabSelection}
-              onCreateSchedule = {() => navigate(`/groups/${groupId}/create-session`)}
+              onCreateSchedule = {() => setModal({ type: 'createSchedule', initialDate: `${calendarYear}-${String(calendarMonth).padStart(2, '0')}-${String(selectedDay).padStart(2, '0')}` })}
             />
           )}
 
@@ -746,9 +748,10 @@ export default function GroupDetailPage() {
       </div>
 
       {modal && (
-        <Modal title = {getModalTitle(modal, selectedSchedule?.title, selectedPost?.title, selectedMember?.name)} onClose = {handleCloseModal} onBack = {modal.type === 'editGuest' ? () => setModal({ type: 'participants', id: modal.id }) : modal.type === 'participants' || modal.type === 'addGuest' || modal.type === 'manageSchedule' ? () => setModal({ type: 'schedule', id: modal.id }) : modal.type === 'memberPermissions' || modal.type === 'ownershipTransfer' || modal.type === 'memberRemoval' ? () => setModal({ type: 'member', id: modal.id }) : undefined} centeredHeader = {modal.type === 'schedule' || modal.type === 'post' || modal.type === 'writePost' || modal.type === 'member' || modal.type === 'groupDeletion'} fixedScheduleSize = {modal.type === 'schedule' || modal.type === 'post' || modal.type === 'participants' || modal.type === 'addGuest' || modal.type === 'editGuest' || modal.type === 'manageSchedule' || modal.type === 'writePost' || modal.type === 'member' || modal.type === 'memberPermissions' || modal.type === 'ownershipTransfer' || modal.type === 'memberRemoval' || modal.type === 'groupDeletion'}>
+        <Modal title = {getModalTitle(modal, selectedSchedule?.title, selectedPost?.title, selectedMember?.name)} onClose = {handleCloseModal} onBack = {modal.type === 'editGuest' ? () => setModal({ type: 'participants', id: modal.id }) : modal.type === 'participants' || modal.type === 'addGuest' || modal.type === 'manageSchedule' ? () => setModal({ type: 'schedule', id: modal.id }) : modal.type === 'memberPermissions' || modal.type === 'ownershipTransfer' || modal.type === 'memberRemoval' ? () => setModal({ type: 'member', id: modal.id }) : undefined} centeredHeader = {modal.type === 'createSchedule' || modal.type === 'schedule' || modal.type === 'post' || modal.type === 'writePost' || modal.type === 'member' || modal.type === 'groupDeletion'} fixedScheduleSize = {modal.type === 'createSchedule' || modal.type === 'schedule' || modal.type === 'post' || modal.type === 'participants' || modal.type === 'addGuest' || modal.type === 'editGuest' || modal.type === 'manageSchedule' || modal.type === 'writePost' || modal.type === 'member' || modal.type === 'memberPermissions' || modal.type === 'ownershipTransfer' || modal.type === 'memberRemoval' || modal.type === 'groupDeletion'}>
+          {modal.type === 'createSchedule' && canManageSchedule && <CreateScheduleModal groupId = {numericGroupId} groupGuestAllowed = {guestAllowed} initialDate = {modal.initialDate} onComplete = {async () => { setModal(null); setListRefreshKey(current => current + 1); await loadGroupDetail(); }} onError = {error => showRequestError(error, '운동 일정을 만들지 못했습니다.')} />}
           {selectedSchedule && (
-            <ScheduleModal schedule = {selectedSchedule} voteStatus = {voteStatus} canManage = {canManageSchedule} canAddGuest = {canManageSchedule && guestAllowed} canChangeVote = {canChangeVoteForSchedule(selectedSchedule, sameDayVoteChangeAllowed, postDeadlineVoteChangeAllowed)} onVote = {status => handleVote(status, selectedSchedule.id)} onOpenParticipants = {id => setModal({ type: 'participants', id })} onAddGuest = {id => setModal({ type: 'addGuest', id })} onManage = {id => setModal({ type: 'manageSchedule', id })} />
+            <ScheduleModal schedule = {selectedSchedule} canManage = {canManageSchedule} canAddGuest = {canManageSchedule && selectedSchedule.guestAllowed} canChangeVote = {canChangeVoteForSchedule(selectedSchedule, sameDayVoteChangeAllowed, postDeadlineVoteChangeAllowed)} onVote = {status => handleVote(status, selectedSchedule.id)} onOpenParticipants = {id => setModal({ type: 'participants', id })} onAddGuest = {id => setModal({ type: 'addGuest', id })} onManage = {id => setModal({ type: 'manageSchedule', id })} />
           )}
           {selectedPost && <PostModal groupId = {numericGroupId} post = {selectedPost} myMemberId = {groupInfo?.myMemberId} canManage = {canManagePosts} canEdit = {canManagePosts || groupInfo?.myMemberId === selectedPost.authorId} canComment = {canComment} onChanged = {async () => { setListRefreshKey(current => current + 1); await loadGroupDetail(); }} onError = {showRequestError} />}
           {modal.type === 'member' && selectedMember && (
@@ -791,12 +794,12 @@ export default function GroupDetailPage() {
 }
 
 function HomeTab({
-  dashboard, scheduleItems, notice, noticeDraft, noticeAuthor, noticeUpdatedAt, editingNotice, canManageNotice, canManageSchedule, canChangeVote, voteStatus, onNoticeDraftChange, onEditNotice,
+  dashboard, scheduleItems, notice, noticeDraft, noticeAuthor, noticeUpdatedAt, editingNotice, canManageNotice, canManageSchedule, canChangeVote, onNoticeDraftChange, onEditNotice,
   onCancelNotice, onSaveNotice, onDeleteNotice, onVote, onOpenSchedule,
   onCreateSchedule, onNavigateReport,
 }: {
   dashboard: GroupDashboardResponse | null;
-  scheduleItems: typeof schedules;
+  scheduleItems: ScheduleItem[];
   notice: string;
   noticeDraft: string;
   noticeAuthor: string | null;
@@ -805,7 +808,6 @@ function HomeTab({
   canManageNotice: boolean;
   canManageSchedule: boolean;
   canChangeVote: boolean;
-  voteStatus: VoteStatus;
   onNoticeDraftChange: (value: string) => void;
   onEditNotice: () => void;
   onCancelNotice: () => void;
@@ -875,7 +877,7 @@ function HomeTab({
                 <div className = {styles.upcomingText}>
                   <div className = {styles.inlineBadges}>
                     <Badge className = {styles.statusBadge(upcoming.status)}>{getScheduleStatusLabel(upcoming.status)}</Badge>
-                    <Badge variant = "outline">{getVoteLabel(voteStatus)}</Badge>
+                    <Badge variant = "outline">{getVoteLabel(upcoming.voteStatus)}</Badge>
                   </div>
                   <h3>{upcoming.title}</h3>
                   <div className = {styles.detailMeta}>
@@ -889,7 +891,7 @@ function HomeTab({
               <div className = {styles.scheduleActions}>
                 {canChangeVote && <div className = {styles.voteButtons}>
                   {(['JOIN', 'UNDECIDED', 'ABSENT'] as VoteStatus[]).map(status => (
-                    <button key = {status} type = "button" className = {styles.voteButton(voteStatus === status)} onClick = {() => onVote(status)}>
+                    <button key = {status} type = "button" className = {styles.voteButton(upcoming.voteStatus === status)} onClick = {() => onVote(status)}>
                       {getVoteLabel(status)}
                     </button>
                   ))}
@@ -961,11 +963,11 @@ function HomeTab({
 }
 
 function ScheduleTab({ scheduleItems, year, month, selectedDay, daySchedules, monthlySummary, canManage, onSelectDay, onChangeMonth, onOpenSchedule, onCreateSchedule }: {
-  scheduleItems: typeof schedules;
+  scheduleItems: ScheduleItem[];
   year: number;
   month: number;
   selectedDay: number;
-  daySchedules: typeof schedules;
+  daySchedules: ScheduleItem[];
   monthlySummary: { upcomingCount: number; completedCount: number; cumulativeAttendance: number };
   canManage: boolean;
   onSelectDay: (day: number) => void;
@@ -987,7 +989,7 @@ function ScheduleTab({ scheduleItems, year, month, selectedDay, daySchedules, mo
   const monthSchedules = scheduleItems.filter(schedule => schedule.date.startsWith(monthPrefix));
   const today = new Date();
   const todayDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-  const getDisplayStatus = (schedule: typeof schedules[number]): ScheduleStatus => schedule.date < todayDate ? 'COMPLETED' : schedule.status;
+  const getDisplayStatus = (schedule: ScheduleItem): ScheduleStatus => schedule.date < todayDate ? 'COMPLETED' : schedule.status;
 
   const changeMonth = (offset: number) => {
     const next = new Date(year, month - 1 + offset, 1);
@@ -1060,7 +1062,7 @@ function ScheduleTab({ scheduleItems, year, month, selectedDay, daySchedules, mo
 function BoardTab({ filter, keyword, posts: filteredPosts, canManage, canWrite, currentPage, totalPages, onPageChange, onFilter, onKeyword, onOpenPost, onWrite }: {
   filter: string;
   keyword: string;
-  posts: typeof posts;
+  posts: PostItem[];
   canManage: boolean;
   canWrite: boolean;
   currentPage: number;
@@ -1101,7 +1103,7 @@ function BoardTab({ filter, keyword, posts: filteredPosts, canManage, canWrite, 
 }
 
 function MembersTab({ members: filteredMembers, keyword, role, grade, canManage, isOwner, currentPage, totalPages, onPageChange, onKeyword, onRole, onGrade, onOpenMember }: {
-  members: typeof members;
+  members: MemberItem[];
   keyword: string;
   role: string;
   grade: string;
@@ -1156,7 +1158,7 @@ function MembersTab({ members: filteredMembers, keyword, role, grade, canManage,
   );
 }
 
-function RequestsTab({ requests, currentPage, totalPages, onPageChange, onRequest, onAllRequests }: { requests: typeof joinRequests; currentPage: number; totalPages: number; onPageChange: (page: number) => void; onRequest: (id: number, approve: boolean) => void; onAllRequests: (approve: boolean) => void }) {
+function RequestsTab({ requests, currentPage, totalPages, onPageChange, onRequest, onAllRequests }: { requests: JoinRequestItem[]; currentPage: number; totalPages: number; onPageChange: (page: number) => void; onRequest: (id: number, approve: boolean) => void; onAllRequests: (approve: boolean) => void }) {
   return (
     <div className = {styles.paginatedTab}>
       <Panel title = "가입 요청 관리" description = "승인 대기 중인 회원의 정보를 확인하세요." icon = {UserCheck} className = {styles.listTabPanel} action = {requests.length > 0 && <div className = {styles.requestBulkActions}><Button variant = "outline" className = {`${styles.smallRoundButton} ${styles.dangerTextButton}`} onClick = {() => onAllRequests(false)}>전체 거절</Button><Button className = {styles.smallRoundButton} onClick = {() => onAllRequests(true)}><Check /> 전체 승인</Button></div>}>
@@ -1184,7 +1186,7 @@ function RequestsTab({ requests, currentPage, totalPages, onPageChange, onReques
   );
 }
 
-function HistoryTab({ items, currentPage, totalPages, onPageChange }: { items: typeof operationHistory; currentPage: number; totalPages: number; onPageChange: (page: number) => void }) {
+function HistoryTab({ items, currentPage, totalPages, onPageChange }: { items: OperationItem[]; currentPage: number; totalPages: number; onPageChange: (page: number) => void }) {
   return (
     <div className = {styles.paginatedTab}>
       <Panel title = "운영 기록" description = "모임 운영에 영향을 준 변경 사항을 확인하세요." icon = {FileClock} className = {styles.listTabPanel}>
@@ -1360,21 +1362,21 @@ function Modal({ title, children, onClose, onBack, centeredHeader = false, fixed
   );
 }
 
-function ScheduleModal({ schedule, voteStatus, canManage, canAddGuest, canChangeVote, onVote, onOpenParticipants, onAddGuest, onManage }: { schedule: typeof schedules[number]; voteStatus: VoteStatus; canManage: boolean; canAddGuest: boolean; canChangeVote: boolean; onVote: (status: VoteStatus) => void; onOpenParticipants: (id: number) => void; onAddGuest: (id: number) => void; onManage: (id: number) => void }) {
+function ScheduleModal({ schedule, canManage, canAddGuest, canChangeVote, onVote, onOpenParticipants, onAddGuest, onManage }: { schedule: ScheduleItem; canManage: boolean; canAddGuest: boolean; canChangeVote: boolean; onVote: (status: VoteStatus) => void; onOpenParticipants: (id: number) => void; onAddGuest: (id: number) => void; onManage: (id: number) => void }) {
   return (
     <div className = {styles.scheduleModalContent}>
-      <div className = {styles.modalHighlight}><Badge className = {styles.statusBadge(schedule.status)}>{getScheduleStatusLabel(schedule.status)}</Badge><strong>{schedule.date.replaceAll('-', '.')} · {schedule.time}</strong><span><MapPin /> {schedule.place}</span></div>
+      <div className = {styles.modalHighlight}><div className = {styles.inlineBadges}><Badge className = {styles.statusBadge(schedule.status)}>{getScheduleStatusLabel(schedule.status)}</Badge><Badge variant = "outline">{getSessionTypeLabel(schedule.sessionType)}</Badge></div><strong>{schedule.date.replaceAll('-', '.')} · {schedule.time}</strong><span><MapPin /> {schedule.place}</span></div>
       <div className = {styles.modalStats}>
         <span><strong>{schedule.joined}</strong>참여</span><span><strong>{schedule.undecided}</strong>미정</span><span><strong>{schedule.absent}</strong>불참</span><span><strong>{schedule.guests}</strong>게스트</span>
       </div>
-      <div className = {styles.modalSection}><h3>내 참여 상태</h3><p>참여 투표 마감 {schedule.deadline}</p>{canChangeVote && <div className = {styles.voteButtons}>{(['JOIN', 'UNDECIDED', 'ABSENT'] as VoteStatus[]).map(status => <button key = {status} type = "button" className = {styles.voteButton(voteStatus === status)} onClick = {() => onVote(status)}>{getVoteLabel(status)}</button>)}</div>}</div>
+      <div className = {styles.modalSection}><h3>내 참여 상태</h3><p>참여 투표 마감 {schedule.deadline}</p>{canChangeVote && <div className = {styles.voteButtons}>{(['JOIN', 'UNDECIDED', 'ABSENT'] as VoteStatus[]).map(status => <button key = {status} type = "button" className = {styles.voteButton(schedule.voteStatus === status)} onClick = {() => onVote(status)}>{getVoteLabel(status)}</button>)}</div>}</div>
       <div className = {styles.modalSection}><h3>참가자 및 게스트</h3><p>참여 {schedule.joined}명 · 미정 {schedule.undecided}명 · 불참 {schedule.absent}명</p><Button variant = "outline" className = {styles.smallRoundButton} onClick = {() => onOpenParticipants(schedule.id)}><Users /> 참가자 목록 확인</Button></div>
       {canManage && <div className = {styles.modalActions}>{canAddGuest && <Button variant = "outline" className = {styles.roundButton} onClick = {() => onAddGuest(schedule.id)}><Plus /> 게스트 추가</Button>}<Button className = {styles.roundButton} onClick = {() => onManage(schedule.id)}><Settings /> 일정 관리</Button></div>}
     </div>
   );
 }
 
-function PostModal({ groupId, post, myMemberId, canManage, canEdit, canComment, onChanged, onError }: { groupId: number; post: typeof posts[number]; myMemberId?: number; canManage: boolean; canEdit: boolean; canComment: boolean; onChanged: () => Promise<void>; onError: (error: unknown, fallback: string) => void }) {
+function PostModal({ groupId, post, myMemberId, canManage, canEdit, canComment, onChanged, onError }: { groupId: number; post: PostItem; myMemberId?: number; canManage: boolean; canEdit: boolean; canComment: boolean; onChanged: () => Promise<void>; onError: (error: unknown, fallback: string) => void }) {
   const [deleted, setDeleted] = useState(false);
   const [pinned, setPinned] = useState(post.pinned);
   const [editingPost, setEditingPost] = useState(false);
@@ -1469,7 +1471,7 @@ function PostModal({ groupId, post, myMemberId, canManage, canEdit, canComment, 
   );
 }
 
-function MemberModal({ groupId, member, isOwner, canViewMemo, canManage, onOpenPermissions, onOpenOwnershipTransfer, onOpenRemoval }: { groupId: number; member: typeof members[number]; isOwner: boolean; canViewMemo: boolean; canManage: boolean; onOpenPermissions: () => void; onOpenOwnershipTransfer: () => void; onOpenRemoval: () => void }) {
+function MemberModal({ groupId, member, isOwner, canViewMemo, canManage, onOpenPermissions, onOpenOwnershipTransfer, onOpenRemoval }: { groupId: number; member: MemberItem; isOwner: boolean; canViewMemo: boolean; canManage: boolean; onOpenPermissions: () => void; onOpenOwnershipTransfer: () => void; onOpenRemoval: () => void }) {
   const isTargetOwner = member.role === '소유자';
   const [memo, setMemo] = useState('');
   const [memoDraft, setMemoDraft] = useState('');
@@ -1511,7 +1513,7 @@ function MemberModal({ groupId, member, isOwner, canViewMemo, canManage, onOpenP
   );
 }
 
-function MemberPermissionsModal({ groupId, member, onComplete }: { groupId: number; member: typeof members[number]; onComplete: (message: string) => void }) {
+function MemberPermissionsModal({ groupId, member, onComplete }: { groupId: number; member: MemberItem; onComplete: (message: string) => void }) {
   const [role, setRole] = useState<'MANAGER' | 'MEMBER'>(member.role === '매니저' ? 'MANAGER' : 'MEMBER');
   const [permissions, setPermissions] = useState<GroupPermissions>({ schedule: true, notice: true, joinRequests: false, members: false, posts: true, operationLogs: false });
   const labels = { schedule: '일정 관리', notice: '운영 안내 관리', joinRequests: '가입 요청 관리', members: '일반 멤버 관리', posts: '공지사항 관리', operationLogs: '운영 기록 조회' } as const;
@@ -1540,7 +1542,7 @@ function MemberPermissionsModal({ groupId, member, onComplete }: { groupId: numb
   );
 }
 
-function OwnershipTransferModal({ groupId, member, onComplete }: { groupId: number; member: typeof members[number]; onComplete: (message: string) => void }) {
+function OwnershipTransferModal({ groupId, member, onComplete }: { groupId: number; member: MemberItem; onComplete: (message: string) => void }) {
   const [confirmation, setConfirmation] = useState('');
   return (
     <div className = {styles.memberManagementModal}>
@@ -1557,7 +1559,7 @@ function OwnershipTransferModal({ groupId, member, onComplete }: { groupId: numb
   );
 }
 
-function MemberRemovalModal({ groupId, member, onComplete }: { groupId: number; member: typeof members[number]; onComplete: (message: string) => void }) {
+function MemberRemovalModal({ groupId, member, onComplete }: { groupId: number; member: MemberItem; onComplete: (message: string) => void }) {
   const [confirmation, setConfirmation] = useState('');
   return (
     <div className = {styles.memberManagementModal}>
@@ -1639,7 +1641,7 @@ function WritePostModal({ groupId, canManage, attachmentAllowed, onComplete }: {
   );
 }
 
-function ParticipantsModal({ groupId, schedule, canManage, onEditGuest }: { groupId: number; schedule?: typeof schedules[number]; canManage: boolean; onEditGuest: (guest: GroupParticipantResponse) => void }) {
+function ParticipantsModal({ groupId, schedule, canManage, onEditGuest }: { groupId: number; schedule?: ScheduleItem; canManage: boolean; onEditGuest: (guest: GroupParticipantResponse) => void }) {
   const [filter, setFilter] = useState<VoteStatus>('JOIN');
   const [participantSamples, setParticipantSamples] = useState<Array<GroupParticipantResponse & { status: VoteStatus }>>([]);
   const loadParticipants = useCallback(() => {
@@ -1679,6 +1681,79 @@ function ParticipantsModal({ groupId, schedule, canManage, onEditGuest }: { grou
   );
 }
 
+function CreateScheduleModal({ groupId, groupGuestAllowed, initialDate, onComplete, onError }: { groupId: number; groupGuestAllowed: boolean; initialDate?: string; onComplete: () => Promise<void>; onError: (error: unknown) => void }) {
+  const today = new Date();
+  const localToday = new Date(today.getTime() - today.getTimezoneOffset() * 60_000).toISOString().slice(0, 10);
+  const [title, setTitle] = useState('');
+  const [date, setDate] = useState(initialDate ?? localToday);
+  const [startTime, setStartTime] = useState('19:00');
+  const [endTime, setEndTime] = useState('22:00');
+  const [sessionType, setSessionType] = useState('REGULAR');
+  const [courtCount, setCourtCount] = useState('1');
+  const [place, setPlace] = useState('');
+  const [votingAllowed, setVotingAllowed] = useState(true);
+  const [voteDeadline, setVoteDeadline] = useState('');
+  const [guestAllowed, setGuestAllowed] = useState(groupGuestAllowed);
+  const [guestLinkAllowed, setGuestLinkAllowed] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const startsAt = date && startTime ? `${date}T${startTime}` : '';
+  const endsAt = date && endTime ? `${date}T${endTime}` : '';
+  const validPeriod = Boolean(startsAt && endsAt && endsAt > startsAt);
+  const validDeadline = !votingAllowed || Boolean(voteDeadline && voteDeadline < startsAt);
+  const canSubmit = Boolean(title.trim() && date && startTime && endTime && place.trim() && Number(courtCount) >= 1 && validPeriod && validDeadline && !submitting);
+
+  const submit = async () => {
+    if (!canSubmit) return;
+    setSubmitting(true);
+    try {
+      await groupDetailApi.createSession(groupId, {
+        title: title.trim(),
+        startsAt,
+        endsAt,
+        place: place.trim(),
+        sessionType,
+        courtCount: Number(courtCount),
+        votingAllowed,
+        voteDeadline: votingAllowed ? voteDeadline : null,
+        guestAllowed,
+        guestLinkAllowed,
+      });
+      await onComplete();
+    } catch (error) {
+      onError(error);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className = {styles.createScheduleModalContent}>
+      <div className = {styles.createScheduleGrid}>
+        <label className = {styles.modalField}><span>일정명</span><Input value = {title} onChange = {event => setTitle(event.target.value)} className = {styles.input} placeholder = "일정명을 입력하세요" /></label>
+        <label className = {styles.modalField}><span>일정 구분</span><Select value = {sessionType} onValueChange = {setSessionType}><SelectTrigger className = {styles.selectTriggerWide}><SelectValue /></SelectTrigger><SelectContent>{[['REGULAR', '정기 모임'], ['LIGHTNING', '번개 모임'], ['EXCHANGE', '교류전'], ['TOURNAMENT', '대회'], ['OTHER', '기타']].map(([value, label]) => <SelectItem className = {styles.guestSelectItem} key = {value} value = {value}>{label}</SelectItem>)}</SelectContent></Select></label>
+      </div>
+      <div className = {styles.createScheduleTimeGrid}>
+        <label className = {styles.modalField}><span>날짜</span><Input type = "date" min = {localToday} value = {date} onChange = {event => setDate(event.target.value)} className = {styles.input} /></label>
+        <label className = {styles.modalField}><span>시작 시간</span><Input type = "time" value = {startTime} onChange = {event => setStartTime(event.target.value)} className = {styles.input} /></label>
+        <label className = {styles.modalField}><span>종료 시간</span><Input type = "time" value = {endTime} onChange = {event => setEndTime(event.target.value)} className = {styles.input} /></label>
+      </div>
+      {!validPeriod && date && startTime && endTime && <p className = {styles.createScheduleValidation}>종료 시간은 시작 시간보다 늦어야 합니다.</p>}
+      <div className = {styles.createScheduleGrid}>
+        <label className = {styles.modalField}><span>장소</span><Input value = {place} onChange = {event => setPlace(event.target.value)} className = {styles.input} placeholder = "운동 장소를 입력하세요" /></label>
+        <label className = {styles.modalField}><span>코트 수</span><Input type = "number" min = "1" value = {courtCount} onChange = {event => setCourtCount(event.target.value)} className = {styles.input} /></label>
+      </div>
+      <div className = {styles.createScheduleOptions}>
+        <SettingSwitch title = "참여 투표 허용" description = "모임 멤버가 참여·미정·불참 상태를 선택할 수 있습니다." checked = {votingAllowed} onCheckedChange = {checked => { setVotingAllowed(checked); if (!checked) setVoteDeadline(''); }} />
+        {votingAllowed && <label className = {styles.modalField}><span>참여 투표 마감 일시</span><Input type = "datetime-local" max = {startsAt || undefined} value = {voteDeadline} onChange = {event => setVoteDeadline(event.target.value)} className = {styles.input} /></label>}
+        {votingAllowed && voteDeadline && !validDeadline && <p className = {styles.createScheduleValidation}>투표 마감 일시는 일정 시작 전이어야 합니다.</p>}
+        <SettingSwitch title = "게스트 허용" description = {groupGuestAllowed ? "운영자가 이 일정에 게스트를 추가할 수 있습니다." : "모임 설정에서 게스트 일정 참여가 허용되어 있지 않습니다."} checked = {guestAllowed} disabled = {!groupGuestAllowed} onCheckedChange = {checked => { setGuestAllowed(checked); if (!checked) setGuestLinkAllowed(false); }} />
+        <SettingSwitch title = "비회원 링크 참여" description = "게스트가 전용 링크를 통해 이 일정에 참여할 수 있습니다." checked = {guestLinkAllowed} disabled = {!guestAllowed} onCheckedChange = {setGuestLinkAllowed} />
+      </div>
+      <div className = {styles.modalActions}><Button disabled = {!canSubmit} className = {styles.roundButton} onClick = {() => void submit()}><Plus /> {submitting ? '일정 생성 중' : '운동 일정 만들기'}</Button></div>
+    </div>
+  );
+}
+
 function AddGuestModal({ groupId, sessionId, guest, onComplete }: { groupId: number; sessionId: number; guest?: GroupParticipantResponse; onComplete: (message: string) => void }) {
   const genderLabel = guest?.gender === 'MALE' || guest?.gender === '남성' ? '남성' : guest?.gender === 'FEMALE' || guest?.gender === '여성' ? '여성' : '';
   const ageLabel = ({ TEENS: '10대', TWENTIES: '20대', THIRTIES: '30대', FORTIES: '40대', FIFTIES: '50대', SIXTIES_AND_ABOVE: '60대 이상' } as Record<string, string>)[guest?.ageGroup ?? ''] || guest?.ageGroup || '';
@@ -1708,7 +1783,7 @@ function AddGuestModal({ groupId, sessionId, guest, onComplete }: { groupId: num
   );
 }
 
-function ManageScheduleModal({ groupId, schedule, onComplete }: { groupId: number; schedule?: typeof schedules[number]; onComplete: (message: string) => void }) {
+function ManageScheduleModal({ groupId, schedule, onComplete }: { groupId: number; schedule?: ScheduleItem; onComplete: (message: string) => void }) {
   const [title, setTitle] = useState(schedule?.title ?? '');
   const [startTime, setStartTime] = useState(schedule?.time.split(' - ')[0] ?? '');
   const [endTime, setEndTime] = useState(schedule?.time.split(' - ')[1] ?? '');
@@ -1745,6 +1820,16 @@ function getVoteLabel(status: VoteStatus) {
   return { JOIN: '참여', UNDECIDED: '미정', ABSENT: '불참' }[status];
 }
 
+function normalizeVoteStatus(status?: string | null): VoteStatus {
+  if (status === 'ATTENDING' || status === 'JOIN') return 'JOIN';
+  if (status === 'ABSENT') return 'ABSENT';
+  return 'UNDECIDED';
+}
+
+function getSessionTypeLabel(sessionType: string) {
+  return { REGULAR: '정기 모임', LIGHTNING: '번개 모임', EXCHANGE: '교류전', TOURNAMENT: '대회', OTHER: '기타' }[sessionType] ?? '기타';
+}
+
 function formatGender(gender: string) {
   return ({ MALE: '남성', FEMALE: '여성' } as Record<string, string>)[gender] || gender || '미설정';
 }
@@ -1753,8 +1838,9 @@ function formatAgeGroup(ageGroup: string) {
   return ({ TEENS: '10대', TWENTIES: '20대', THIRTIES: '30대', FORTIES: '40대', FIFTIES: '50대', SIXTIES_AND_ABOVE: '60대 이상' } as Record<string, string>)[ageGroup] || ageGroup || '미설정';
 }
 
-function canChangeVoteForSchedule(schedule: typeof schedules[number] | undefined, sameDayAllowed: boolean, postDeadlineAllowed: boolean) {
+function canChangeVoteForSchedule(schedule: ScheduleItem | undefined, sameDayAllowed: boolean, postDeadlineAllowed: boolean) {
   if (!schedule) return false;
+  if (!schedule.votingAllowed) return false;
   if (schedule.status === 'COMPLETED' || schedule.status === 'CANCELLED' || schedule.status === 'IN_PROGRESS') return false;
   if (schedule.status === 'TODAY') return sameDayAllowed;
   return schedule.status === 'VOTING' || postDeadlineAllowed;
@@ -1787,6 +1873,7 @@ function formatRequestTime(requestedAt: string) {
 }
 
 function getModalTitle(modal: Exclude<ModalState, null>, scheduleTitle?: string, postTitle?: string, memberName?: string) {
+  if (modal.type === 'createSchedule') return '운동 일정 만들기';
   if (modal.type === 'schedule') return scheduleTitle ?? '일정 상세';
   if (modal.type === 'post') return postTitle ?? '게시글 상세';
   if (modal.type === 'member') return `${memberName ?? '멤버'} 상세`;
