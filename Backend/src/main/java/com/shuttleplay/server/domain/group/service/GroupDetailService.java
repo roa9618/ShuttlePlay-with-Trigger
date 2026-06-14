@@ -7,6 +7,7 @@ import com.shuttleplay.server.domain.notification.enums.NotificationType;
 import com.shuttleplay.server.domain.notification.service.NotificationService;
 import com.shuttleplay.server.domain.user.entity.User;
 import com.shuttleplay.server.domain.user.enums.*;
+import com.shuttleplay.server.domain.user.repository.UserRepository;
 import com.shuttleplay.server.global.error.*;
 import java.time.*;
 import java.util.*;
@@ -30,6 +31,7 @@ public class GroupDetailService {
     private final GroupPostRepository posts;
     private final GroupCommentRepository comments;
     private final GroupJoinRequestRepository joinRequests;
+    private final UserRepository users;
     private final GroupOperationLogRepository logs;
     private final NotificationService notifications;
     private final GroupNotificationDispatchService notificationDispatch;
@@ -102,6 +104,46 @@ public class GroupDetailService {
         GroupMember member = access.member(groupId, userId);
         if (member.getRole() == GroupMemberRole.OWNER) throw new BusinessException(ErrorCode.FORBIDDEN);
         member.leave(); events.members(groupId, "MEMBER_LEFT");
+    }
+
+    public Map<String, Object> joinBySharedLink(Long userId, Long groupId) {
+        Group group = groups.findByIdAndStatus(groupId, GroupStatus.ACTIVE)
+                .orElseThrow(() -> new BusinessException(ErrorCode.GROUP_NOT_FOUND));
+        User user = users.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        Optional<GroupMember> existingMember = members.findByGroupIdAndUserId(groupId, userId);
+        if (existingMember.filter(member -> member.getStatus() == GroupMemberStatus.ACTIVE).isPresent()) {
+            return joinResult(group, "ALREADY_MEMBER");
+        }
+        if (!group.isNewJoinAllowed()) {
+            return joinResult(group, "CLOSED");
+        }
+
+        Optional<GroupJoinRequest> pendingRequest = joinRequests.findFirstByGroupIdAndRequesterIdAndStatus(
+                groupId,
+                userId,
+                JoinRequestStatus.PENDING
+        );
+        if (group.isApprovalRequired()) {
+            pendingRequest.orElseGet(() -> {
+                GroupJoinRequest request = joinRequests.save(GroupJoinRequest.create(group, user, null));
+                notificationDispatch.notifyManagers(group, "JOIN_REQUESTED:" + request.getId(), user.getName() + "님의 가입 요청이 도착했습니다.");
+                events.joinRequests(groupId, "JOIN_REQUEST_CREATED");
+                return request;
+            });
+            return joinResult(group, "REQUESTED");
+        }
+
+        pendingRequest.ifPresent(GroupJoinRequest::approve);
+        GroupMember member = existingMember.map(existing -> {
+            existing.reactivate();
+            return existing;
+        }).orElseGet(() -> members.save(GroupMember.createMember(group, user)));
+        notifications.send(user, NotificationType.GROUP, group.getName(), "모임 가입이 완료되었습니다.", "/groups/" + groupId);
+        log(member, "JOIN_APPROVED", user.getName());
+        events.members(groupId, "MEMBER_JOINED");
+        return joinResult(group, "JOINED");
     }
 
     @Transactional(readOnly = true)
@@ -239,7 +281,21 @@ public class GroupDetailService {
 
     @Transactional(readOnly = true)
     public Map<String, Object> requestList(Long userId, Long groupId, int page, int size) { access.joinRequestManager(groupId, userId); return page(joinRequests.findAllByGroupIdAndStatusOrderByCreatedAtDesc(groupId, JoinRequestStatus.PENDING, PageRequest.of(page, size)), this::requestMap); }
-    public void processRequest(Long userId, Long groupId, Long requestId, boolean approve) { GroupMember actor = access.joinRequestManager(groupId, userId); GroupJoinRequest request = joinRequests.findByIdAndGroupIdAndStatus(requestId, groupId, JoinRequestStatus.PENDING).orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND)); if (approve) { request.approve(); members.findByGroupIdAndUserId(groupId, request.getRequester().getId()).ifPresentOrElse(GroupMember::reactivate, () -> members.save(GroupMember.createMember(actor.getGroup(), request.getRequester()))); } else request.reject(); notificationDispatch.notifyManagers(actor.getGroup(), approve ? "JOIN_APPROVED:" + requestId : "JOIN_REJECTED:" + requestId, request.getRequester().getName() + "님의 가입 요청이 처리되었습니다."); log(actor, approve ? "JOIN_APPROVED" : "JOIN_REJECTED", request.getRequester().getName()); events.joinRequests(groupId, "JOIN_REQUEST_PROCESSED"); }
+    public void processRequest(Long userId, Long groupId, Long requestId, boolean approve) {
+        GroupMember actor = access.joinRequestManager(groupId, userId);
+        GroupJoinRequest request = joinRequests.findByIdAndGroupIdAndStatus(requestId, groupId, JoinRequestStatus.PENDING).orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+        if (approve) {
+            request.approve();
+            members.findByGroupIdAndUserId(groupId, request.getRequester().getId())
+                    .ifPresentOrElse(GroupMember::reactivate, () -> members.save(GroupMember.createMember(actor.getGroup(), request.getRequester())));
+            notifications.send(request.getRequester(), NotificationType.GROUP, actor.getGroup().getName(), "가입 요청이 승인되었습니다.", "/groups/" + groupId);
+        } else {
+            request.reject();
+        }
+        notificationDispatch.notifyManagers(actor.getGroup(), approve ? "JOIN_APPROVED:" + requestId : "JOIN_REJECTED:" + requestId, request.getRequester().getName() + "님의 가입 요청이 처리되었습니다.");
+        log(actor, approve ? "JOIN_APPROVED" : "JOIN_REJECTED", request.getRequester().getName());
+        events.joinRequests(groupId, "JOIN_REQUEST_PROCESSED");
+    }
     public void processAllRequests(Long userId, Long groupId, boolean approve) { access.joinRequestManager(groupId, userId); joinRequests.findAllByGroupIdAndStatus(groupId, JoinRequestStatus.PENDING).forEach(request -> processRequest(userId, groupId, request.getId(), approve)); }
 
     @Transactional(readOnly = true)
@@ -263,7 +319,8 @@ public class GroupDetailService {
     private Map<String, Object> guestParticipantMap(GroupSessionGuest g) { Map<String, Object> x = map(); x.putAll(guestMap(g)); x.put("guest", true); x.put("profileImageUrl", null); x.put("role", "GUEST"); x.put("voteStatus", g.getStatus()); return x; }
     private Map<String, Object> postMap(GroupPost p, long count) { Map<String, Object> x = map(); x.put("id", p.getId()); x.put("type", p.getType()); x.put("title", p.getTitle()); x.put("content", p.getContent()); x.put("pinned", p.isPinned()); x.put("viewCount", p.getViewCount()); x.put("commentCount", count); x.put("authorId", p.getAuthor().getId()); x.put("authorName", p.getAuthor().getUser().getName()); x.put("attachmentNames", p.getAttachmentNames()); x.put("createdAt", p.getCreatedAt()); return x; }
     private Map<String, Object> commentMap(GroupComment c) { return Map.of("id", c.getId(), "parentId", c.getParent() == null ? 0 : c.getParent().getId(), "authorId", c.getAuthor().getId(), "authorName", c.getAuthor().getUser().getName(), "content", c.getContent(), "createdAt", c.getCreatedAt()); }
-    private Map<String, Object> requestMap(GroupJoinRequest r) { User u = r.getRequester(); return Map.of("id", r.getId(), "name", u.getName(), "gender", String.valueOf(u.getGender()), "ageGroup", String.valueOf(u.getAgeGroup()), "grade", String.valueOf(u.getGrade()), "message", Optional.ofNullable(r.getMessage()).orElse(""), "requestedAt", r.getCreatedAt()); }
+    private Map<String, Object> requestMap(GroupJoinRequest r) { User u = r.getRequester(); Map<String, Object> result = map(); result.put("id", r.getId()); result.put("name", u.getName()); result.put("profileImageUrl", u.getProfileImageUrl()); result.put("gender", u.getGender()); result.put("ageGroup", u.getAgeGroup()); result.put("grade", u.getGrade()); result.put("message", Optional.ofNullable(r.getMessage()).orElse("")); result.put("requestedAt", r.getCreatedAt()); return result; }
+    private Map<String, Object> joinResult(Group group, String status) { Map<String, Object> result = map(); result.put("groupId", group.getId()); result.put("groupName", group.getName()); result.put("profileImageUrl", group.getProfileImageUrl()); result.put("approvalRequired", group.isApprovalRequired()); result.put("status", status); return result; }
     private Map<String, Object> permissionMap(GroupMember m) { return Map.of("schedule", m.isSchedulePermission(), "notice", m.isNoticePermission(), "joinRequests", m.isJoinRequestPermission(), "members", m.isMemberPermission(), "posts", m.isPostPermission(), "operationLogs", m.isOperationLogPermission()); }
     private <T> Map<String, Object> page(Page<T> p, Function<T, Map<String, Object>> mapper) { return Map.of("items", p.stream().map(mapper).toList(), "page", p.getNumber(), "size", p.getSize(), "totalElements", p.getTotalElements(), "totalPages", p.getTotalPages()); }
     private int average(List<GroupMember> list, Function<User, Integer> getter) { return list.isEmpty() ? 0 : (int) Math.round(list.stream().map(GroupMember::getUser).map(getter).mapToInt(Integer::intValue).average().orElse(0)); }
