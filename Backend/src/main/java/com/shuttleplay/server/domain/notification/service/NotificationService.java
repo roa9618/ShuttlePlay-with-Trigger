@@ -10,18 +10,21 @@ import com.shuttleplay.server.global.error.BusinessException;
 import com.shuttleplay.server.global.error.ErrorCode;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class NotificationService {
     private final NotificationRepository notificationRepository;
-    private final SimpMessagingTemplate messagingTemplate;
+    private final NotificationDeliveryService notificationDeliveryService;
 
     public NotificationListResponse getNotifications(Long userId, boolean unreadOnly, int page, int size) {
         PageRequest pageRequest = PageRequest.of(page, size);
@@ -59,10 +62,27 @@ public class NotificationService {
                 Notification.create(user, type, title, message, targetPath)
         );
 
-        messagingTemplate.convertAndSendToUser(
-                user.getEmail(),
-                "/queue/notifications",
-                NotificationItemResponse.from(notification)
-        );
+        NotificationItemResponse response = NotificationItemResponse.from(notification);
+        Runnable dispatch = () -> dispatch(user, response);
+
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    dispatch.run();
+                }
+            });
+            return;
+        }
+
+        dispatch.run();
+    }
+
+    private void dispatch(User user, NotificationItemResponse response) {
+        try {
+            notificationDeliveryService.dispatch(user.getId(), user.getEmail(), response);
+        } catch (RuntimeException exception) {
+            log.warn("Notification delivery task submission failed for user {}", user.getId(), exception);
+        }
     }
 }
