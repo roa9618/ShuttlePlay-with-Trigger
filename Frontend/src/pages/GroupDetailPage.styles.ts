@@ -21,7 +21,7 @@ export const styles = {
   smallRoundButton: 'h-9 rounded-full border-primary/15 px-4 hover:border-primary/30 hover:bg-primary/10 hover:text-primary',
   destructiveButton: 'hover:border-destructive/40 hover:bg-destructive/90 hover:text-white',
   leaveButton: 'h-10 rounded-full px-3 text-muted-foreground hover:bg-destructive/5 hover:text-destructive',
-  tabBar: `${basePanel} mt-4 grid grid-cols-7 items-center gap-1 p-1.5`,
+  tabBar: `${basePanel} mt-4 grid items-center gap-1 p-1.5`,
   tabButton: (active: boolean) => `relative inline-flex h-10 min-w-0 items-center justify-center rounded-full px-3 text-center text-sm font-medium transition-all ${active ? 'bg-primary text-primary-foreground shadow-md shadow-primary/20' : 'text-muted-foreground hover:bg-primary/[0.06] hover:text-primary'} [&_span]:ml-2 [&_span]:rounded-full [&_span]:bg-white/20 [&_span]:px-1.5 [&_span]:py-0.5 [&_span]:text-[10px]`,
   tabContent: 'mt-5 min-w-0',
   paginatedTab: 'flex h-[calc(100dvh-19.5rem)] min-h-0 flex-col overflow-hidden',

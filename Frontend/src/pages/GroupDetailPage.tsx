@@ -98,7 +98,7 @@ const tabPaths: Record<TabKey, string> = {
 type ScheduleItem = { id: number; title: string; date: string; time: string; place: string; joined: number; undecided: number; absent: number; guests: number; deadline: string; status: ScheduleStatus; sessionType: string; voteStatus: VoteStatus; matches: number | null; votingAllowed: boolean; guestAllowed: boolean };
 type MemberItem = { id: number; name: string; gender: string; age: string; grade: string; role: string; participation: number; recent: number; rate: number; matches: number | null; winRate: number | null; doublesMmr: number; mixedMmr: number; streak: number | null; absenceRate: number | null };
 type PostItem = { id: number; authorId: number; type: string; pinned: boolean; title: string; author: string; date: string; views: number; comments: number; content: string; attachmentNames: string | null };
-type JoinRequestItem = { id: number; name: string; gender: string; age: string; grade: string; requestedAt: string; message: string };
+type JoinRequestItem = { id: number; name: string; profileImageUrl: string | null; gender: string; age: string; grade: string; requestedAt: string; message: string };
 type OperationItem = { id: number; actor: string; action: string; time: string; icon: typeof Calendar };
 
 function toScheduleItem(session: GroupSessionResponse): ScheduleItem {
@@ -167,7 +167,7 @@ function toMemberItem(member: GroupMemberResponse): MemberItem {
     name: member.name,
     gender: genderLabels[member.gender] || member.gender || '미설정',
     age: ageLabels[member.ageGroup] || member.ageGroup || '미설정',
-    grade: member.grade || '급수 미정',
+    grade: formatGrade(member.grade),
     role,
     participation: member.participationCount,
     recent: member.recentFourWeekParticipationCount,
@@ -391,7 +391,7 @@ export default function GroupDetailPage() {
     if (!Number.isFinite(numericGroupId) || !canManageRequests) return;
     void groupDetailApi.getJoinRequests(numericGroupId, requestPage - 1, 6).then(response => {
       setRequests(response.items.map(item => ({
-        id: item.id, name: item.name, gender: item.gender, age: item.ageGroup, grade: item.grade,
+        id: item.id, name: item.name, profileImageUrl: item.profileImageUrl, gender: formatGender(item.gender), age: formatAgeGroup(item.ageGroup), grade: formatGrade(item.grade),
         requestedAt: item.requestedAt, message: item.message,
       })));
       setRequestTotalPages(Math.max(1, response.totalPages));
@@ -514,7 +514,7 @@ export default function GroupDetailPage() {
           return;
         }
         setRequests(response.items.map(item => ({
-          id: item.id, name: item.name, gender: item.gender, age: item.ageGroup, grade: item.grade,
+          id: item.id, name: item.name, profileImageUrl: item.profileImageUrl, gender: formatGender(item.gender), age: formatAgeGroup(item.ageGroup), grade: formatGrade(item.grade),
           requestedAt: item.requestedAt, message: item.message,
         })));
         setRequestTotalPages(Math.max(1, response.totalPages));
@@ -586,7 +586,7 @@ export default function GroupDetailPage() {
           </div>
         </header>
 
-        <nav className = {styles.tabBar}>
+        <nav className = {styles.tabBar} style = {{ gridTemplateColumns: `repeat(${visibleTabs.length}, minmax(0, 1fr))` }}>
           {visibleTabs.map(tab => (
             <Link key = {tab.key} to = {`/groups/${groupId}${tabPaths[tab.key] ? `/${tabPaths[tab.key]}` : ''}`} className = {styles.tabButton(activeTab === tab.key)}>
               {tab.label}
@@ -1161,12 +1161,15 @@ function MembersTab({ members: filteredMembers, keyword, role, grade, canManage,
 function RequestsTab({ requests, currentPage, totalPages, onPageChange, onRequest, onAllRequests }: { requests: JoinRequestItem[]; currentPage: number; totalPages: number; onPageChange: (page: number) => void; onRequest: (id: number, approve: boolean) => void; onAllRequests: (approve: boolean) => void }) {
   return (
     <div className = {styles.paginatedTab}>
-      <Panel title = "가입 요청 관리" description = "승인 대기 중인 회원의 정보를 확인하세요." icon = {UserCheck} className = {styles.listTabPanel} action = {requests.length > 0 && <div className = {styles.requestBulkActions}><Button variant = "outline" className = {`${styles.smallRoundButton} ${styles.dangerTextButton}`} onClick = {() => onAllRequests(false)}>전체 거절</Button><Button className = {styles.smallRoundButton} onClick = {() => onAllRequests(true)}><Check /> 전체 승인</Button></div>}>
+      <Panel title = "가입 요청 관리" description = "승인 대기 중인 회원의 정보를 확인하세요." icon = {UserCheck} className = {styles.listTabPanel} action = {requests.length > 0 && <div className = {styles.requestBulkActions}><Button variant = "ghost" className = {`${styles.smallRoundButton} ${styles.dangerTextButton}`} onClick = {() => onAllRequests(false)}>전체 거절</Button><Button className = {styles.smallRoundButton} onClick = {() => onAllRequests(true)}><Check /> 전체 승인</Button></div>}>
       {requests.length > 0 ? (
         <div className = {styles.requestList}>
           {requests.map(request => (
             <div key = {request.id} className = {styles.requestCard}>
-              <div className = {styles.avatar}>{request.name[0]}</div>
+              {request.profileImageUrl ? (
+                <img src = {request.profileImageUrl} alt = {`${request.name} 프로필`} className = {styles.participantProfileImage} onError = {event => { event.currentTarget.style.display = 'none'; event.currentTarget.nextElementSibling?.removeAttribute('hidden'); }} />
+              ) : null}
+              <div hidden = {!!request.profileImageUrl} className = {styles.avatar}>{request.name[0]}</div>
               <div className = {styles.requestMain}>
                 <div><strong>{request.name}</strong><span>{request.gender} · {request.age} · {request.grade}</span></div>
                 <p>{request.message}</p>
@@ -1830,12 +1833,18 @@ function getSessionTypeLabel(sessionType: string) {
   return { REGULAR: '정기 모임', LIGHTNING: '번개 모임', EXCHANGE: '교류전', TOURNAMENT: '대회', OTHER: '기타' }[sessionType] ?? '기타';
 }
 
-function formatGender(gender: string) {
-  return ({ MALE: '남성', FEMALE: '여성' } as Record<string, string>)[gender] || gender || '미설정';
+function formatGender(gender: string | null) {
+  const labels: Record<string, string> = { MALE: '남성', FEMALE: '여성' };
+  return gender ? labels[gender] || gender : '미설정';
 }
 
-function formatAgeGroup(ageGroup: string) {
-  return ({ TEENS: '10대', TWENTIES: '20대', THIRTIES: '30대', FORTIES: '40대', FIFTIES: '50대', SIXTIES_AND_ABOVE: '60대 이상' } as Record<string, string>)[ageGroup] || ageGroup || '미설정';
+function formatAgeGroup(ageGroup: string | null) {
+  const labels: Record<string, string> = { TEENS: '10대', TWENTIES: '20대', THIRTIES: '30대', FORTIES: '40대', FIFTIES: '50대', SIXTIES_AND_ABOVE: '60대 이상' };
+  return ageGroup ? labels[ageGroup] || ageGroup : '미설정';
+}
+
+function formatGrade(grade: string | null) {
+  return grade ? `${grade}급` : '급수 미정';
 }
 
 function canChangeVoteForSchedule(schedule: ScheduleItem | undefined, sameDayAllowed: boolean, postDeadlineAllowed: boolean) {
