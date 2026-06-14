@@ -38,6 +38,28 @@ public interface GroupMemberRepository extends JpaRepository<GroupMember, Long> 
     );
 
     @EntityGraph(attributePaths = {"group", "group.owner"})
+    @Query("""
+            select gm
+            from GroupMember gm
+            where gm.user.id = :userId
+              and gm.status = :status
+              and gm.group.status = com.shuttleplay.server.domain.group.enums.GroupStatus.ACTIVE
+              and (
+                gm.role = com.shuttleplay.server.domain.group.enums.GroupMemberRole.OWNER
+                or (
+                  gm.role = com.shuttleplay.server.domain.group.enums.GroupMemberRole.MANAGER
+                  and (:scheduleOnly = false or gm.schedulePermission = true)
+                )
+              )
+            """)
+    Page<GroupMember> findManageableGroups(
+            @Param("userId") Long userId,
+            @Param("status") GroupMemberStatus status,
+            @Param("scheduleOnly") boolean scheduleOnly,
+            Pageable pageable
+    );
+
+    @EntityGraph(attributePaths = {"group", "group.owner"})
     List<GroupMember> findAllByUserIdAndStatus(Long userId, GroupMemberStatus status);
 
     @EntityGraph(attributePaths = {"group", "group.owner"})

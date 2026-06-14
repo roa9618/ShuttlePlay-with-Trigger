@@ -44,6 +44,7 @@ public class GroupDetailService {
         result.put("activityRegion", group.getActivityRegion()); result.put("description", group.getDescription());
         result.put("createdAt", group.getCreatedAt()); result.put("ownerName", group.getOwner().getName());
         result.put("memberCount", members.countByGroupIdAndStatus(groupId, GroupMemberStatus.ACTIVE));
+        result.put("guestAllowed", group.isGuestAllowed());
         result.put("myMemberId", me.getId());
         result.put("myRole", me.getRole()); result.put("permissions", permissionMap(me));
         return result;
@@ -64,7 +65,7 @@ public class GroupDetailService {
             trend.add(Map.of("week", 4 - week, "attendance", sessions.findAllByGroupIdAndStartsAtBetweenAndStatusAndIsDeletedFalse(groupId, from, to, GroupSessionStatus.CLOSED).stream().mapToInt(GroupSession::getAttendanceCount).sum()));
         }
         Map<String, Object> result = map();
-        result.put("upcomingSession", sessions.findAllByGroupIdAndStartsAtBetweenAndStatusInAndIsDeletedFalse(groupId, now, now.plusYears(1), List.of(GroupSessionStatus.CREATED, GroupSessionStatus.ATTENDANCE_OPEN)).stream().min(Comparator.comparing(GroupSession::getStartsAt)).map(this::sessionMap).orElse(null));
+        result.put("upcomingSession", sessions.findAllByGroupIdAndStartsAtBetweenAndStatusInAndIsDeletedFalse(groupId, now, now.plusYears(1), List.of(GroupSessionStatus.CREATED, GroupSessionStatus.ATTENDANCE_OPEN)).stream().min(Comparator.comparing(GroupSession::getStartsAt)).map(session -> sessionMapWithVote(session, me)).orElse(null));
         result.put("recentSessions", sessions.findTop3ByGroupIdAndStatusAndIsDeletedFalseOrderByStartsAtDesc(groupId, GroupSessionStatus.CLOSED).stream().map(this::sessionMap).toList());
         result.put("recentFourWeekSessionCount", recent.size());
         result.put("averageAttendance", recent.isEmpty() ? 0 : Math.round(recent.stream().mapToInt(GroupSession::getAttendanceCount).average().orElse(0)));
@@ -124,6 +125,41 @@ public class GroupDetailService {
     }
     @Transactional(readOnly = true)
     public Map<String, Object> session(Long userId, Long groupId, Long sessionId) { GroupMember member = access.member(groupId, userId); Map<String, Object> result = detailedSession(access.session(groupId, sessionId)); result.put("myVoteStatus", votes.findBySessionIdAndMemberId(sessionId, member.getId()).map(GroupSessionVote::getStatus).orElse(null)); return result; }
+    public Map<String, Object> createSession(Long userId, Long groupId, Map<String, Object> body) {
+        GroupMember actor = access.scheduleManager(groupId, userId);
+        LocalDateTime startsAt = dateTime(body, "startsAt");
+        LocalDateTime endsAt = dateTime(body, "endsAt");
+        boolean votingAllowed = bool(body, "votingAllowed");
+        LocalDateTime voteDeadline = votingAllowed ? dateTime(body, "voteDeadline") : null;
+        boolean guestAllowed = actor.getGroup().isGuestAllowed() && bool(body, "guestAllowed");
+        boolean guestLinkAllowed = bool(body, "guestLinkAllowed");
+        int courtCount = integer(body, "courtCount");
+        GroupSessionType sessionType = sessionType(body);
+
+        if (startsAt == null || endsAt == null || !endsAt.isAfter(startsAt) || courtCount < 1
+                || (votingAllowed && (voteDeadline == null || !voteDeadline.isBefore(startsAt)))
+                || (guestLinkAllowed && !guestAllowed)) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST);
+        }
+
+        GroupSession session = sessions.save(GroupSession.create(
+                actor.getGroup(),
+                text(body, "title"),
+                startsAt,
+                endsAt,
+                text(body, "place"),
+                voteDeadline,
+                sessionType,
+                courtCount,
+                votingAllowed,
+                guestLinkAllowed,
+                guestAllowed
+        ));
+        log(actor, "SESSION_CREATED", session.getTitle());
+        notifyAll(actor.getGroup(), "새 운동 일정이 등록되었습니다.", sessionPath(groupId, session.getId()));
+        events.sessions(groupId, "SESSION_CREATED");
+        return sessionMap(session);
+    }
     public void updateSession(Long userId, Long groupId, Long sessionId, Map<String, Object> body) {
         GroupMember actor = access.scheduleManager(groupId, userId); GroupSession session = access.session(groupId, sessionId);
         session.update(text(body, "title"), dateTime(body, "startsAt"), dateTime(body, "endsAt"), text(body, "place"), dateTime(body, "voteDeadline"));
@@ -133,6 +169,7 @@ public class GroupDetailService {
     public void deleteSession(Long userId, Long groupId, Long sessionId) { GroupMember actor = access.scheduleManager(groupId, userId); access.session(groupId, sessionId).deleteSession(); log(actor, "SESSION_DELETED", String.valueOf(sessionId)); notifyAll(actor.getGroup(), "운동 일정이 삭제되었습니다.", "/groups/" + groupId + "/schedule"); events.sessions(groupId, "SESSION_DELETED"); }
     public void vote(Long userId, Long groupId, Long sessionId, SessionVoteStatus status) {
         GroupMember member = access.member(groupId, userId); GroupSession session = access.session(groupId, sessionId);
+        if (!session.isVotingAllowed()) throw new BusinessException(ErrorCode.FORBIDDEN);
         LocalDateTime now = LocalDateTime.now();
         if (session.getVoteDeadline() != null && now.isAfter(session.getVoteDeadline()) && !member.getGroup().isPostDeadlineVoteChangeAllowed()) throw new BusinessException(ErrorCode.FORBIDDEN);
         if (session.getStartsAt().toLocalDate().equals(now.toLocalDate()) && !member.getGroup().isSameDayVoteChangeAllowed()) throw new BusinessException(ErrorCode.FORBIDDEN);
@@ -150,9 +187,10 @@ public class GroupDetailService {
     public Map<String, Object> addGuest(Long userId, Long groupId, Long sessionId, Map<String, Object> body) {
         GroupMember actor = access.scheduleManager(groupId, userId);
         if (!actor.getGroup().isGuestAllowed()) throw new BusinessException(ErrorCode.FORBIDDEN);
+        GroupSession session = access.session(groupId, sessionId);
+        if (!session.isGuestAllowed()) throw new BusinessException(ErrorCode.FORBIDDEN);
         String name = text(body, "name");
         if (guests.existsBySessionIdAndNameIgnoreCase(sessionId, name)) throw new BusinessException(ErrorCode.INVALID_REQUEST);
-        GroupSession session = access.session(groupId, sessionId);
         GroupSessionGuest guest = guests.save(GroupSessionGuest.create(session, name, Gender.valueOf(text(body, "gender")), AgeGroup.valueOf(text(body, "ageGroup")), Grade.valueOf(text(body, "grade"))));
         refreshAttendanceCount(session); log(actor, "GUEST_ADDED", name); events.sessions(groupId, "GUEST_ADDED"); return guestMap(guest);
     }
@@ -218,7 +256,8 @@ public class GroupDetailService {
     public void deleteGroup(Long userId, Long groupId) { GroupMember actor = access.owner(groupId, userId); notifyAll(actor.getGroup(), "모임이 삭제되었습니다.", "/groups"); actor.getGroup().deactivate(); log(actor, "GROUP_DELETED", actor.getGroup().getName()); events.group(groupId, "GROUP_DELETED"); }
 
     private Map<String, Object> detailedSession(GroupSession s) { Map<String, Object> m = sessionMap(s); m.put("attending", votes.countBySessionIdAndStatus(s.getId(), SessionVoteStatus.ATTENDING)); m.put("undecided", votes.countBySessionIdAndStatus(s.getId(), SessionVoteStatus.UNDECIDED)); m.put("absent", votes.countBySessionIdAndStatus(s.getId(), SessionVoteStatus.ABSENT)); m.put("guests", guests.findAllBySessionId(s.getId()).stream().map(this::guestMap).toList()); return m; }
-    private Map<String, Object> sessionMap(GroupSession s) { Map<String, Object> m = map(); m.put("id", s.getId()); m.put("title", s.getTitle()); m.put("startsAt", s.getStartsAt()); m.put("endsAt", s.getEndsAt()); m.put("place", s.getPlace()); m.put("voteDeadline", s.getVoteDeadline()); m.put("attendanceCount", s.getAttendanceCount()); m.put("attending", votes.countBySessionIdAndStatus(s.getId(), SessionVoteStatus.ATTENDING)); m.put("undecided", votes.countBySessionIdAndStatus(s.getId(), SessionVoteStatus.UNDECIDED)); m.put("absent", votes.countBySessionIdAndStatus(s.getId(), SessionVoteStatus.ABSENT)); m.put("guestCount", guests.findAllBySessionId(s.getId()).size()); m.put("status", s.getStatus()); return m; }
+    private Map<String, Object> sessionMapWithVote(GroupSession session, GroupMember member) { Map<String, Object> result = sessionMap(session); result.put("myVoteStatus", votes.findBySessionIdAndMemberId(session.getId(), member.getId()).map(GroupSessionVote::getStatus).orElse(null)); return result; }
+    private Map<String, Object> sessionMap(GroupSession s) { Map<String, Object> m = map(); m.put("id", s.getId()); m.put("title", s.getTitle()); m.put("startsAt", s.getStartsAt()); m.put("endsAt", s.getEndsAt()); m.put("place", s.getPlace()); m.put("voteDeadline", s.getVoteDeadline()); m.put("sessionType", s.getSessionType()); m.put("courtCount", s.getCourtCount()); m.put("votingAllowed", s.isVotingAllowed()); m.put("guestLinkAllowed", s.isGuestLinkAllowed()); m.put("guestAllowed", s.isGuestAllowed()); m.put("attendanceCount", s.getAttendanceCount()); m.put("attending", votes.countBySessionIdAndStatus(s.getId(), SessionVoteStatus.ATTENDING)); m.put("undecided", votes.countBySessionIdAndStatus(s.getId(), SessionVoteStatus.UNDECIDED)); m.put("absent", votes.countBySessionIdAndStatus(s.getId(), SessionVoteStatus.ABSENT)); m.put("guestCount", guests.findAllBySessionId(s.getId()).size()); m.put("status", s.getStatus()); return m; }
     private Map<String, Object> memberMap(GroupMember m, SessionVoteStatus status) { Map<String, Object> x = map(); User u = m.getUser(); int recentCount = recentParticipationCount(m); long recentSessions = sessions.findAllByGroupIdAndStartsAtBetweenAndStatusAndIsDeletedFalse(m.getGroup().getId(), LocalDateTime.now().minusDays(28), LocalDateTime.now(), GroupSessionStatus.CLOSED).size(); x.put("id", m.getId()); x.put("name", u.getName()); x.put("profileImageUrl", u.getProfileImageUrl()); x.put("gender", u.getGender()); x.put("ageGroup", u.getAgeGroup()); x.put("grade", u.getGrade()); x.put("role", m.getRole()); x.put("participationCount", votes.countByMemberIdAndStatusAndSession_Status(m.getId(), SessionVoteStatus.ATTENDING, GroupSessionStatus.CLOSED)); x.put("monthlyParticipationRate", recentSessions == 0 ? 0 : Math.round(recentCount * 100f / recentSessions)); x.put("recentFourWeekParticipationCount", recentCount); x.put("doublesMmr", u.getDoublesMmr()); x.put("mixedMmr", u.getMixedMmr()); x.put("voteStatus", status); return x; }
     private Map<String, Object> guestMap(GroupSessionGuest g) { return Map.of("id", g.getId(), "name", g.getName(), "gender", g.getGender(), "ageGroup", g.getAgeGroup(), "grade", g.getGrade(), "status", g.getStatus()); }
     private Map<String, Object> guestParticipantMap(GroupSessionGuest g) { Map<String, Object> x = map(); x.putAll(guestMap(g)); x.put("guest", true); x.put("profileImageUrl", null); x.put("role", "GUEST"); x.put("voteStatus", g.getStatus()); return x; }
@@ -232,6 +271,7 @@ public class GroupDetailService {
     private void requireAuthorOrPostManager(Long groupId, Long userId, GroupMember actor, GroupMember author) { if (!Objects.equals(actor.getId(), author.getId())) access.postManager(groupId, userId); }
     private String operationActionLabel(String action) {
         return switch (action) {
+            case "SESSION_CREATED" -> "운동 일정 생성";
             case "OPERATION_GUIDE_UPDATED" -> "운영 안내 변경";
             case "SESSION_UPDATED" -> "운동 일정 변경";
             case "SESSION_CANCELLED" -> "운동 일정 취소";
@@ -274,5 +314,7 @@ public class GroupDetailService {
     private static String text(Map<String, Object> b, String k) { Object v = b.get(k); if (v == null || String.valueOf(v).isBlank()) throw new BusinessException(ErrorCode.INVALID_REQUEST); return String.valueOf(v).trim(); }
     private static String textOrNull(Map<String, Object> b, String k) { Object v = b.get(k); return v == null ? null : String.valueOf(v); }
     private static boolean bool(Map<String, Object> b, String k) { return Boolean.TRUE.equals(b.get(k)); }
+    private static int integer(Map<String, Object> b, String k) { try { return Integer.parseInt(text(b, k)); } catch (NumberFormatException e) { throw new BusinessException(ErrorCode.INVALID_REQUEST); } }
+    private static GroupSessionType sessionType(Map<String, Object> b) { try { return GroupSessionType.valueOf(text(b, "sessionType")); } catch (IllegalArgumentException e) { throw new BusinessException(ErrorCode.INVALID_REQUEST); } }
     private static LocalDateTime dateTime(Map<String, Object> b, String k) { Object v = b.get(k); return v == null || String.valueOf(v).isBlank() ? null : LocalDateTime.parse(String.valueOf(v)); }
 }

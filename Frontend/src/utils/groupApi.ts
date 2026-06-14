@@ -1,6 +1,6 @@
 import { apiClient } from './apiClient';
 
-export type GroupRole = 'OWNER' | 'MEMBER';
+export type GroupRole = 'OWNER' | 'MANAGER' | 'MEMBER';
 
 export type GroupHighlightResponse = {
   groupId: number;
@@ -105,6 +105,26 @@ export function getMyGroups({
   }
 
   return apiClient.get<GroupListResponse>(`/groups?${searchParams.toString()}`, {
+    auth: true,
+  });
+}
+
+export function getManageableGroups({
+  scheduleOnly,
+  page,
+  size,
+}: {
+  scheduleOnly: boolean;
+  page: number;
+  size: number;
+}) {
+  const searchParams = new URLSearchParams({
+    scheduleOnly: String(scheduleOnly),
+    page: String(page),
+    size: String(size),
+  });
+
+  return apiClient.get<GroupListResponse>(`/groups/manageable?${searchParams.toString()}`, {
     auth: true,
   });
 }

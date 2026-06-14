@@ -1,6 +1,7 @@
 package com.shuttleplay.server.domain.group.entity;
 
 import com.shuttleplay.server.domain.group.enums.GroupSessionStatus;
+import com.shuttleplay.server.domain.group.enums.GroupSessionType;
 import com.shuttleplay.server.global.entity.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -53,12 +54,58 @@ public class GroupSession extends BaseEntity {
     @Column
     private LocalDateTime voteDeadline;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private GroupSessionType sessionType = GroupSessionType.REGULAR;
+
+    @Column(nullable = false)
+    private int courtCount = 1;
+
+    @Column(nullable = false)
+    private boolean votingAllowed = true;
+
+    @Column(nullable = false)
+    private boolean guestLinkAllowed;
+
+    @Column(nullable = false)
+    private boolean guestAllowed = true;
+
     @Column(nullable = false)
     private int attendanceCount;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private GroupSessionStatus status;
+
+    public static GroupSession create(
+            Group group,
+            String title,
+            LocalDateTime startsAt,
+            LocalDateTime endsAt,
+            String place,
+            LocalDateTime voteDeadline,
+            GroupSessionType sessionType,
+            int courtCount,
+            boolean votingAllowed,
+            boolean guestLinkAllowed,
+            boolean guestAllowed
+    ) {
+        GroupSession session = new GroupSession();
+        session.group = group;
+        session.title = title;
+        session.startsAt = startsAt;
+        session.endsAt = endsAt;
+        session.place = place;
+        session.voteDeadline = voteDeadline;
+        session.sessionType = sessionType;
+        session.courtCount = courtCount;
+        session.votingAllowed = votingAllowed;
+        session.guestLinkAllowed = guestLinkAllowed;
+        session.guestAllowed = guestAllowed;
+        session.attendanceCount = 0;
+        session.status = votingAllowed ? GroupSessionStatus.ATTENDANCE_OPEN : GroupSessionStatus.CREATED;
+        return session;
+    }
 
     public void update(String title, LocalDateTime startsAt, LocalDateTime endsAt, String place, LocalDateTime voteDeadline) {
         this.title = title;

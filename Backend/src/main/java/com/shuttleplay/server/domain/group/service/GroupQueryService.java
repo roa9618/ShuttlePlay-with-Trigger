@@ -132,6 +132,39 @@ public class GroupQueryService {
                 .build();
     }
 
+    public GroupListResponse getManageableGroups(
+            Long userId,
+            boolean scheduleOnly,
+            int page,
+            int size
+    ) {
+        Page<GroupMember> memberships = groupMemberRepository.findManageableGroups(
+                userId,
+                GroupMemberStatus.ACTIVE,
+                scheduleOnly,
+                PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "group.name"))
+        );
+
+        List<Long> groupIds = getGroupIds(memberships.getContent());
+        Map<Long, Long> activeMemberCounts = getActiveMemberCounts(groupIds);
+        Map<Long, LocalDateTime> nextScheduleByGroupId = getNextScheduleByGroupId(groupIds);
+        List<GroupListItemResponse> items = memberships.getContent().stream()
+                .map(member -> GroupListItemResponse.from(
+                        member,
+                        activeMemberCounts.getOrDefault(member.getGroup().getId(), 0L),
+                        nextScheduleByGroupId.get(member.getGroup().getId())
+                ))
+                .toList();
+
+        return GroupListResponse.builder()
+                .items(items)
+                .page(memberships.getNumber())
+                .size(memberships.getSize())
+                .totalElements(memberships.getTotalElements())
+                .totalPages(memberships.getTotalPages())
+                .build();
+    }
+
     public GroupActivitySummaryResponse getActivitySummary(Long userId, Long groupId) {
         GroupMember member = groupMemberRepository.findByGroupIdAndUserIdAndStatus(
                         groupId,

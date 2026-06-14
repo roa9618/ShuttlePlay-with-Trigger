@@ -22,7 +22,7 @@ export default function GalleryPage() {
     { name: '모임 운영 기록', path: '/groups/1/history', description: '모임 운영 변경 이력 확인' },
     { name: '모임 설정', path: '/groups/1/settings', description: '기본 정보, 가입, 권한 및 삭제 설정' },
     { name: '모임 만들기', path: '/groups/new', description: '새로운 모임 생성' },
-    { name: '운동 일정 만들기', path: '/groups/1/create-session', description: '오늘 진행할 운동 일정을 등록합니다' },
+    { name: '운동 일정 만들기', path: '/groups/1/schedule?createSession=true', description: '오늘 진행할 운동 일정을 등록합니다' },
     { name: '운영자 대시보드', path: '/sessions/demo/dashboard', description: '세션 운영 및 현황 관리' },
     { name: '참가자 관리', path: '/sessions/demo/participants', description: '참가자 상태 및 메모 관리' },
     { name: '경기 후보 큐', path: '/sessions/demo/queue', description: '자동 매칭 및 경기 생성' },

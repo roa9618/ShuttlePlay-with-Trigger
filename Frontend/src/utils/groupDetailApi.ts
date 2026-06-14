@@ -4,7 +4,7 @@ export type GroupDetailRole = 'OWNER' | 'MANAGER' | 'MEMBER';
 export type GroupPermissions = { schedule: boolean; notice: boolean; joinRequests: boolean; members: boolean; posts: boolean; operationLogs: boolean };
 export type GroupDetailResponse = {
   id: number; name: string; profileImageUrl: string | null; activityRegion: string; description: string;
-  createdAt: string; ownerName: string; memberCount: number; myMemberId: number; myRole: GroupDetailRole; permissions: GroupPermissions;
+  createdAt: string; ownerName: string; memberCount: number; myMemberId: number; myRole: GroupDetailRole; permissions: GroupPermissions; guestAllowed: boolean;
 };
 export type GroupSettingsResponse = GroupDetailResponse & {
   newJoinAllowed: boolean; approvalRequired: boolean; guestAllowed: boolean;
@@ -12,7 +12,7 @@ export type GroupSettingsResponse = GroupDetailResponse & {
   memberPostAllowed: boolean; memberCommentAllowed: boolean; postAttachmentAllowed: boolean;
 };
 export type PageResponse<T> = { items: T[]; page: number; size: number; totalElements: number; totalPages: number };
-export type GroupSessionResponse = { id: number; title: string; startsAt: string; endsAt: string | null; place: string | null; voteDeadline: string | null; attendanceCount: number; attending?: number; undecided?: number; absent?: number; guestCount?: number; myVoteStatus?: string | null; status: string };
+export type GroupSessionResponse = { id: number; title: string; startsAt: string; endsAt: string | null; place: string | null; voteDeadline: string | null; sessionType?: string; courtCount?: number; votingAllowed?: boolean; guestLinkAllowed?: boolean; guestAllowed?: boolean; attendanceCount: number; attending?: number; undecided?: number; absent?: number; guestCount?: number; myVoteStatus?: string | null; status: string };
 export type GroupDashboardResponse = {
   upcomingSession: GroupSessionResponse | null;
   recentSessions: GroupSessionResponse[];
@@ -51,6 +51,7 @@ export const groupDetailApi = {
   leave: (id: number) => apiClient.post<void>(`${root(id)}/leave`, undefined, auth),
   getSessions: (id: number, year: number, month: number, day?: number) => apiClient.get<GroupSessionResponse[]>(`${root(id)}/sessions?${query({ year, month, day })}`, auth),
   getMonthlySummary: (id: number, year: number, month: number) => apiClient.get<Record<string, number>>(`${root(id)}/sessions/monthly-summary?${query({ year, month })}`, auth),
+  createSession: (id: number, body: unknown) => apiClient.post<GroupSessionResponse>(`${root(id)}/sessions`, body, auth),
   getSession: (id: number, sessionId: number) => apiClient.get<GroupSessionResponse>(`${root(id)}/sessions/${sessionId}`, auth),
   updateSession: (id: number, sessionId: number, body: unknown) => apiClient.put<void>(`${root(id)}/sessions/${sessionId}`, body, auth),
   cancelSession: (id: number, sessionId: number) => apiClient.post<void>(`${root(id)}/sessions/${sessionId}/cancel`, undefined, auth),

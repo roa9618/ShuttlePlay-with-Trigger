@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import {
   Activity,
   CalendarCheck2,
@@ -28,6 +28,7 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import {
   getGroupActivitySummary,
+  getManageableGroups,
   getGroupOverview,
   getMyGroups,
   type GroupActivitySummaryResponse,
@@ -133,6 +134,8 @@ function getThisWeekScheduleLabel(scheduleAt: string | null) {
 function getRoleLabel(role: GroupRole) {
   return role === 'OWNER'
     ? '운영자'
+    : role === 'MANAGER'
+      ? '매니저'
     : '멤버';
 }
 
@@ -185,6 +188,8 @@ const initialOverview: GroupOverviewResponse = {
 };
 
 export default function GroupListPage() {
+  const [searchParams] = useSearchParams();
+  const isCreateSessionSelection = searchParams.get('action') === 'createSession';
   const [keyword, setKeyword] = useState('');
   const [filterType, setFilterType] = useState<FilterType>('ALL');
   const [currentPage, setCurrentPage] = useState(1);
@@ -222,14 +227,20 @@ export default function GroupListPage() {
 
     const timer = window.setTimeout(async () => {
       try {
-        const response = await getMyGroups({
-          keyword: keyword.trim(),
-          role: filterType === 'ALL'
-            ? null
-            : filterType,
-          page: currentPage - 1,
-          size: PAGE_SIZE,
-        });
+        const response = isCreateSessionSelection
+          ? await getManageableGroups({
+              scheduleOnly: true,
+              page: currentPage - 1,
+              size: PAGE_SIZE,
+            })
+          : await getMyGroups({
+              keyword: keyword.trim(),
+              role: filterType === 'ALL'
+                ? null
+                : filterType,
+              page: currentPage - 1,
+              size: PAGE_SIZE,
+            });
 
         if (!ignore) {
           setGroups(response.items);
@@ -247,7 +258,7 @@ export default function GroupListPage() {
       ignore = true;
       window.clearTimeout(timer);
     };
-  }, [currentPage, filterType, keyword]);
+  }, [currentPage, filterType, isCreateSessionSelection, keyword]);
 
   const safeCurrentPage = Math.min(currentPage, pageCount);
   const nearestSchedule = overview.nearestSchedule;
@@ -597,7 +608,7 @@ export default function GroupListPage() {
                     className = {styles.groupRow}
                   >
                     <Link
-                      to = {`/groups/${group.id}`}
+                      to = {isCreateSessionSelection ? `/groups/${group.id}/schedule?createSession=true` : `/groups/${group.id}`}
                       className = {styles.groupMain}
                     >
                       <img
@@ -665,7 +676,7 @@ export default function GroupListPage() {
                         size = "sm"
                         className = {styles.enterButton}
                       >
-                        <Link to = {`/groups/${group.id}`}>
+                        <Link to = {isCreateSessionSelection ? `/groups/${group.id}/schedule?createSession=true` : `/groups/${group.id}`}>
                           입장
                           <ChevronRight className = {styles.chevronIcon} />
                         </Link>

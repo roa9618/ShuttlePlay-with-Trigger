@@ -41,8 +41,7 @@ export default function Layout() {
     location.pathname.includes('/queue') ||
     location.pathname.includes('/current') ||
     location.pathname.includes('/result/') ||
-    location.pathname.includes('/report') ||
-    location.pathname.includes('/create-session');
+    location.pathname.includes('/report');
 
   const showFooter = location.pathname === '/';
 

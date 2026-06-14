@@ -4,7 +4,7 @@ import Logo from '../components/Logo';
 import ShuttlecockIcon from '../components/ShuttlecockIcon';
 import { Sparkles } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { startTokenAuthSession, type AuthSession, type UserRole } from '../utils/authSession';
+import { consumeAuthRedirectPath, startTokenAuthSession, type AuthSession, type UserRole } from '../utils/authSession';
 import { styles } from './LoginPage.styles';
 
 function normalizeRole(role: string | null): UserRole {
@@ -67,7 +67,8 @@ export default function OAuthCallbackPage() {
 
     setSessionFromStorage();
 
-    navigate(profileCompleted ? '/groups' : '/social-signup', {
+    const redirectPath = consumeAuthRedirectPath();
+    navigate(profileCompleted ? (redirectPath === '/' ? '/groups' : redirectPath) : '/social-signup', {
       replace: true,
     });
   }, [navigate, searchParams, setSessionFromStorage]);
