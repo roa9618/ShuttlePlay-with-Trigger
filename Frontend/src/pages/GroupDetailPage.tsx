@@ -285,29 +285,37 @@ export default function GroupDetailPage() {
 
   const loadGroupDetail = useCallback(async () => {
     if (!Number.isFinite(numericGroupId)) return;
-    const [group, guide, dashboardResponse, sessionResponse, monthlySummaryResponse] = await Promise.all([
-      groupDetailApi.getGroup(numericGroupId),
+    const group = await groupDetailApi.getGroup(numericGroupId);
+    setGroupInfo(group);
+    setCurrentRole(group.myRole);
+    setManagerPermissions(group.permissions);
+
+    const [guideResult, dashboardResult, sessionResult, monthlySummaryResult] = await Promise.allSettled([
       groupDetailApi.getOperationGuide(numericGroupId),
       groupDetailApi.getDashboard(numericGroupId),
       groupDetailApi.getSessions(numericGroupId, calendarYear, calendarMonth),
       groupDetailApi.getMonthlySummary(numericGroupId, calendarYear, calendarMonth),
     ]);
-    setGroupInfo(group);
-    setCurrentRole(group.myRole);
-    setManagerPermissions(group.permissions);
-    setNotice(guide.content);
-    setNoticeDraft(guide.content);
-    setNoticeAuthor(guide.authorName);
-    setNoticeUpdatedAt(guide.updatedAt);
-    setDashboard(dashboardResponse);
-    setScheduleItems(sessionResponse.map(toScheduleItem));
-    const firstVote = sessionResponse.find(session => session.myVoteStatus)?.myVoteStatus;
-    if (firstVote) setVoteStatus(firstVote === 'ATTENDING' ? 'JOIN' : firstVote as VoteStatus);
-    setMonthlySummary({
-      upcomingCount: Number(monthlySummaryResponse.upcomingCount ?? 0),
-      completedCount: Number(monthlySummaryResponse.completedCount ?? 0),
-      cumulativeAttendance: Number(monthlySummaryResponse.cumulativeAttendance ?? 0),
-    });
+
+    if (guideResult.status === 'fulfilled') {
+      setNotice(guideResult.value.content);
+      setNoticeDraft(guideResult.value.content);
+      setNoticeAuthor(guideResult.value.authorName);
+      setNoticeUpdatedAt(guideResult.value.updatedAt);
+    }
+    if (dashboardResult.status === 'fulfilled') setDashboard(dashboardResult.value);
+    if (sessionResult.status === 'fulfilled') {
+      setScheduleItems(sessionResult.value.map(toScheduleItem));
+      const firstVote = sessionResult.value.find(session => session.myVoteStatus)?.myVoteStatus;
+      if (firstVote) setVoteStatus(firstVote === 'ATTENDING' ? 'JOIN' : firstVote as VoteStatus);
+    }
+    if (monthlySummaryResult.status === 'fulfilled') {
+      setMonthlySummary({
+        upcomingCount: Number(monthlySummaryResult.value.upcomingCount ?? 0),
+        completedCount: Number(monthlySummaryResult.value.completedCount ?? 0),
+        cumulativeAttendance: Number(monthlySummaryResult.value.cumulativeAttendance ?? 0),
+      });
+    }
     if (group.myRole === 'OWNER') {
       const settings = await groupDetailApi.getSettings(numericGroupId);
       setNewJoinAllowed(settings.newJoinAllowed);
@@ -319,6 +327,8 @@ export default function GroupDetailPage() {
       setMemberCommentAllowed(settings.memberCommentAllowed);
       setPostAttachmentAllowed(settings.postAttachmentAllowed);
     }
+    const failedResult = [guideResult, dashboardResult, sessionResult, monthlySummaryResult].find(result => result.status === 'rejected');
+    if (failedResult?.status === 'rejected') throw failedResult.reason;
   }, [calendarMonth, calendarYear, numericGroupId]);
 
   useEffect(() => {
@@ -339,6 +349,33 @@ export default function GroupDetailPage() {
       })
       .catch(() => showToast('게시글 목록을 불러오지 못했습니다.'));
   }, [boardFilter, boardKeyword, boardPage, listRefreshKey, numericGroupId, showToast]);
+
+  useEffect(() => {
+    const postId = Number(new URLSearchParams(location.search).get('postId'));
+    if (activeTab !== 'board' || !Number.isFinite(numericGroupId) || !Number.isFinite(postId) || postId <= 0) return;
+
+    void groupDetailApi.getPost(numericGroupId, postId)
+      .then(post => {
+        const item = toPostItem(post);
+        setPostItems(current => [...current.filter(existing => existing.id !== postId), item]);
+        setModal({ type: 'post', id: postId });
+      })
+      .catch(() => showToast('공지사항을 불러오지 못했습니다.'));
+  }, [activeTab, location.search, numericGroupId, showToast]);
+
+  useEffect(() => {
+    const sessionId = Number(new URLSearchParams(location.search).get('sessionId'));
+    if (activeTab !== 'schedule' || !Number.isFinite(numericGroupId) || !Number.isFinite(sessionId) || sessionId <= 0) return;
+
+    void groupDetailApi.getSession(numericGroupId, sessionId)
+      .then(session => {
+        const item = toScheduleItem(session);
+        setScheduleItems(current => [...current.filter(existing => existing.id !== sessionId), item]);
+        if (session.myVoteStatus) setVoteStatus(session.myVoteStatus === 'ATTENDING' ? 'JOIN' : session.myVoteStatus as VoteStatus);
+        setModal({ type: 'schedule', id: sessionId });
+      })
+      .catch(() => showToast('일정을 불러오지 못했습니다.'));
+  }, [activeTab, location.search, numericGroupId, showToast]);
 
   useEffect(() => {
     if (!Number.isFinite(numericGroupId)) return;
@@ -411,6 +448,14 @@ export default function GroupDetailPage() {
   const handleCopyGroupLink = async () => {
     await navigator.clipboard?.writeText(`${window.location.origin}/groups/${groupId}/join`);
     showToast('모임 공유 링크를 복사했습니다.');
+  };
+
+  const handleCloseModal = () => {
+    setModal(null);
+    const searchParams = new URLSearchParams(location.search);
+    if (searchParams.has('postId') || searchParams.has('sessionId')) {
+      navigate(location.pathname, { replace: true });
+    }
   };
 
   const handleVote = (nextStatus: VoteStatus, targetSessionId?: number) => {
@@ -701,7 +746,7 @@ export default function GroupDetailPage() {
       </div>
 
       {modal && (
-        <Modal title = {getModalTitle(modal, selectedSchedule?.title, selectedPost?.title, selectedMember?.name)} onClose = {() => setModal(null)} onBack = {modal.type === 'editGuest' ? () => setModal({ type: 'participants', id: modal.id }) : modal.type === 'participants' || modal.type === 'addGuest' || modal.type === 'manageSchedule' ? () => setModal({ type: 'schedule', id: modal.id }) : modal.type === 'memberPermissions' || modal.type === 'ownershipTransfer' || modal.type === 'memberRemoval' ? () => setModal({ type: 'member', id: modal.id }) : undefined} centeredHeader = {modal.type === 'schedule' || modal.type === 'post' || modal.type === 'writePost' || modal.type === 'member' || modal.type === 'groupDeletion'} fixedScheduleSize = {modal.type === 'schedule' || modal.type === 'post' || modal.type === 'participants' || modal.type === 'addGuest' || modal.type === 'editGuest' || modal.type === 'manageSchedule' || modal.type === 'writePost' || modal.type === 'member' || modal.type === 'memberPermissions' || modal.type === 'ownershipTransfer' || modal.type === 'memberRemoval' || modal.type === 'groupDeletion'}>
+        <Modal title = {getModalTitle(modal, selectedSchedule?.title, selectedPost?.title, selectedMember?.name)} onClose = {handleCloseModal} onBack = {modal.type === 'editGuest' ? () => setModal({ type: 'participants', id: modal.id }) : modal.type === 'participants' || modal.type === 'addGuest' || modal.type === 'manageSchedule' ? () => setModal({ type: 'schedule', id: modal.id }) : modal.type === 'memberPermissions' || modal.type === 'ownershipTransfer' || modal.type === 'memberRemoval' ? () => setModal({ type: 'member', id: modal.id }) : undefined} centeredHeader = {modal.type === 'schedule' || modal.type === 'post' || modal.type === 'writePost' || modal.type === 'member' || modal.type === 'groupDeletion'} fixedScheduleSize = {modal.type === 'schedule' || modal.type === 'post' || modal.type === 'participants' || modal.type === 'addGuest' || modal.type === 'editGuest' || modal.type === 'manageSchedule' || modal.type === 'writePost' || modal.type === 'member' || modal.type === 'memberPermissions' || modal.type === 'ownershipTransfer' || modal.type === 'memberRemoval' || modal.type === 'groupDeletion'}>
           {selectedSchedule && (
             <ScheduleModal schedule = {selectedSchedule} voteStatus = {voteStatus} canManage = {canManageSchedule} canAddGuest = {canManageSchedule && guestAllowed} canChangeVote = {canChangeVoteForSchedule(selectedSchedule, sameDayVoteChangeAllowed, postDeadlineVoteChangeAllowed)} onVote = {status => handleVote(status, selectedSchedule.id)} onOpenParticipants = {id => setModal({ type: 'participants', id })} onAddGuest = {id => setModal({ type: 'addGuest', id })} onManage = {id => setModal({ type: 'manageSchedule', id })} />
           )}
