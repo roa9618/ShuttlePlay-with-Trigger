@@ -201,6 +201,7 @@ export const styles = {
   imageUpload: 'block rounded-2xl border border-dashed border-primary/20 bg-primary/[0.025] p-5 [&>span]:mb-3 [&>span]:block [&>span]:text-sm [&>span]:font-medium',
   memberModalHeader: 'flex items-center gap-4 rounded-2xl bg-primary/[0.03] p-5 [&>div:last-child>div]:flex [&>div:last-child>div]:items-center [&>div:last-child>div]:gap-2 [&_h3]:text-xl [&_h3]:font-medium [&_p]:mt-1 [&_p]:text-sm [&_p]:text-muted-foreground',
   avatarLarge: 'flex h-16 w-16 shrink-0 items-center justify-center rounded-[22px] bg-primary/10 text-xl font-medium text-primary',
+  avatarLargeImage: 'h-16 w-16 shrink-0 rounded-[22px] object-cover',
   memberModalContent: 'flex h-full min-h-0 w-full flex-col gap-5 [&>div:last-child]:mt-auto',
   memberModalScroll: 'min-h-0 flex-1 space-y-5 overflow-y-auto pr-1',
   memberManagementModal: 'flex h-full min-h-0 w-full flex-col gap-5 [&>div:last-child]:mt-auto',

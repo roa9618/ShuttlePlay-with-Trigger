@@ -43,6 +43,7 @@ import {
   groupDetailApi,
   type GroupDashboardResponse,
   type GroupDetailResponse,
+  type GroupGuestResponse,
   type GroupMemberResponse,
   type GroupParticipantResponse,
   type GroupPermissions,
@@ -54,7 +55,7 @@ import { formatActivityRegion, splitActivityRegion } from '../utils/activityRegi
 import { koreanRegions, provinceOptions } from '../utils/koreanRegions';
 import { ApiClientError } from '../utils/apiClient';
 
-type TabKey = 'home' | 'schedule' | 'board' | 'members' | 'requests' | 'history' | 'settings';
+type TabKey = 'home' | 'schedule' | 'board' | 'members' | 'guests' | 'requests' | 'history' | 'settings';
 type GroupRole = 'OWNER' | 'MANAGER' | 'MEMBER';
 type ScheduleStatus = 'VOTING' | 'TODAY' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
 type VoteStatus = 'JOIN' | 'UNDECIDED' | 'ABSENT';
@@ -63,6 +64,7 @@ type ModalState =
   | { type: 'schedule'; id: number }
   | { type: 'post'; id: number }
   | { type: 'member'; id: number }
+  | { type: 'guest'; id: number }
   | { type: 'writePost' }
   | { type: 'participants'; id: number }
   | { type: 'addGuest'; id: number }
@@ -80,6 +82,7 @@ const tabs: Array<{ key: TabKey; label: string; adminOnly?: boolean; ownerOnly?:
   { key: 'schedule', label: '일정' },
   { key: 'board', label: '게시판' },
   { key: 'members', label: '멤버' },
+  { key: 'guests', label: '게스트 관리', adminOnly: true },
   { key: 'requests', label: '가입 요청', adminOnly: true },
   { key: 'history', label: '운영 기록', adminOnly: true },
   { key: 'settings', label: '모임 설정', ownerOnly: true },
@@ -90,13 +93,15 @@ const tabPaths: Record<TabKey, string> = {
   schedule: 'schedule',
   board: 'board',
   members: 'members',
+  guests: 'guests',
   requests: 'requests',
   history: 'history',
   settings: 'settings',
 };
 
 type ScheduleItem = { id: number; title: string; date: string; time: string; place: string; joined: number; undecided: number; absent: number; guests: number; deadline: string; status: ScheduleStatus; sessionType: string; voteStatus: VoteStatus; matches: number | null; votingAllowed: boolean; guestAllowed: boolean };
-type MemberItem = { id: number; name: string; gender: string; age: string; grade: string; role: string; participation: number; recent: number; rate: number; matches: number | null; winRate: number | null; doublesMmr: number; mixedMmr: number; streak: number | null; absenceRate: number | null };
+type MemberItem = { id: number; name: string; profileImageUrl: string | null; gender: string; age: string; grade: string; role: string; participation: number; recent: number; rate: number; matches: number | null; winRate: number | null; doublesMmr: number; mixedMmr: number; streak: number | null; absenceRate: number | null };
+type GuestItem = { id: number; name: string; profileImageUrl: string | null; gender: string; age: string; grade: string; registered: boolean; userId: number | null; participation: number; lastParticipationAt: string | null; matches: number | null; winRate: number | null; doublesMmr: number | null; mixedMmr: number | null; memo: string | null };
 type PostItem = { id: number; authorId: number; type: string; pinned: boolean; title: string; author: string; date: string; views: number; comments: number; content: string; attachmentNames: string | null };
 type JoinRequestItem = { id: number; name: string; profileImageUrl: string | null; gender: string; age: string; grade: string; requestedAt: string; message: string };
 type OperationItem = { id: number; actor: string; action: string; time: string; icon: typeof Calendar };
@@ -165,6 +170,7 @@ function toMemberItem(member: GroupMemberResponse): MemberItem {
   return {
     id: member.id,
     name: member.name,
+    profileImageUrl: member.profileImageUrl,
     gender: genderLabels[member.gender] || member.gender || '미설정',
     age: ageLabels[member.ageGroup] || member.ageGroup || '미설정',
     grade: formatGrade(member.grade),
@@ -178,6 +184,26 @@ function toMemberItem(member: GroupMemberResponse): MemberItem {
     mixedMmr: member.mixedMmr,
     streak: null,
     absenceRate: null,
+  };
+}
+
+function toGuestItem(guest: GroupGuestResponse): GuestItem {
+  return {
+    id: guest.id,
+    name: guest.name,
+    profileImageUrl: guest.profileImageUrl,
+    gender: formatGender(guest.gender),
+    age: formatAgeGroup(guest.ageGroup),
+    grade: formatGrade(guest.grade),
+    registered: guest.registered,
+    userId: guest.userId,
+    participation: guest.participationCount,
+    lastParticipationAt: guest.lastParticipationAt,
+    matches: guest.averageMatchCount,
+    winRate: guest.winRate,
+    doublesMmr: guest.doublesMmr,
+    mixedMmr: guest.mixedMmr,
+    memo: guest.memo,
   };
 }
 
@@ -206,6 +232,7 @@ export default function GroupDetailPage() {
   const [scheduleItems, setScheduleItems] = useState<ScheduleItem[]>([]);
   const [postItems, setPostItems] = useState<PostItem[]>([]);
   const [memberItems, setMemberItems] = useState<MemberItem[]>([]);
+  const [guestItems, setGuestItems] = useState<GuestItem[]>([]);
   const [operationItems, setOperationItems] = useState<OperationItem[]>([]);
   const [notice, setNotice] = useState('');
   const [noticeDraft, setNoticeDraft] = useState(notice);
@@ -220,11 +247,15 @@ export default function GroupDetailPage() {
   const [memberKeyword, setMemberKeyword] = useState('');
   const [memberRole, setMemberRole] = useState('ALL');
   const [memberGrade, setMemberGrade] = useState('ALL');
+  const [guestKeyword, setGuestKeyword] = useState('');
+  const [guestType, setGuestType] = useState('ALL');
   const [requests, setRequests] = useState<JoinRequestItem[]>([]);
   const [boardPage, setBoardPage] = useState(1);
   const [boardTotalPages, setBoardTotalPages] = useState(1);
   const [memberPage, setMemberPage] = useState(1);
   const [memberTotalPages, setMemberTotalPages] = useState(1);
+  const [guestPage, setGuestPage] = useState(1);
+  const [guestTotalPages, setGuestTotalPages] = useState(1);
   const [requestPage, setRequestPage] = useState(1);
   const [requestTotalPages, setRequestTotalPages] = useState(1);
   const [historyPage, setHistoryPage] = useState(1);
@@ -242,7 +273,7 @@ export default function GroupDetailPage() {
 
   const [currentRole, setCurrentRole] = useState<GroupRole>('OWNER');
   const [managerPermissions, setManagerPermissions] = useState<GroupPermissions>({
-    schedule: false, notice: false, joinRequests: false, members: false, posts: false, operationLogs: false,
+    schedule: false, notice: false, joinRequests: false, members: false, posts: false, operationLogs: false, guests: false,
   });
   const isOwner = currentRole === 'OWNER';
   const isManager = currentRole === 'MANAGER';
@@ -251,10 +282,11 @@ export default function GroupDetailPage() {
   const canManageNotice = isOwner || (isManager && managerPermissions.notice);
   const canManageRequests = isOwner || (isManager && managerPermissions.joinRequests);
   const canManageMembers = isOwner || (isManager && managerPermissions.members);
+  const canManageGuests = isOwner || (isManager && managerPermissions.guests);
   const canManagePosts = isOwner || (isManager && managerPermissions.posts);
   const canViewHistory = isOwner || (isManager && managerPermissions.operationLogs);
-  const canWritePost = canManagePosts || memberPostAllowed;
-  const canComment = canManagePosts || memberCommentAllowed;
+  const canWritePost = memberPostAllowed;
+  const canComment = memberCommentAllowed;
   const activeTab = getActiveTab(location.pathname);
 
   const numericGroupId = Number(groupId);
@@ -388,6 +420,17 @@ export default function GroupDetailPage() {
   }, [listRefreshKey, memberGrade, memberKeyword, memberPage, memberRole, numericGroupId, showToast]);
 
   useEffect(() => {
+    if (!Number.isFinite(numericGroupId) || !canManageGuests) return;
+    const registered = guestType === 'REGISTERED' ? 'true' : guestType === 'NON_MEMBER' ? 'false' : undefined;
+    void groupDetailApi.getGuests(numericGroupId, { keyword: guestKeyword, registered, page: guestPage - 1, size: 12 })
+      .then(response => {
+        setGuestItems(response.items.map(toGuestItem));
+        setGuestTotalPages(Math.max(1, response.totalPages));
+      })
+      .catch(error => showRequestError(error, '게스트 목록을 불러오지 못했습니다.'));
+  }, [canManageGuests, guestKeyword, guestPage, guestType, listRefreshKey, numericGroupId, showRequestError]);
+
+  useEffect(() => {
     if (!Number.isFinite(numericGroupId) || !canManageRequests) return;
     void groupDetailApi.getJoinRequests(numericGroupId, requestPage - 1, 6).then(response => {
       setRequests(response.items.map(item => ({
@@ -410,6 +453,7 @@ export default function GroupDetailPage() {
     if (tab.ownerOnly && !isOwner) return false;
     if (tab.key === 'requests' && !canManageRequests) return false;
     if (tab.key === 'history' && !canViewHistory) return false;
+    if (tab.key === 'guests' && !canManageGuests) return false;
     if (tab.adminOnly && !canManage) return false;
     return true;
   });
@@ -418,12 +462,13 @@ export default function GroupDetailPage() {
     const hasPermission =
       (activeTab !== 'requests' || canManageRequests) &&
       (activeTab !== 'history' || canViewHistory) &&
+      (activeTab !== 'guests' || canManageGuests) &&
       (activeTab !== 'settings' || isOwner);
 
     if (!hasPermission) {
       navigate(`/groups/${groupId}`, { replace: true });
     }
-  }, [activeTab, canManageRequests, canViewHistory, groupId, isOwner, navigate]);
+  }, [activeTab, canManageGuests, canManageRequests, canViewHistory, groupId, isOwner, navigate]);
 
   const selectedSchedule = modal?.type === 'schedule'
     ? scheduleItems.find(schedule => schedule.id === modal.id)
@@ -436,6 +481,9 @@ export default function GroupDetailPage() {
     : undefined;
   const selectedMember = modal?.type === 'member' || modal?.type === 'memberPermissions' || modal?.type === 'ownershipTransfer' || modal?.type === 'memberRemoval'
     ? memberItems.find(member => member.id === modal.id)
+    : undefined;
+  const selectedGuest = modal?.type === 'guest'
+    ? guestItems.find(guest => guest.id === modal.id)
     : undefined;
 
   const filteredPosts = postItems;
@@ -687,6 +735,20 @@ export default function GroupDetailPage() {
             />
           )}
 
+          {activeTab === 'guests' && canManageGuests && (
+            <GuestsTab
+              guests = {guestItems}
+              keyword = {guestKeyword}
+              type = {guestType}
+              currentPage = {guestPage}
+              totalPages = {guestTotalPages}
+              onPageChange = {setGuestPage}
+              onKeyword = {setGuestKeyword}
+              onType = {setGuestType}
+              onOpenGuest = {id => setModal({ type: 'guest', id })}
+            />
+          )}
+
           {activeTab === 'requests' && canManageRequests && (
             <RequestsTab requests = {requests} currentPage = {requestPage} totalPages = {requestTotalPages} onPageChange = {setRequestPage} onRequest = {handleRequest} onAllRequests = {handleAllRequests} />
           )}
@@ -748,7 +810,7 @@ export default function GroupDetailPage() {
       </div>
 
       {modal && (
-        <Modal title = {getModalTitle(modal, selectedSchedule?.title, selectedPost?.title, selectedMember?.name)} onClose = {handleCloseModal} onBack = {modal.type === 'editGuest' ? () => setModal({ type: 'participants', id: modal.id }) : modal.type === 'participants' || modal.type === 'addGuest' || modal.type === 'manageSchedule' ? () => setModal({ type: 'schedule', id: modal.id }) : modal.type === 'memberPermissions' || modal.type === 'ownershipTransfer' || modal.type === 'memberRemoval' ? () => setModal({ type: 'member', id: modal.id }) : undefined} centeredHeader = {modal.type === 'createSchedule' || modal.type === 'schedule' || modal.type === 'post' || modal.type === 'writePost' || modal.type === 'member' || modal.type === 'groupDeletion'} fixedScheduleSize = {modal.type === 'createSchedule' || modal.type === 'schedule' || modal.type === 'post' || modal.type === 'participants' || modal.type === 'addGuest' || modal.type === 'editGuest' || modal.type === 'manageSchedule' || modal.type === 'writePost' || modal.type === 'member' || modal.type === 'memberPermissions' || modal.type === 'ownershipTransfer' || modal.type === 'memberRemoval' || modal.type === 'groupDeletion'}>
+        <Modal title = {getModalTitle(modal, selectedSchedule?.title, selectedPost?.title, selectedMember?.name, selectedGuest?.name)} onClose = {handleCloseModal} onBack = {modal.type === 'editGuest' ? () => setModal({ type: 'participants', id: modal.id }) : modal.type === 'participants' || modal.type === 'addGuest' || modal.type === 'manageSchedule' ? () => setModal({ type: 'schedule', id: modal.id }) : modal.type === 'memberPermissions' || modal.type === 'ownershipTransfer' || modal.type === 'memberRemoval' ? () => setModal({ type: 'member', id: modal.id }) : undefined} centeredHeader = {modal.type === 'createSchedule' || modal.type === 'schedule' || modal.type === 'post' || modal.type === 'writePost' || modal.type === 'member' || modal.type === 'guest' || modal.type === 'groupDeletion'} fixedScheduleSize = {modal.type === 'createSchedule' || modal.type === 'schedule' || modal.type === 'post' || modal.type === 'participants' || modal.type === 'addGuest' || modal.type === 'editGuest' || modal.type === 'manageSchedule' || modal.type === 'writePost' || modal.type === 'member' || modal.type === 'guest' || modal.type === 'memberPermissions' || modal.type === 'ownershipTransfer' || modal.type === 'memberRemoval' || modal.type === 'groupDeletion'}>
           {modal.type === 'createSchedule' && canManageSchedule && <CreateScheduleModal groupId = {numericGroupId} groupGuestAllowed = {guestAllowed} initialDate = {modal.initialDate} onComplete = {async () => { setModal(null); setListRefreshKey(current => current + 1); await loadGroupDetail(); }} onError = {error => showRequestError(error, '운동 일정을 만들지 못했습니다.')} />}
           {selectedSchedule && (
             <ScheduleModal schedule = {selectedSchedule} canManage = {canManageSchedule} canAddGuest = {canManageSchedule && selectedSchedule.guestAllowed} canChangeVote = {canChangeVoteForSchedule(selectedSchedule, sameDayVoteChangeAllowed, postDeadlineVoteChangeAllowed)} onVote = {status => handleVote(status, selectedSchedule.id)} onOpenParticipants = {id => setModal({ type: 'participants', id })} onAddGuest = {id => setModal({ type: 'addGuest', id })} onManage = {id => setModal({ type: 'manageSchedule', id })} />
@@ -766,6 +828,7 @@ export default function GroupDetailPage() {
               onOpenRemoval = {() => setModal({ type: 'memberRemoval', id: selectedMember.id })}
             />
           )}
+          {modal.type === 'guest' && selectedGuest && <GuestModal groupId = {numericGroupId} guest = {selectedGuest} canManage = {canManageGuests} />}
           {modal.type === 'confirm' && (
             <div className = {styles.confirmContent}>
               <div className = {styles.warningIconBox}><AlertTriangle /></div>
@@ -1136,7 +1199,8 @@ function MembersTab({ members: filteredMembers, keyword, role, grade, canManage,
           {filteredMembers.map(member => (
             <button key = {member.id} type = "button" className = {styles.memberCard} onClick = {() => onOpenMember(member.id)}>
               <div className = {styles.memberTop}>
-                <div className = {styles.avatar}>{member.name[0]}</div>
+                {member.profileImageUrl ? <img src = {member.profileImageUrl} alt = {`${member.name} 프로필`} className = {styles.participantProfileImage} onError = {event => { event.currentTarget.style.display = 'none'; event.currentTarget.nextElementSibling?.removeAttribute('hidden'); }} /> : null}
+                <div hidden = {!!member.profileImageUrl} className = {styles.avatar}>{member.name[0]}</div>
                 <div className = {styles.memberIdentity}>
                   <div><strong>{member.name}</strong>{member.role === '소유자' && <Crown />}{member.role === '매니저' && <ShieldCheck />}</div>
                   <span>{member.gender} · {member.age} · {member.grade}</span>
@@ -1155,6 +1219,57 @@ function MembersTab({ members: filteredMembers, keyword, role, grade, canManage,
         <EmptyState className = {styles.memberEmptyState} icon = {Users} title = "조건에 맞는 멤버가 없습니다." description = "검색어나 역할 필터를 변경해보세요." />
       )}
       {canManage && <p className = {styles.permissionGuide}><LockKeyhole /><span>{isOwner ? '소유자는 매니저 임명, 소유권 이전, 멤버 강제 탈퇴를 관리할 수 있습니다.' : '매니저는 권한 범위 안에서 일반 멤버만 관리할 수 있습니다.'}</span></p>}
+      </Panel>
+      <Pagination currentPage = {currentPage} totalPages = {totalPages} onPageChange = {onPageChange} />
+    </div>
+  );
+}
+
+function GuestsTab({ guests: filteredGuests, keyword, type, currentPage, totalPages, onPageChange, onKeyword, onType, onOpenGuest }: {
+  guests: GuestItem[];
+  keyword: string;
+  type: string;
+  currentPage: number;
+  totalPages: number;
+  onPageChange: (page: number) => void;
+  onKeyword: (keyword: string) => void;
+  onType: (type: string) => void;
+  onOpenGuest: (id: number) => void;
+}) {
+  return (
+    <div className = {styles.paginatedTab}>
+      <Panel title = "게스트 관리" description = "종료된 운동에 실제 참여한 게스트를 확인하고 메모를 관리하세요." icon = {UserCheck} className = {styles.listTabPanel} bodyClassName = {styles.listTabBody}>
+        <div className = {styles.toolbar}>
+          <div className = {styles.searchBox}><Search /><Input value = {keyword} onChange = {event => { onKeyword(event.target.value); onPageChange(1); }} placeholder = "게스트 이름 검색" className = {styles.searchInput} /></div>
+          <div className = {styles.filterGroup}>
+            {[['ALL', '전체'], ['REGISTERED', '회원 게스트'], ['NON_MEMBER', '비회원 게스트']].map(([value, label]) => <button key = {value} type = "button" className = {styles.filterButton(type === value)} onClick = {() => { onType(value); onPageChange(1); }}>{label}</button>)}
+          </div>
+        </div>
+        {filteredGuests.length > 0 ? (
+          <div className = {styles.memberGrid}>
+            {filteredGuests.map(guest => (
+              <button key = {guest.id} type = "button" className = {styles.memberCard} onClick = {() => onOpenGuest(guest.id)}>
+                <div className = {styles.memberTop}>
+                  {guest.profileImageUrl ? <img src = {guest.profileImageUrl} alt = {`${guest.name} 프로필`} className = {styles.participantProfileImage} onError = {event => { event.currentTarget.style.display = 'none'; event.currentTarget.nextElementSibling?.removeAttribute('hidden'); }} /> : null}
+                  <div hidden = {!!guest.profileImageUrl} className = {styles.avatar}>{guest.name[0]}</div>
+                  <div className = {styles.memberIdentity}>
+                    <div><strong>{guest.name}</strong><Badge variant = "outline" className = {guest.registered ? styles.participantRoleBadge : styles.guestBadge}>{guest.registered ? '회원 게스트' : '비회원 사용자'}</Badge></div>
+                    <span>{guest.gender} · {guest.age} · {guest.grade}</span>
+                  </div>
+                  <MoreHorizontal />
+                </div>
+                <div className = {styles.memberStats}>
+                  <span><strong>{guest.participation}</strong>참여</span>
+                  <span><strong>{guest.registered ? (guest.winRate == null ? '-' : `${guest.winRate}%`) : '-'}</strong>승률</span>
+                  <span><strong>{guest.registered ? (guest.matches ?? '-') : '-'}</strong>평균 경기</span>
+                </div>
+              </button>
+            ))}
+          </div>
+        ) : (
+          <EmptyState className = {styles.memberEmptyState} icon = {UserCheck} title = "조건에 맞는 게스트가 없습니다." description = "종료된 운동에 참여한 게스트가 있으면 이곳에서 확인할 수 있습니다." />
+        )}
+        <p className = {styles.permissionGuide}><LockKeyhole /><span>게스트 관리는 종료된 운동에 실제 참여한 게스트만 표시하며, 권한이 있는 운영자만 확인할 수 있습니다.</span></p>
       </Panel>
       <Pagination currentPage = {currentPage} totalPages = {totalPages} onPageChange = {onPageChange} />
     </div>
@@ -1491,7 +1606,7 @@ function MemberModal({ groupId, member, isOwner, canViewMemo, canManage, onOpenP
   return (
     <div className = {styles.memberModalContent}>
       <div className = {styles.memberModalScroll}>
-        <div className = {styles.memberModalHeader}><div className = {styles.avatarLarge}>{member.name[0]}</div><div><div><h3>{member.name}</h3><Badge variant = "outline">{member.role}</Badge></div><p>{member.gender} · {member.age} · {member.grade}</p></div></div>
+        <div className = {styles.memberModalHeader}>{member.profileImageUrl ? <img src = {member.profileImageUrl} alt = {`${member.name} 프로필`} className = {styles.avatarLargeImage} onError = {event => { event.currentTarget.style.display = 'none'; event.currentTarget.nextElementSibling?.removeAttribute('hidden'); }} /> : null}<div hidden = {!!member.profileImageUrl} className = {styles.avatarLarge}>{member.name[0]}</div><div><div><h3>{member.name}</h3><Badge variant = "outline">{member.role}</Badge></div><p>{member.gender} · {member.age} · {member.grade}</p></div></div>
         <div className = {styles.memberDetailGrid}>
           <span><strong>{member.participation}회</strong>총 참여</span><span><strong>{member.recent}회</strong>최근 4주 참여</span><span><strong>{member.rate}%</strong>월간 참여율</span>
           <span><strong>{member.matches ?? '-'}</strong>평균 경기 수</span><span><strong>{member.winRate == null ? '-' : `${member.winRate}%`}</strong>승률</span><span><strong>{member.absenceRate == null ? '-' : `${member.absenceRate}%`}</strong>불참률</span>
@@ -1519,10 +1634,51 @@ function MemberModal({ groupId, member, isOwner, canViewMemo, canManage, onOpenP
   );
 }
 
+function GuestModal({ groupId, guest, canManage }: { groupId: number; guest: GuestItem; canManage: boolean }) {
+  const [detail, setDetail] = useState(guest);
+  const [memo, setMemo] = useState(guest.memo ?? '');
+  const [memoDraft, setMemoDraft] = useState(guest.memo ?? '');
+  const [editingMemo, setEditingMemo] = useState(false);
+  useEffect(() => {
+    void groupDetailApi.getGuest(groupId, guest.id).then(response => {
+      const item = toGuestItem(response);
+      setDetail(item);
+      setMemo(item.memo ?? '');
+      setMemoDraft(item.memo ?? '');
+    });
+  }, [groupId, guest.id]);
+  return (
+    <div className = {styles.memberModalContent}>
+      <div className = {styles.memberModalScroll}>
+        <div className = {styles.memberModalHeader}>
+          {detail.profileImageUrl ? <img src = {detail.profileImageUrl} alt = {`${detail.name} 프로필`} className = {styles.avatarLargeImage} onError = {event => { event.currentTarget.style.display = 'none'; event.currentTarget.nextElementSibling?.removeAttribute('hidden'); }} /> : null}
+          <div hidden = {!!detail.profileImageUrl} className = {styles.avatarLarge}>{detail.name[0]}</div>
+          <div><div><h3>{detail.name}</h3><Badge variant = "outline">{detail.registered ? '회원 게스트' : '비회원 사용자'}</Badge></div><p>{detail.gender} · {detail.age} · {detail.grade}</p></div>
+        </div>
+        <div className = {styles.memberDetailGrid}>
+          <span><strong>{detail.participation}회</strong>게스트 참여</span><span><strong>{detail.lastParticipationAt ? new Date(detail.lastParticipationAt).toLocaleDateString('ko-KR') : '-'}</strong>마지막 참여</span><span><strong>{detail.registered ? '회원' : '비회원'}</strong>사용자 구분</span>
+          <span><strong>{detail.registered ? (detail.matches ?? '-') : '-'}</strong>평균 경기 수</span><span><strong>{detail.registered ? (detail.winRate == null ? '-' : `${detail.winRate}%`) : '-'}</strong>승률</span><span><strong>{detail.registered ? (detail.doublesMmr ?? '-') : '-'}</strong>복식 MMR</span>
+          <span><strong>{detail.registered ? (detail.mixedMmr ?? '-') : '-'}</strong>혼복 MMR</span><span><strong>{detail.userId ?? '-'}</strong>회원 ID</span><span><strong>{detail.memo ? '있음' : '없음'}</strong>운영 메모</span>
+        </div>
+        <div className = {styles.memberMemo}>
+          <div>
+            <Edit3 />
+            <strong>게스트 메모</strong>
+            {canManage && (editingMemo
+              ? <div className = {styles.memberMemoHeaderActions}><Button variant = "ghost" size = "sm" className = {styles.textButton} onClick = {() => setEditingMemo(false)}>취소</Button><Button variant = "ghost" size = "sm" className = {styles.textButton} onClick = {() => { const nextMemo = memoDraft.trim(); void groupDetailApi.saveGuestMemo(groupId, detail.id, nextMemo).then(() => { setMemo(nextMemo); setDetail(current => ({ ...current, memo: nextMemo })); setEditingMemo(false); }); }}>저장</Button></div>
+              : <Button variant = "ghost" size = "sm" className = {styles.textButton} onClick = {() => { setMemoDraft(memo); setEditingMemo(true); }}>{memo ? '수정' : '작성'}</Button>)}
+          </div>
+          {editingMemo ? <textarea className = {styles.memberMemoInlineTextarea} value = {memoDraft} onChange = {event => setMemoDraft(event.target.value)} placeholder = "운영에 필요한 게스트 메모를 입력하세요." /> : <p>{memo || '등록된 게스트 메모가 없습니다.'}</p>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function MemberPermissionsModal({ groupId, member, onComplete }: { groupId: number; member: MemberItem; onComplete: (message: string) => void }) {
   const [role, setRole] = useState<'MANAGER' | 'MEMBER'>(member.role === '매니저' ? 'MANAGER' : 'MEMBER');
-  const [permissions, setPermissions] = useState<GroupPermissions>({ schedule: true, notice: true, joinRequests: false, members: false, posts: true, operationLogs: false });
-  const labels = { schedule: '일정 관리', notice: '운영 안내 관리', joinRequests: '가입 요청 관리', members: '일반 멤버 관리', posts: '공지사항 관리', operationLogs: '운영 기록 조회' } as const;
+  const [permissions, setPermissions] = useState<GroupPermissions>({ schedule: true, notice: true, joinRequests: false, members: false, posts: true, operationLogs: false, guests: false });
+  const labels = { schedule: '일정 관리', notice: '운영 안내 관리', joinRequests: '가입 요청 관리', members: '일반 멤버 관리', posts: '공지사항 관리', operationLogs: '운영 기록 조회', guests: '게스트 관리' } as const;
   useEffect(() => {
     if (member.role === '매니저') void groupDetailApi.getPermissions(groupId, member.id).then(setPermissions);
   }, [groupId, member.id, member.role]);
@@ -1648,7 +1804,7 @@ function WritePostModal({ groupId, canManage, attachmentAllowed, onComplete }: {
 }
 
 function ParticipantsModal({ groupId, schedule, canManage, onEditGuest }: { groupId: number; schedule?: ScheduleItem; canManage: boolean; onEditGuest: (guest: GroupParticipantResponse) => void }) {
-  const [filter, setFilter] = useState<VoteStatus>('JOIN');
+  const [filter, setFilter] = useState<VoteStatus>('UNDECIDED');
   const [participantSamples, setParticipantSamples] = useState<Array<GroupParticipantResponse & { status: VoteStatus }>>([]);
   const loadParticipants = useCallback(() => {
     if (!schedule) return;
@@ -1681,7 +1837,7 @@ function ParticipantsModal({ groupId, schedule, canManage, onEditGuest }: { grou
       </div>
       <div className = {styles.participantSectionTitle}><strong>{getVoteLabel(filter)} 응답</strong><span>{filteredParticipants.length}명</span></div>
       <div className = {styles.participantList}>
-        {filteredParticipants.map(participant => <div key = {`${participant.guest ? 'guest' : 'member'}-${participant.id}`} className = {styles.participantCard}>{participant.profileImageUrl ? <img src = {participant.profileImageUrl} alt = {`${participant.name} 프로필`} className = {styles.participantProfileImage} onError = {event => { event.currentTarget.style.display = 'none'; event.currentTarget.nextElementSibling?.removeAttribute('hidden'); }} /> : null}<div hidden = {!!participant.profileImageUrl} className = {participant.guest ? styles.guestAvatar : styles.participantAvatar}>{participant.name[0]}</div><span><strong>{participant.name}</strong><small>{formatGender(participant.gender)} · {formatAgeGroup(participant.ageGroup)} · {participant.grade}</small></span><div className = {styles.participantBadges}>{participant.guest && canManage && <><Button variant = "ghost" size = "icon" className = {styles.iconButton} aria-label = "게스트 정보 수정" onClick = {() => onEditGuest(participant)}><Edit3 /></Button><Button variant = "ghost" size = "icon" className = {styles.iconButton} aria-label = "게스트 삭제" onClick = {() => schedule && void groupDetailApi.deleteGuest(groupId, schedule.id, participant.id).then(loadParticipants)}><Trash2 /></Button></>}<Badge variant = "outline" className = {participant.guest ? styles.guestBadge : styles.participantRoleBadge}>{participant.guest ? '게스트' : participant.role === 'OWNER' ? '소유자' : participant.role === 'MANAGER' ? '매니저' : '멤버'}</Badge><Badge className = {styles.statusBadge(filter)}>{getVoteLabel(filter)}</Badge></div></div>)}
+        {filteredParticipants.map(participant => <div key = {`${participant.guest ? 'guest' : 'member'}-${participant.id}`} className = {styles.participantCard}>{participant.profileImageUrl ? <img src = {participant.profileImageUrl} alt = {`${participant.name} 프로필`} className = {styles.participantProfileImage} onError = {event => { event.currentTarget.style.display = 'none'; event.currentTarget.nextElementSibling?.removeAttribute('hidden'); }} /> : null}<div hidden = {!!participant.profileImageUrl} className = {participant.guest ? styles.guestAvatar : styles.participantAvatar}>{participant.name[0]}</div><span><strong>{participant.name}</strong><small>{formatGender(participant.gender)} · {formatAgeGroup(participant.ageGroup)} · {formatGrade(participant.grade)}</small></span><div className = {styles.participantBadges}>{participant.guest && canManage && <><Button variant = "ghost" size = "icon" className = {styles.iconButton} aria-label = "게스트 정보 수정" onClick = {() => onEditGuest(participant)}><Edit3 /></Button><Button variant = "ghost" size = "icon" className = {styles.iconButton} aria-label = "게스트 삭제" onClick = {() => schedule && void groupDetailApi.deleteGuest(groupId, schedule.id, participant.id).then(loadParticipants)}><Trash2 /></Button></>}<Badge variant = "outline" className = {participant.guest ? styles.guestBadge : styles.participantRoleBadge}>{participant.guest ? '게스트' : participant.role === 'OWNER' ? '소유자' : participant.role === 'MANAGER' ? '매니저' : '멤버'}</Badge><Badge className = {styles.statusBadge(filter)}>{getVoteLabel(filter)}</Badge></div></div>)}
       </div>
     </div>
   );
@@ -1884,11 +2040,12 @@ function formatRequestTime(requestedAt: string) {
   return `${requestedDate.getFullYear()}.${String(requestedDate.getMonth() + 1).padStart(2, '0')}.${String(requestedDate.getDate()).padStart(2, '0')}`;
 }
 
-function getModalTitle(modal: Exclude<ModalState, null>, scheduleTitle?: string, postTitle?: string, memberName?: string) {
+function getModalTitle(modal: Exclude<ModalState, null>, scheduleTitle?: string, postTitle?: string, memberName?: string, guestName?: string) {
   if (modal.type === 'createSchedule') return '운동 일정 만들기';
   if (modal.type === 'schedule') return scheduleTitle ?? '일정 상세';
   if (modal.type === 'post') return postTitle ?? '게시글 상세';
   if (modal.type === 'member') return `${memberName ?? '멤버'} 상세`;
+  if (modal.type === 'guest') return `${guestName ?? '게스트'} 상세`;
   if (modal.type === 'memberPermissions') return '멤버 권한 변경';
   if (modal.type === 'ownershipTransfer') return '소유권 이전 확인';
   if (modal.type === 'memberRemoval') return '멤버 강제 탈퇴';
@@ -1898,7 +2055,8 @@ function getModalTitle(modal: Exclude<ModalState, null>, scheduleTitle?: string,
   if (modal.type === 'addGuest') return '게스트 추가';
   if (modal.type === 'editGuest') return '게스트 정보 수정';
   if (modal.type === 'manageSchedule') return '일정 관리';
-  return modal.title;
+  if (modal.type === 'confirm') return modal.title;
+  return '';
 }
 
 function getActiveTab(pathname: string): TabKey {
@@ -1907,6 +2065,7 @@ function getActiveTab(pathname: string): TabKey {
   if (lastSegment === 'schedule') return 'schedule';
   if (lastSegment === 'board') return 'board';
   if (lastSegment === 'members') return 'members';
+  if (lastSegment === 'guests') return 'guests';
   if (lastSegment === 'requests') return 'requests';
   if (lastSegment === 'history') return 'history';
   if (lastSegment === 'settings') return 'settings';

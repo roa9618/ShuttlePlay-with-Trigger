@@ -71,6 +71,7 @@ export const router = createBrowserRouter([
           { path: "groups/:groupId/schedule", Component: GroupDetailPage, handle: { title: "모임 일정" } },
           { path: "groups/:groupId/board", Component: GroupDetailPage, handle: { title: "모임 게시판" } },
           { path: "groups/:groupId/members", Component: GroupDetailPage, handle: { title: "모임 멤버" } },
+          { path: "groups/:groupId/guests", Component: GroupDetailPage, handle: { title: "모임 게스트 관리" } },
           { path: "groups/:groupId/requests", Component: GroupDetailPage, handle: { title: "모임 가입 요청" } },
           { path: "groups/:groupId/history", Component: GroupDetailPage, handle: { title: "모임 운영 기록" } },
           { path: "groups/:groupId/settings", Component: GroupDetailPage, handle: { title: "모임 설정" } },
