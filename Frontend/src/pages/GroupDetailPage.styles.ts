@@ -47,6 +47,7 @@ export const styles = {
   noticeEditActions: 'flex items-center gap-1',
   noticeEmptyState: 'flex h-full items-center justify-center rounded-2xl border border-dashed border-primary/15 bg-primary/[0.02] px-6 text-center [&_strong]:block [&_strong]:text-sm [&_p]:mt-1 [&_p]:text-xs [&_p]:text-muted-foreground',
   emptyState: 'flex min-h-[190px] flex-col items-center justify-center rounded-2xl border border-dashed border-primary/15 bg-primary/[0.02] px-6 text-center [&_strong]:mt-3 [&_strong]:text-sm [&_p]:mt-1 [&_p]:mb-4 [&_p]:text-xs [&_p]:text-muted-foreground',
+  memberEmptyState: 'min-h-0 flex-1',
   preservedEmptyState: 'h-full !min-h-0',
   noticePanelBody: 'flex h-[142px] flex-col [&>div]:min-h-0 [&>div]:flex-1',
   upcomingPanelBody: 'flex min-h-[285px] flex-col [&>div]:flex-1',

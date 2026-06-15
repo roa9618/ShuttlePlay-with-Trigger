@@ -1131,26 +1131,29 @@ function MembersTab({ members: filteredMembers, keyword, role, grade, canManage,
           </div>
         </div>
       </div>
-      <div className = {styles.memberGrid}>
-        {filteredMembers.map(member => (
-          <button key = {member.id} type = "button" className = {styles.memberCard} onClick = {() => onOpenMember(member.id)}>
-            <div className = {styles.memberTop}>
-              <div className = {styles.avatar}>{member.name[0]}</div>
-              <div className = {styles.memberIdentity}>
-                <div><strong>{member.name}</strong>{member.role === '소유자' && <Crown />}{member.role === '매니저' && <ShieldCheck />}</div>
-                <span>{member.gender} · {member.age} · {member.grade}</span>
+      {filteredMembers.length > 0 ? (
+        <div className = {styles.memberGrid}>
+          {filteredMembers.map(member => (
+            <button key = {member.id} type = "button" className = {styles.memberCard} onClick = {() => onOpenMember(member.id)}>
+              <div className = {styles.memberTop}>
+                <div className = {styles.avatar}>{member.name[0]}</div>
+                <div className = {styles.memberIdentity}>
+                  <div><strong>{member.name}</strong>{member.role === '소유자' && <Crown />}{member.role === '매니저' && <ShieldCheck />}</div>
+                  <span>{member.gender} · {member.age} · {member.grade}</span>
+                </div>
+                <MoreHorizontal />
               </div>
-              <MoreHorizontal />
-            </div>
-            <div className = {styles.memberStats}>
-              <span><strong>{member.participation}</strong>총 참여</span>
-              <span><strong>{member.rate}%</strong>월간 참여율</span>
-              <span><strong>{member.winRate == null ? '-' : `${member.winRate}%`}</strong>승률</span>
-            </div>
-          </button>
-        ))}
-      </div>
-      {filteredMembers.length === 0 && <EmptyState icon = {Users} title = "조건에 맞는 멤버가 없습니다." description = "검색어나 역할 필터를 변경해보세요." />}
+              <div className = {styles.memberStats}>
+                <span><strong>{member.participation}</strong>총 참여</span>
+                <span><strong>{member.rate}%</strong>월간 참여율</span>
+                <span><strong>{member.winRate == null ? '-' : `${member.winRate}%`}</strong>승률</span>
+              </div>
+            </button>
+          ))}
+        </div>
+      ) : (
+        <EmptyState className = {styles.memberEmptyState} icon = {Users} title = "조건에 맞는 멤버가 없습니다." description = "검색어나 역할 필터를 변경해보세요." />
+      )}
       {canManage && <p className = {styles.permissionGuide}><LockKeyhole /><span>{isOwner ? '소유자는 매니저 임명, 소유권 이전, 멤버 강제 탈퇴를 관리할 수 있습니다.' : '매니저는 권한 범위 안에서 일반 멤버만 관리할 수 있습니다.'}</span></p>}
       </Panel>
       <Pagination currentPage = {currentPage} totalPages = {totalPages} onPageChange = {onPageChange} />
