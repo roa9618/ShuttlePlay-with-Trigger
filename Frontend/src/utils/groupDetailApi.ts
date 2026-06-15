@@ -33,7 +33,7 @@ export type GroupJoinLinkResponse = {
   groupName: string;
   profileImageUrl: string | null;
   approvalRequired: boolean;
-  status: 'JOINED' | 'REQUESTED' | 'ALREADY_MEMBER' | 'CLOSED';
+  status: 'AVAILABLE' | 'JOINED' | 'REQUESTED' | 'ALREADY_MEMBER' | 'CLOSED' | 'PROFILE_REQUIRED';
 };
 export type GroupPostResponse = { id: number; type: string; title: string; content: string; pinned: boolean; viewCount: number; commentCount: number; authorId: number; authorName: string; attachmentNames: string | null; createdAt: string };
 export type GroupMemberResponse = { id: number; name: string; profileImageUrl: string | null; gender: string; ageGroup: string; grade: string; role: GroupDetailRole; participationCount: number; monthlyParticipationRate: number; recentFourWeekParticipationCount: number; doublesMmr: number; mixedMmr: number; memo: string | null };
@@ -56,6 +56,7 @@ export const groupDetailApi = {
   saveOperationGuide: (id: number, content: string) => apiClient.put<void>(`${root(id)}/operation-guide`, { content }, auth),
   deleteOperationGuide: (id: number) => apiClient.delete<void>(`${root(id)}/operation-guide`, auth),
   leave: (id: number) => apiClient.post<void>(`${root(id)}/leave`, undefined, auth),
+  getJoinPreview: (id: number) => apiClient.get<GroupJoinLinkResponse>(`${root(id)}/join`, auth),
   joinBySharedLink: (id: number) => apiClient.post<GroupJoinLinkResponse>(`${root(id)}/join`, undefined, auth),
   getSessions: (id: number, year: number, month: number, day?: number) => apiClient.get<GroupSessionResponse[]>(`${root(id)}/sessions?${query({ year, month, day })}`, auth),
   getMonthlySummary: (id: number, year: number, month: number) => apiClient.get<Record<string, number>>(`${root(id)}/sessions/monthly-summary?${query({ year, month })}`, auth),

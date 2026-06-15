@@ -106,12 +106,39 @@ public class GroupDetailService {
         member.leave(); events.members(groupId, "MEMBER_LEFT");
     }
 
-    public Map<String, Object> joinBySharedLink(Long userId, Long groupId) {
+    @Transactional(readOnly = true)
+    public Map<String, Object> joinPreview(Long userId, Long groupId) {
         Group group = groups.findByIdAndStatus(groupId, GroupStatus.ACTIVE)
                 .orElseThrow(() -> new BusinessException(ErrorCode.GROUP_NOT_FOUND));
         User user = users.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
+        if (!user.isProfileCompleted()) {
+            return joinResult(group, "PROFILE_REQUIRED");
+        }
+        if (members.findByGroupIdAndUserId(groupId, userId)
+                .filter(member -> member.getStatus() == GroupMemberStatus.ACTIVE)
+                .isPresent()) {
+            return joinResult(group, "ALREADY_MEMBER");
+        }
+        if (!group.isNewJoinAllowed()) {
+            return joinResult(group, "CLOSED");
+        }
+        if (joinRequests.findFirstByGroupIdAndRequesterIdAndStatus(groupId, userId, JoinRequestStatus.PENDING).isPresent()) {
+            return joinResult(group, "REQUESTED");
+        }
+        return joinResult(group, "AVAILABLE");
+    }
+
+    public Map<String, Object> joinBySharedLink(Long userId, Long groupId) {
+        Group group = groups.findByIdAndStatusForUpdate(groupId, GroupStatus.ACTIVE)
+                .orElseThrow(() -> new BusinessException(ErrorCode.GROUP_NOT_FOUND));
+        User user = users.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        if (!user.isProfileCompleted()) {
+            throw new BusinessException(ErrorCode.FORBIDDEN);
+        }
         Optional<GroupMember> existingMember = members.findByGroupIdAndUserId(groupId, userId);
         if (existingMember.filter(member -> member.getStatus() == GroupMemberStatus.ACTIVE).isPresent()) {
             return joinResult(group, "ALREADY_MEMBER");

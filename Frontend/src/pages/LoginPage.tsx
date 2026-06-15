@@ -112,7 +112,7 @@ export default function LoginPage() {
 
     const normalizedRedirectParam = normalizeAuthRedirectPath(redirectParam);
 
-    if (normalizedRedirectParam !== '/') {
+    if (redirectParam !== null) {
       return normalizedRedirectParam;
     }
 
@@ -130,7 +130,7 @@ export default function LoginPage() {
 
     const normalizedRedirectParam = normalizeAuthRedirectPath(redirectParam);
 
-    if (normalizedRedirectParam !== '/') {
+    if (redirectParam !== null) {
       setAuthRedirectPath(normalizedRedirectParam);
       return;
     }

@@ -51,7 +51,7 @@ export default function SocialSignupPage() {
 
     const normalizedRedirectParam = normalizeAuthRedirectPath(redirectParam);
 
-    if (normalizedRedirectParam !== '/') {
+    if (redirectParam !== null) {
       return normalizedRedirectParam;
     }
 
@@ -79,7 +79,7 @@ export default function SocialSignupPage() {
 
     const normalizedRedirectParam = normalizeAuthRedirectPath(redirectParam);
 
-    if (normalizedRedirectParam !== '/') {
+    if (redirectParam !== null) {
       setAuthRedirectPath(normalizedRedirectParam);
     }
 
