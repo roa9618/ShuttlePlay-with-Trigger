@@ -9,7 +9,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface GroupSessionVoteRepository extends JpaRepository<GroupSessionVote, Long> {
     Optional<GroupSessionVote> findBySessionIdAndMemberId(Long sessionId, Long memberId);
+    List<GroupSessionVote> findAllBySessionId(Long sessionId);
     List<GroupSessionVote> findAllBySessionIdAndStatus(Long sessionId, SessionVoteStatus status);
+    long countBySessionId(Long sessionId);
     long countBySessionIdAndStatus(Long sessionId, SessionVoteStatus status);
     long countByMemberIdAndStatusAndSession_Status(Long memberId, SessionVoteStatus status, GroupSessionStatus sessionStatus);
     long countByMemberIdAndStatusAndSession_StartsAtBetweenAndSession_StatusNot(

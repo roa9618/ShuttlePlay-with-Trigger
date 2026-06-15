@@ -1,7 +1,7 @@
 import { apiClient } from './apiClient';
 
 export type GroupDetailRole = 'OWNER' | 'MANAGER' | 'MEMBER';
-export type GroupPermissions = { schedule: boolean; notice: boolean; joinRequests: boolean; members: boolean; posts: boolean; operationLogs: boolean };
+export type GroupPermissions = { schedule: boolean; notice: boolean; joinRequests: boolean; members: boolean; posts: boolean; operationLogs: boolean; guests: boolean };
 export type GroupDetailResponse = {
   id: number; name: string; profileImageUrl: string | null; activityRegion: string; description: string;
   createdAt: string; ownerName: string; memberCount: number; myMemberId: number; myRole: GroupDetailRole; permissions: GroupPermissions; guestAllowed: boolean;
@@ -37,6 +37,7 @@ export type GroupJoinLinkResponse = {
 };
 export type GroupPostResponse = { id: number; type: string; title: string; content: string; pinned: boolean; viewCount: number; commentCount: number; authorId: number; authorName: string; attachmentNames: string | null; createdAt: string };
 export type GroupMemberResponse = { id: number; name: string; profileImageUrl: string | null; gender: string; ageGroup: string; grade: string; role: GroupDetailRole; participationCount: number; monthlyParticipationRate: number; recentFourWeekParticipationCount: number; doublesMmr: number; mixedMmr: number; memo: string | null };
+export type GroupGuestResponse = { id: number; name: string; profileImageUrl: string | null; gender: string; ageGroup: string; grade: string; registered: boolean; userId: number | null; participationCount: number; lastParticipationAt: string | null; doublesMmr: number | null; mixedMmr: number | null; winRate: number | null; averageMatchCount: number | null; memo: string | null };
 export type GroupParticipantResponse = { id: number; name: string; profileImageUrl: string | null; gender: string; ageGroup: string; grade: string; role: GroupDetailRole | 'GUEST'; voteStatus: string; guest?: boolean };
 export type GroupCommentResponse = { id: number; parentId: number; authorId: number; authorName: string; content: string; createdAt: string };
 export type GroupDeletionSummaryResponse = { upcomingCount: number; inProgressCount: number };
@@ -90,6 +91,9 @@ export const groupDetailApi = {
   updatePermissions: (id: number, memberId: number, body: GroupPermissions) => apiClient.put<void>(`${root(id)}/members/${memberId}/permissions`, body, auth),
   transferOwner: (id: number, memberId: number) => apiClient.put<void>(`${root(id)}/owner`, { memberId }, auth),
   removeMember: (id: number, memberId: number) => apiClient.delete<void>(`${root(id)}/members/${memberId}`, auth),
+  getGuests: (id: number, params: Record<string, string | number | undefined>) => apiClient.get<PageResponse<GroupGuestResponse>>(`${root(id)}/guests?${query(params)}`, auth),
+  getGuest: (id: number, guestId: number) => apiClient.get<GroupGuestResponse>(`${root(id)}/guests/${guestId}`, auth),
+  saveGuestMemo: (id: number, guestId: number, memo: string) => apiClient.put<void>(`${root(id)}/guests/${guestId}/memo`, { memo }, auth),
   getJoinRequests: (id: number, page = 0, size = 6) => apiClient.get<PageResponse<GroupJoinRequestResponse>>(`${root(id)}/join-requests?${query({ page, size })}`, auth),
   approveRequest: (id: number, requestId: number) => apiClient.post<void>(`${root(id)}/join-requests/${requestId}/approve`, undefined, auth),
   rejectRequest: (id: number, requestId: number) => apiClient.post<void>(`${root(id)}/join-requests/${requestId}/reject`, undefined, auth),

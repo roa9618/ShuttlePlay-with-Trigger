@@ -53,6 +53,11 @@ public class GroupAccessService {
         if (member.getRole() == GroupMemberRole.MANAGER && !member.isOperationLogPermission()) throw new BusinessException(ErrorCode.FORBIDDEN);
         return member;
     }
+    public GroupMember guestManager(Long groupId, Long userId) {
+        GroupMember member = manager(groupId, userId);
+        if (member.getRole() == GroupMemberRole.MANAGER && !member.isGuestPermission()) throw new BusinessException(ErrorCode.FORBIDDEN);
+        return member;
+    }
     public GroupMember owner(Long groupId, Long userId) {
         GroupMember member = member(groupId, userId);
         if (member.getRole() != GroupMemberRole.OWNER) throw new BusinessException(ErrorCode.FORBIDDEN);
