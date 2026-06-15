@@ -186,6 +186,7 @@ export function consumeAuthRedirectPath() {
 export function endAuthSession() {
   window.sessionStorage.removeItem(AUTH_SESSION_KEY);
   window.sessionStorage.removeItem(AUTH_TOKENS_KEY);
+  window.sessionStorage.removeItem(AUTH_REDIRECT_PATH_KEY);
   window.localStorage.removeItem(AUTH_SESSION_KEY);
   window.localStorage.removeItem(AUTH_TOKENS_KEY);
 }

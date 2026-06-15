@@ -73,7 +73,7 @@ export default function OAuthCallbackPage() {
       consumeAuthRedirectPath();
     }
 
-    navigate(profileCompleted ? (redirectPath === '/' ? '/groups' : redirectPath) : `/social-signup?redirect=${encodeURIComponent(redirectPath)}`, {
+    navigate(profileCompleted ? redirectPath : `/social-signup?redirect=${encodeURIComponent(redirectPath)}`, {
       replace: true,
     });
   }, [navigate, searchParams, setSessionFromStorage]);

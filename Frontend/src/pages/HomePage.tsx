@@ -86,7 +86,7 @@ export default function HomePage() {
 
       if (nextSession) {
         consumeAuthRedirectPath();
-        navigate(redirectPath === '/' ? '/groups' : redirectPath, {
+        navigate(redirectPath, {
           replace: true,
         });
         return;
@@ -274,7 +274,7 @@ export default function HomePage() {
             </div>
           ) : (
             <div className = {styles.row}>
-              <Link to = "/login">
+              <Link to = "/login?redirect=%2F" onClick = {() => setAuthRedirectPath('/')}>
                 <Button variant = "ghost" className = {styles.loginButton}>
                   <LogIn className = {styles.logInIcon} />
                   로그인
