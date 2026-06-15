@@ -99,6 +99,9 @@ public class GroupMember extends BaseEntity {
     @Column(nullable = false, columnDefinition = "boolean default false")
     private boolean operationLogPermission;
 
+    @Column(nullable = false, columnDefinition = "boolean default false")
+    private boolean guestPermission;
+
     @Builder
     private GroupMember(Group group, User user, GroupMemberRole role, GroupMemberStatus status,
                         int participationCount, LocalDateTime lastParticipationAt,
@@ -142,13 +145,14 @@ public class GroupMember extends BaseEntity {
     }
 
     public void updatePermissions(boolean schedule, boolean notice, boolean joinRequest, boolean member, boolean post,
-                                  boolean operationLog) {
+                                  boolean operationLog, boolean guest) {
         this.schedulePermission = schedule;
         this.noticePermission = notice;
         this.joinRequestPermission = joinRequest;
         this.memberPermission = member;
         this.postPermission = post;
         this.operationLogPermission = operationLog;
+        this.guestPermission = guest;
     }
 
     public void updateMemo(String memo) {
