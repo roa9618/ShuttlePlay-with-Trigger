@@ -19,5 +19,6 @@ export const styles = {
   actions: 'mt-7 flex flex-wrap justify-center gap-2',
   primaryButton: 'h-10 rounded-full px-5 shadow-md shadow-primary/15 hover:bg-primary/90 hover:text-primary-foreground',
   secondaryButton: 'h-10 rounded-full border-primary/15 px-5 hover:border-primary/30 hover:bg-primary/10 hover:text-primary',
+  disabledButton: 'h-10 rounded-full px-5 opacity-70',
   loadingDot: 'mt-6 h-2 w-2 animate-ping rounded-full bg-primary',
 } as const;
