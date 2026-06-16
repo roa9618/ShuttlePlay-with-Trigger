@@ -68,6 +68,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/auth/password-reset/send").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/auth/password-reset/confirm").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/inquiries").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/sessions/*/guest-join").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/sessions/*/guest-join").permitAll()
                         .anyRequest().authenticated()
                 )
                 .oauth2Login(oauth2 -> oauth2

@@ -28,6 +28,9 @@ public interface GroupSessionRepository extends JpaRepository<GroupSession, Long
     @EntityGraph(attributePaths = {"group"})
     Optional<GroupSession> findByIdAndGroupIdAndIsDeletedFalse(Long id, Long groupId);
 
+    @EntityGraph(attributePaths = {"group"})
+    Optional<GroupSession> findByIdAndIsDeletedFalse(Long id);
+
     List<GroupSession> findAllByGroupIdAndStartsAtBetweenAndIsDeletedFalse(Long groupId, LocalDateTime from, LocalDateTime to);
 
     List<GroupSession> findAllByGroupIdAndStartsAtBetweenAndStatusAndIsDeletedFalse(

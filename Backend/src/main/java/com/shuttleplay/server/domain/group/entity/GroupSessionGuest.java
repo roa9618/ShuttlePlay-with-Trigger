@@ -27,4 +27,8 @@ public class GroupSessionGuest extends BaseEntity {
     public void update(String name, Gender gender, AgeGroup ageGroup, Grade grade) {
         this.name = name; this.gender = gender; this.ageGroup = ageGroup; this.grade = grade;
     }
+
+    public void updateStatus(SessionVoteStatus status) {
+        this.status = status;
+    }
 }
