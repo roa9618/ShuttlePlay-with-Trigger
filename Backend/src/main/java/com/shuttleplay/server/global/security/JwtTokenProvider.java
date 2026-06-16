@@ -12,15 +12,21 @@ import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Date;
+import java.util.Optional;
 import javax.crypto.SecretKey;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 @Component
 public class JwtTokenProvider {
+    private static final String GUEST_SESSION_TOKEN_TYPE = "guest-session";
+
     private final SecretKey secretKey;
     private final long accessTokenExpirationMillis;
     private final long refreshTokenExpirationMillis;
+
+    public record GuestSessionTokenClaims(Long sessionId, Long guestId) {
+    }
 
     public JwtTokenProvider(
             @Value("${jwt.secret}") String secret,
@@ -44,6 +50,43 @@ public class JwtTokenProvider {
                 .expiration(expiresAt)
                 .signWith(secretKey)
                 .compact();
+    }
+
+    public String createGuestSessionToken(Long sessionId, Long guestId, long expirationMillis) {
+        Date now = new Date();
+        Date expiresAt = new Date(now.getTime() + expirationMillis);
+
+        return Jwts.builder()
+                .claim("type", GUEST_SESSION_TOKEN_TYPE)
+                .claim("sessionId", sessionId)
+                .claim("guestId", guestId)
+                .issuedAt(now)
+                .expiration(expiresAt)
+                .signWith(secretKey)
+                .compact();
+    }
+
+    public Optional<GuestSessionTokenClaims> getGuestSessionTokenClaims(String token) {
+        if (token == null || token.isBlank()) {
+            return Optional.empty();
+        }
+
+        try {
+            Claims claims = parseClaims(token);
+            if (!GUEST_SESSION_TOKEN_TYPE.equals(claims.get("type", String.class))) {
+                return Optional.empty();
+            }
+
+            Long sessionId = longClaim(claims, "sessionId");
+            Long guestId = longClaim(claims, "guestId");
+            if (sessionId == null || guestId == null) {
+                return Optional.empty();
+            }
+
+            return Optional.of(new GuestSessionTokenClaims(sessionId, guestId));
+        } catch (JwtException | IllegalArgumentException exception) {
+            return Optional.empty();
+        }
     }
 
     public Long getUserId(String token) {
@@ -87,5 +130,16 @@ public class JwtTokenProvider {
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();
+    }
+
+    private static Long longClaim(Claims claims, String name) {
+        Object value = claims.get(name);
+        if (value == null) {
+            return null;
+        }
+        if (value instanceof Number number) {
+            return number.longValue();
+        }
+        return Long.valueOf(String.valueOf(value));
     }
 }

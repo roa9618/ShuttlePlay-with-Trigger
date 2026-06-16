@@ -20,6 +20,8 @@ import com.shuttleplay.server.domain.user.enums.UserStatus;
 import com.shuttleplay.server.domain.user.repository.UserRepository;
 import com.shuttleplay.server.global.error.BusinessException;
 import com.shuttleplay.server.global.error.ErrorCode;
+import com.shuttleplay.server.global.security.JwtTokenProvider;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -30,21 +32,34 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 public class SessionGuestJoinService {
+    private static final Duration GUEST_TOKEN_DURATION = Duration.ofDays(30);
+
     private final GroupSessionRepository sessions;
     private final GroupMemberRepository members;
     private final GroupSessionVoteRepository votes;
     private final GroupSessionGuestRepository guests;
     private final UserRepository users;
     private final GroupEventService events;
+    private final JwtTokenProvider jwtTokenProvider;
+
+    public record GuestJoinResult(Map<String, Object> data, String guestToken) {
+        public boolean hasGuestToken() {
+            return guestToken != null && !guestToken.isBlank();
+        }
+    }
 
     @Transactional(readOnly = true)
-    public Map<String, Object> preview(Long sessionId, Long userId) {
+    public Map<String, Object> preview(Long sessionId, Long userId, String guestToken) {
         GroupSession session = guestJoinableSession(sessionId);
         Map<String, Object> result = sessionMap(session);
 
         if (userId == null) {
             result.put("participantType", "GUEST");
             result.put("profileCompleted", false);
+            GroupSessionGuest guest = findGuestByToken(sessionId, guestToken);
+            if (guest != null) {
+                putGuestIdentity(result, guest);
+            }
             return result;
         }
 
@@ -83,7 +98,7 @@ public class SessionGuestJoinService {
     }
 
     @Transactional
-    public Map<String, Object> submit(Long sessionId, Long userId, Map<String, Object> body) {
+    public GuestJoinResult submit(Long sessionId, Long userId, Map<String, Object> body, String guestToken) {
         GroupSession session = guestJoinableSession(sessionId);
         assertVotingAvailable(session);
 
@@ -106,7 +121,7 @@ public class SessionGuestJoinService {
                         .orElseGet(() -> votes.save(GroupSessionVote.create(session, member, status)));
                 refreshAttendanceCount(session);
                 events.sessions(group.getId(), "VOTE_UPDATED");
-                return authenticatedResponse(sessionId, userId, vote.getStatus());
+                return new GuestJoinResult(authenticatedResponse(sessionId, userId, vote.getStatus()), null);
             }
 
             if (!user.isProfileCompleted() || user.getGender() == null || user.getAgeGroup() == null || user.getGrade() == null) {
@@ -116,22 +131,29 @@ public class SessionGuestJoinService {
             upsertGuest(session, user.getName(), user.getGender(), user.getAgeGroup(), user.getGrade(), status);
             refreshAttendanceCount(session);
             events.sessions(group.getId(), "GUEST_VOTE_UPDATED");
-            return authenticatedResponse(sessionId, userId, status);
+            return new GuestJoinResult(authenticatedResponse(sessionId, userId, status), null);
         }
 
-        upsertGuest(
-                session,
-                text(body, "name"),
-                enumValue(Gender.class, text(body, "gender")),
-                enumValue(AgeGroup.class, text(body, "ageGroup")),
-                enumValue(Grade.class, text(body, "grade")),
-                status
-        );
+        String name = text(body, "name");
+        Gender gender = enumValue(Gender.class, text(body, "gender"));
+        AgeGroup ageGroup = enumValue(AgeGroup.class, text(body, "ageGroup"));
+        Grade grade = enumValue(Grade.class, text(body, "grade"));
+        GroupSessionGuest guest = findGuestByToken(sessionId, guestToken);
+        if (guest == null) {
+            guest = upsertGuest(session, name, gender, ageGroup, grade, status);
+        } else {
+            guest.update(name, gender, ageGroup, grade);
+            guest.updateStatus(status);
+        }
         refreshAttendanceCount(session);
         events.sessions(session.getGroup().getId(), "GUEST_VOTE_UPDATED");
         Map<String, Object> result = response(session, status, "GUEST");
+        putGuestIdentity(result, guest);
         result.put("profileCompleted", false);
-        return result;
+        return new GuestJoinResult(
+                result,
+                jwtTokenProvider.createGuestSessionToken(sessionId, guest.getId(), GUEST_TOKEN_DURATION.toMillis())
+        );
     }
 
     private GroupSession guestJoinableSession(Long sessionId) {
@@ -160,7 +182,7 @@ public class SessionGuestJoinService {
         }
     }
 
-    private void upsertGuest(GroupSession session, String name, Gender gender, AgeGroup ageGroup, Grade grade, SessionVoteStatus status) {
+    private GroupSessionGuest upsertGuest(GroupSession session, String name, Gender gender, AgeGroup ageGroup, Grade grade, SessionVoteStatus status) {
         GroupSessionGuest guest = guests.findBySessionIdAndNameIgnoreCaseAndGenderAndAgeGroupAndGrade(
                         session.getId(),
                         name,
@@ -170,6 +192,7 @@ public class SessionGuestJoinService {
                 )
                 .orElseGet(() -> guests.save(GroupSessionGuest.create(session, name, gender, ageGroup, grade)));
         guest.updateStatus(status);
+        return guest;
     }
 
     private void refreshAttendanceCount(GroupSession session) {
@@ -209,9 +232,24 @@ public class SessionGuestJoinService {
     }
 
     private Map<String, Object> authenticatedResponse(Long sessionId, Long userId, SessionVoteStatus status) {
-        Map<String, Object> result = preview(sessionId, userId);
+        Map<String, Object> result = preview(sessionId, userId, null);
         result.put("currentVoteStatus", status);
         return result;
+    }
+
+    private GroupSessionGuest findGuestByToken(Long sessionId, String guestToken) {
+        return jwtTokenProvider.getGuestSessionTokenClaims(guestToken)
+                .filter(claims -> claims.sessionId().equals(sessionId))
+                .flatMap(claims -> guests.findByIdAndSessionId(claims.guestId(), sessionId))
+                .orElse(null);
+    }
+
+    private void putGuestIdentity(Map<String, Object> result, GroupSessionGuest guest) {
+        result.put("name", guest.getName());
+        result.put("gender", guest.getGender());
+        result.put("ageGroup", guest.getAgeGroup());
+        result.put("grade", guest.getGrade());
+        result.put("currentVoteStatus", guest.getStatus());
     }
 
     private long undecidedCount(GroupSession session) {

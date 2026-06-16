@@ -36,33 +36,29 @@ function parseStoredValue<T>(storedValue: string | null, storage: Storage, key: 
 }
 
 function getStoredValue<T>(key: string): T | null {
-  const sessionStorageValue = parseStoredValue<T>(
-    window.sessionStorage.getItem(key),
-    window.sessionStorage,
+  const localStorageValue = parseStoredValue<T>(
+    window.localStorage.getItem(key),
+    window.localStorage,
     key,
   );
 
-  if (sessionStorageValue) {
-    return sessionStorageValue;
+  if (localStorageValue) {
+    return localStorageValue;
   }
 
   return parseStoredValue<T>(
-    window.localStorage.getItem(key),
-    window.localStorage,
+    window.sessionStorage.getItem(key),
+    window.sessionStorage,
     key,
   );
 }
 
 function getActiveStorage() {
-  if (window.sessionStorage.getItem(AUTH_SESSION_KEY)) {
-    return window.sessionStorage;
-  }
-
   if (window.localStorage.getItem(AUTH_SESSION_KEY)) {
     return window.localStorage;
   }
 
-  if (window.sessionStorage.getItem(AUTH_TOKENS_KEY)) {
+  if (window.sessionStorage.getItem(AUTH_SESSION_KEY)) {
     return window.sessionStorage;
   }
 
@@ -70,7 +66,11 @@ function getActiveStorage() {
     return window.localStorage;
   }
 
-  return window.sessionStorage;
+  if (window.sessionStorage.getItem(AUTH_TOKENS_KEY)) {
+    return window.sessionStorage;
+  }
+
+  return window.localStorage;
 }
 
 function getInactiveStorage(storage: Storage) {
@@ -78,7 +78,7 @@ function getInactiveStorage(storage: Storage) {
 }
 
 function persistSession(session: AuthSession, tokens: AuthTokens | null, remember = false) {
-  const storage = remember ? window.localStorage : window.sessionStorage;
+  const storage = window.localStorage;
   const inactiveStorage = getInactiveStorage(storage);
 
   inactiveStorage.removeItem(AUTH_SESSION_KEY);
