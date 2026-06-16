@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import FooterModal from '../components/FooterModal';
 import Logo from '../components/Logo';
 import ShuttlecockIcon from '../components/ShuttlecockIcon';
@@ -15,6 +15,7 @@ import {
   registerAuth,
   sendEmailVerification,
 } from '../utils/authApi';
+import { normalizeAuthRedirectPath, setAuthRedirectPath } from '../utils/authSession';
 import { footerDocuments, type FooterDocumentKey } from '../utils/footerContent';
 import { styles } from './SignupPage.styles';
 
@@ -49,6 +50,7 @@ const passwordRules = [
 ];
 
 export default function SignupPage() {
+  const [searchParams] = useSearchParams();
   const [step, setStep] = useState<SignupStep>(1);
   const [signupCompleted, setSignupCompleted] = useState(false);
   const [fieldFeedback, setFieldFeedback] = useState<FieldFeedback>(null);
@@ -84,6 +86,9 @@ export default function SignupPage() {
     || emailVerificationStatus === 'sending'
     || emailVerificationStatus === 'verified';
   const formattedVerificationTime = `${String(Math.floor(remainingVerificationSeconds / 60)).padStart(2, '0')}:${String(remainingVerificationSeconds % 60).padStart(2, '0')}`;
+  const redirectPath = normalizeAuthRedirectPath(searchParams.get('redirect'));
+  const loginPath = redirectPath === '/' ? '/login' : `/login?redirect=${encodeURIComponent(redirectPath)}`;
+  const rememberRedirectPath = () => setAuthRedirectPath(redirectPath);
 
   useEffect(() => {
     if (emailVerificationStatus !== 'sent' && emailVerificationStatus !== 'verifying') {
@@ -426,7 +431,7 @@ export default function SignupPage() {
                 <p className = {styles.completionText}>
                   가입한 이메일과 비밀번호로 로그인해주세요.
                 </p>
-                <Link to = "/login">
+                <Link to = {loginPath} onClick = {rememberRedirectPath}>
                   <Button type = "button" className = {styles.completionButton} size = "lg">
                     로그인하러 가기
                   </Button>
@@ -719,7 +724,7 @@ export default function SignupPage() {
           {!signupCompleted && (
             <div className = {styles.centeredBlock}>
               <span className = {styles.mutedText}>이미 회원이신가요? </span>
-              <Link to = "/login" className = {styles.primaryLink}>
+              <Link to = {loginPath} onClick = {rememberRedirectPath} className = {styles.primaryLink}>
                 로그인
               </Link>
             </div>
