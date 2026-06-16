@@ -99,7 +99,7 @@ const tabPaths: Record<TabKey, string> = {
   settings: 'settings',
 };
 
-type ScheduleItem = { id: number; title: string; date: string; time: string; place: string; joined: number; undecided: number; absent: number; guests: number; deadline: string; status: ScheduleStatus; sessionType: string; voteStatus: VoteStatus; matches: number | null; votingAllowed: boolean; guestAllowed: boolean };
+type ScheduleItem = { id: number; title: string; date: string; time: string; place: string; joined: number; undecided: number; absent: number; guests: number; deadline: string; status: ScheduleStatus; sessionType: string; voteStatus: VoteStatus; matches: number | null; votingAllowed: boolean; guestAllowed: boolean; guestLinkAllowed: boolean };
 type MemberItem = { id: number; name: string; profileImageUrl: string | null; gender: string; age: string; grade: string; role: string; participation: number; recent: number; rate: number; matches: number | null; winRate: number | null; doublesMmr: number; mixedMmr: number; streak: number | null; absenceRate: number | null };
 type GuestItem = { id: number; name: string; profileImageUrl: string | null; gender: string; age: string; grade: string; registered: boolean; userId: number | null; participation: number; lastParticipationAt: string | null; matches: number | null; winRate: number | null; doublesMmr: number | null; mixedMmr: number | null; memo: string | null };
 type PostItem = { id: number; authorId: number; type: string; pinned: boolean; title: string; author: string; date: string; views: number; comments: number; content: string; attachmentNames: string | null };
@@ -137,6 +137,7 @@ function toScheduleItem(session: GroupSessionResponse): ScheduleItem {
     matches: null,
     votingAllowed: session.votingAllowed ?? true,
     guestAllowed: session.guestAllowed ?? true,
+    guestLinkAllowed: session.guestLinkAllowed ?? false,
   };
 }
 
@@ -499,6 +500,11 @@ export default function GroupDetailPage() {
     showToast('모임 공유 링크를 복사했습니다.');
   };
 
+  const handleCopySessionGuestLink = async (sessionId: number) => {
+    await navigator.clipboard?.writeText(`${window.location.origin}/sessions/${sessionId}/guest-join`);
+    showToast('운동 일정 공유 링크를 복사했습니다.');
+  };
+
   const handleCloseModal = () => {
     setModal(null);
     const searchParams = new URLSearchParams(location.search);
@@ -813,7 +819,7 @@ export default function GroupDetailPage() {
         <Modal title = {getModalTitle(modal, selectedSchedule?.title, selectedPost?.title, selectedMember?.name, selectedGuest?.name)} onClose = {handleCloseModal} onBack = {modal.type === 'editGuest' ? () => setModal({ type: 'participants', id: modal.id }) : modal.type === 'participants' || modal.type === 'addGuest' || modal.type === 'manageSchedule' ? () => setModal({ type: 'schedule', id: modal.id }) : modal.type === 'memberPermissions' || modal.type === 'ownershipTransfer' || modal.type === 'memberRemoval' ? () => setModal({ type: 'member', id: modal.id }) : undefined} centeredHeader = {modal.type === 'createSchedule' || modal.type === 'schedule' || modal.type === 'post' || modal.type === 'writePost' || modal.type === 'member' || modal.type === 'guest' || modal.type === 'groupDeletion'} fixedScheduleSize = {modal.type === 'createSchedule' || modal.type === 'schedule' || modal.type === 'post' || modal.type === 'participants' || modal.type === 'addGuest' || modal.type === 'editGuest' || modal.type === 'manageSchedule' || modal.type === 'writePost' || modal.type === 'member' || modal.type === 'guest' || modal.type === 'memberPermissions' || modal.type === 'ownershipTransfer' || modal.type === 'memberRemoval' || modal.type === 'groupDeletion'}>
           {modal.type === 'createSchedule' && canManageSchedule && <CreateScheduleModal groupId = {numericGroupId} groupGuestAllowed = {guestAllowed} initialDate = {modal.initialDate} onComplete = {async () => { setModal(null); setListRefreshKey(current => current + 1); await loadGroupDetail(); }} onError = {error => showRequestError(error, '운동 일정을 만들지 못했습니다.')} />}
           {selectedSchedule && (
-            <ScheduleModal schedule = {selectedSchedule} canManage = {canManageSchedule} canAddGuest = {canManageSchedule && selectedSchedule.guestAllowed} canChangeVote = {canChangeVoteForSchedule(selectedSchedule, sameDayVoteChangeAllowed, postDeadlineVoteChangeAllowed)} onVote = {status => handleVote(status, selectedSchedule.id)} onOpenParticipants = {id => setModal({ type: 'participants', id })} onAddGuest = {id => setModal({ type: 'addGuest', id })} onManage = {id => setModal({ type: 'manageSchedule', id })} />
+            <ScheduleModal schedule = {selectedSchedule} canManage = {canManageSchedule} canAddGuest = {canManageSchedule && selectedSchedule.guestAllowed} canChangeVote = {canChangeVoteForSchedule(selectedSchedule, sameDayVoteChangeAllowed, postDeadlineVoteChangeAllowed)} onVote = {status => handleVote(status, selectedSchedule.id)} onOpenParticipants = {id => setModal({ type: 'participants', id })} onAddGuest = {id => setModal({ type: 'addGuest', id })} onManage = {id => setModal({ type: 'manageSchedule', id })} onShareGuestLink = {handleCopySessionGuestLink} />
           )}
           {selectedPost && <PostModal groupId = {numericGroupId} post = {selectedPost} myMemberId = {groupInfo?.myMemberId} canManage = {canManagePosts} canEdit = {canManagePosts || groupInfo?.myMemberId === selectedPost.authorId} canComment = {canComment} onChanged = {async () => { setListRefreshKey(current => current + 1); await loadGroupDetail(); }} onError = {showRequestError} />}
           {modal.type === 'member' && selectedMember && (
@@ -1267,7 +1273,7 @@ function GuestsTab({ guests: filteredGuests, keyword, type, currentPage, totalPa
             ))}
           </div>
         ) : (
-          <EmptyState className = {styles.memberEmptyState} icon = {UserCheck} title = "조건에 맞는 게스트가 없습니다." description = "종료된 운동에 참여한 게스트가 있으면 이곳에서 확인할 수 있습니다." />
+          <EmptyState icon = {UserCheck} title = "조건에 맞는 게스트가 없습니다." description = "종료된 운동에 참여한 게스트가 있으면 이곳에서 확인할 수 있습니다." />
         )}
         <p className = {styles.permissionGuide}><LockKeyhole /><span>게스트 관리는 종료된 운동에 실제 참여한 게스트만 표시하며, 권한이 있는 운영자만 확인할 수 있습니다.</span></p>
       </Panel>
@@ -1483,7 +1489,7 @@ function Modal({ title, children, onClose, onBack, centeredHeader = false, fixed
   );
 }
 
-function ScheduleModal({ schedule, canManage, canAddGuest, canChangeVote, onVote, onOpenParticipants, onAddGuest, onManage }: { schedule: ScheduleItem; canManage: boolean; canAddGuest: boolean; canChangeVote: boolean; onVote: (status: VoteStatus) => void; onOpenParticipants: (id: number) => void; onAddGuest: (id: number) => void; onManage: (id: number) => void }) {
+function ScheduleModal({ schedule, canManage, canAddGuest, canChangeVote, onVote, onOpenParticipants, onAddGuest, onManage, onShareGuestLink }: { schedule: ScheduleItem; canManage: boolean; canAddGuest: boolean; canChangeVote: boolean; onVote: (status: VoteStatus) => void; onOpenParticipants: (id: number) => void; onAddGuest: (id: number) => void; onManage: (id: number) => void; onShareGuestLink: (id: number) => void }) {
   return (
     <div className = {styles.scheduleModalContent}>
       <div className = {styles.modalHighlight}><div className = {styles.inlineBadges}><Badge className = {styles.statusBadge(schedule.status)}>{getScheduleStatusLabel(schedule.status)}</Badge><Badge variant = "outline">{getSessionTypeLabel(schedule.sessionType)}</Badge></div><strong>{schedule.date.replaceAll('-', '.')} · {schedule.time}</strong><span><MapPin /> {schedule.place}</span></div>
@@ -1491,7 +1497,7 @@ function ScheduleModal({ schedule, canManage, canAddGuest, canChangeVote, onVote
         <span><strong>{schedule.joined}</strong>참여</span><span><strong>{schedule.undecided}</strong>미정</span><span><strong>{schedule.absent}</strong>불참</span><span><strong>{schedule.guests}</strong>게스트</span>
       </div>
       <div className = {styles.modalSection}><h3>내 참여 상태</h3><p>참여 투표 마감 {schedule.deadline}</p>{canChangeVote && <div className = {styles.voteButtons}>{(['JOIN', 'UNDECIDED', 'ABSENT'] as VoteStatus[]).map(status => <button key = {status} type = "button" className = {styles.voteButton(schedule.voteStatus === status)} onClick = {() => onVote(status)}>{getVoteLabel(status)}</button>)}</div>}</div>
-      <div className = {styles.modalSection}><h3>참가자 및 게스트</h3><p>참여 {schedule.joined}명 · 미정 {schedule.undecided}명 · 불참 {schedule.absent}명</p><Button variant = "outline" className = {styles.smallRoundButton} onClick = {() => onOpenParticipants(schedule.id)}><Users /> 참가자 목록 확인</Button></div>
+      <div className = {styles.modalSection}><h3>참가자 및 게스트</h3><p>참여 {schedule.joined}명 · 미정 {schedule.undecided}명 · 불참 {schedule.absent}명</p><div className = {styles.voteButtons}><Button variant = "outline" className = {styles.smallRoundButton} onClick = {() => onOpenParticipants(schedule.id)}><Users /> 참가자 목록 확인</Button>{schedule.guestAllowed && schedule.guestLinkAllowed && <Button variant = "outline" className = {styles.smallRoundButton} onClick = {() => onShareGuestLink(schedule.id)}><Share2 /> 공유 링크 복사</Button>}</div></div>
       {canManage && <div className = {styles.modalActions}>{canAddGuest && <Button variant = "outline" className = {styles.roundButton} onClick = {() => onAddGuest(schedule.id)}><Plus /> 게스트 추가</Button>}<Button className = {styles.roundButton} onClick = {() => onManage(schedule.id)}><Settings /> 일정 관리</Button></div>}
     </div>
   );
@@ -1804,7 +1810,7 @@ function WritePostModal({ groupId, canManage, attachmentAllowed, onComplete }: {
 }
 
 function ParticipantsModal({ groupId, schedule, canManage, onEditGuest }: { groupId: number; schedule?: ScheduleItem; canManage: boolean; onEditGuest: (guest: GroupParticipantResponse) => void }) {
-  const [filter, setFilter] = useState<VoteStatus>('UNDECIDED');
+  const [filter, setFilter] = useState<VoteStatus>('JOIN');
   const [participantSamples, setParticipantSamples] = useState<Array<GroupParticipantResponse & { status: VoteStatus }>>([]);
   const loadParticipants = useCallback(() => {
     if (!schedule) return;
@@ -1837,7 +1843,7 @@ function ParticipantsModal({ groupId, schedule, canManage, onEditGuest }: { grou
       </div>
       <div className = {styles.participantSectionTitle}><strong>{getVoteLabel(filter)} 응답</strong><span>{filteredParticipants.length}명</span></div>
       <div className = {styles.participantList}>
-        {filteredParticipants.map(participant => <div key = {`${participant.guest ? 'guest' : 'member'}-${participant.id}`} className = {styles.participantCard}>{participant.profileImageUrl ? <img src = {participant.profileImageUrl} alt = {`${participant.name} 프로필`} className = {styles.participantProfileImage} onError = {event => { event.currentTarget.style.display = 'none'; event.currentTarget.nextElementSibling?.removeAttribute('hidden'); }} /> : null}<div hidden = {!!participant.profileImageUrl} className = {participant.guest ? styles.guestAvatar : styles.participantAvatar}>{participant.name[0]}</div><span><strong>{participant.name}</strong><small>{formatGender(participant.gender)} · {formatAgeGroup(participant.ageGroup)} · {formatGrade(participant.grade)}</small></span><div className = {styles.participantBadges}>{participant.guest && canManage && <><Button variant = "ghost" size = "icon" className = {styles.iconButton} aria-label = "게스트 정보 수정" onClick = {() => onEditGuest(participant)}><Edit3 /></Button><Button variant = "ghost" size = "icon" className = {styles.iconButton} aria-label = "게스트 삭제" onClick = {() => schedule && void groupDetailApi.deleteGuest(groupId, schedule.id, participant.id).then(loadParticipants)}><Trash2 /></Button></>}<Badge variant = "outline" className = {participant.guest ? styles.guestBadge : styles.participantRoleBadge}>{participant.guest ? '게스트' : participant.role === 'OWNER' ? '소유자' : participant.role === 'MANAGER' ? '매니저' : '멤버'}</Badge><Badge className = {styles.statusBadge(filter)}>{getVoteLabel(filter)}</Badge></div></div>)}
+        {filteredParticipants.map(participant => <div key = {`${participant.guest ? 'guest' : 'member'}-${participant.id}`} className = {styles.participantCard}>{participant.profileImageUrl ? <img src = {participant.profileImageUrl} alt = {`${participant.name} 프로필`} className = {styles.participantProfileImage} onError = {event => { event.currentTarget.style.display = 'none'; event.currentTarget.nextElementSibling?.removeAttribute('hidden'); }} /> : null}<div hidden = {!!participant.profileImageUrl} className = {participant.guest ? styles.guestAvatar : styles.participantAvatar}>{participant.name[0]}</div><span><strong>{participant.name}</strong><small>{formatGender(participant.gender)} · {formatAgeGroup(participant.ageGroup)} · {formatGrade(participant.grade)}</small></span><div className = {styles.participantBadges}><Badge variant = "outline" className = {participant.guest ? styles.guestBadge : styles.participantRoleBadge}>{participant.guest ? '게스트' : participant.role === 'OWNER' ? '소유자' : participant.role === 'MANAGER' ? '매니저' : '멤버'}</Badge><Badge className = {styles.statusBadge(filter)}>{getVoteLabel(filter)}</Badge>{participant.guest && canManage && <Button variant = "ghost" size = "sm" className = {styles.participantManageButton} onClick = {() => onEditGuest(participant)}>관리</Button>}</div></div>)}
       </div>
     </div>
   );
@@ -1940,7 +1946,10 @@ function AddGuestModal({ groupId, sessionId, guest, onComplete }: { groupId: num
       <label className = {styles.modalField}><span>성별</span><Select value = {gender} onValueChange = {setGender}><SelectTrigger className = {styles.selectTriggerWide}><SelectValue placeholder = "성별을 선택하세요" /></SelectTrigger><SelectContent><SelectItem className = {styles.guestSelectItem} value = "남성">남성</SelectItem><SelectItem className = {styles.guestSelectItem} value = "여성">여성</SelectItem></SelectContent></Select></label>
       <label className = {styles.modalField}><span>연령대</span><Select value = {age} onValueChange = {setAge}><SelectTrigger className = {styles.selectTriggerWide}><SelectValue placeholder = "연령대를 선택하세요" /></SelectTrigger><SelectContent>{['10대', '20대', '30대', '40대', '50대', '60대 이상'].map(item => <SelectItem className = {styles.guestSelectItem} key = {item} value = {item}>{item}</SelectItem>)}</SelectContent></Select></label>
       <label className = {styles.modalField}><span>급수</span><Select value = {grade} onValueChange = {setGrade}><SelectTrigger className = {styles.selectTriggerWide}><SelectValue placeholder = "급수를 선택하세요" /></SelectTrigger><SelectContent>{['E', 'D', 'C', 'B', 'A', 'S', 'SS'].map(item => <SelectItem className = {styles.guestSelectItem} key = {item} value = {item}>{item}</SelectItem>)}</SelectContent></Select></label>
-      <div className = {styles.modalActions}><Button disabled = {!name.trim() || !gender || !age || !grade} className = {styles.roundButton} onClick = {() => void submit()}>{guest ? <Edit3 /> : <Plus />} {guest ? '게스트 정보 저장' : '게스트 추가'}</Button></div>
+      <div className = {styles.modalActions}>
+        {guest && <Button variant = "outline" className = {styles.dangerTextButton} onClick = {() => void groupDetailApi.deleteGuest(groupId, sessionId, guest.id).then(() => onComplete(''))}><Trash2 /> 게스트 삭제</Button>}
+        <Button disabled = {!name.trim() || !gender || !age || !grade} className = {styles.roundButton} onClick = {() => void submit()}>{guest ? <Edit3 /> : <Plus />} {guest ? '게스트 정보 저장' : '게스트 추가'}</Button>
+      </div>
     </div>
   );
 }
