@@ -68,13 +68,13 @@ export default function GuestJoinPage() {
         }
 
         setPreview(data);
-        setCompletedVoteStatus(null);
+        setCompletedVoteStatus(!isLoggedIn && data.participantType === 'GUEST' ? data.currentVoteStatus ?? null : null);
         setSelectedVote(data.currentVoteStatus ?? 'ATTENDING');
         setFormData({
-          name: data.participantType === 'GUEST' ? '' : data.name ?? '',
-          gender: data.participantType === 'GUEST' ? '' : data.gender ?? '',
-          ageGroup: data.participantType === 'GUEST' ? '' : data.ageGroup ?? '',
-          grade: data.participantType === 'GUEST' ? '' : data.grade ?? '',
+          name: data.name ?? '',
+          gender: data.gender ?? '',
+          ageGroup: data.ageGroup ?? '',
+          grade: data.grade ?? '',
         });
       })
       .catch(error => setErrorMessage(getErrorMessage(error, '운동 일정 정보를 불러오지 못했습니다.')))

@@ -38,7 +38,7 @@ export type GuestJoinRequest = {
   grade?: string;
 };
 
-const options = { auth: true };
+const options = { auth: true, credentials: 'include' as RequestCredentials };
 
 export const sessionGuestApi = {
   getPreview: (sessionId: number) =>
