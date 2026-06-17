@@ -7,7 +7,6 @@ import com.shuttleplay.server.domain.auth.dto.request.LoginRequest;
 import com.shuttleplay.server.domain.auth.dto.request.PasswordResetConfirmRequest;
 import com.shuttleplay.server.domain.auth.dto.request.PasswordResetSendRequest;
 import com.shuttleplay.server.domain.auth.dto.request.RegisterRequest;
-import com.shuttleplay.server.domain.auth.dto.request.TokenReissueRequest;
 import com.shuttleplay.server.domain.auth.dto.response.CheckEmailResponse;
 import com.shuttleplay.server.domain.auth.dto.response.EmailVerificationConfirmResponse;
 import com.shuttleplay.server.domain.auth.dto.response.EmailVerificationSendResponse;
@@ -46,6 +45,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 @Service
 @RequiredArgsConstructor
@@ -136,36 +136,32 @@ public class AuthService {
     }
 
     @Transactional
-    public LoginResponse login(LoginRequest request) {
+    public LoginResult login(LoginRequest request) {
         User user = findLocalUserForLogin(request.getEmail());
 
         validateAccountStatus(user);
         validatePassword(request.getPassword(), user.getPassword());
 
         String accessToken = jwtTokenProvider.createAccessToken(user);
+        RefreshToken refreshToken = createRefreshToken(user.getId(), request.isAutoLogin());
 
-        String refreshToken = null;
-        Long refreshTokenExpiresIn = null;
-
-        if (request.isAutoLogin()) {
-            RefreshToken savedRefreshToken = createRefreshToken(user.getId());
-
-            refreshToken = savedRefreshToken.getToken();
-            refreshTokenExpiresIn = jwtTokenProvider.getRefreshTokenExpirationMillis();
-        }
-
-        return LoginResponse.of(
+        LoginResponse response = LoginResponse.of(
                 accessToken,
-                refreshToken,
                 jwtTokenProvider.getAccessTokenExpirationMillis(),
-                refreshTokenExpiresIn,
+                jwtTokenProvider.getRefreshTokenExpirationMillis(),
                 LoginUserResponse.from(user)
         );
+
+        return LoginResult.of(response, refreshToken.getToken(), request.isAutoLogin());
     }
 
     @Transactional
-    public TokenReissueResponse reissueToken(TokenReissueRequest request) {
-        RefreshToken refreshToken = refreshTokenRepository.findByToken(request.getRefreshToken())
+    public TokenReissueResult reissueToken(String refreshTokenValue) {
+        if (!StringUtils.hasText(refreshTokenValue)) {
+            throw new BusinessException(ErrorCode.REFRESH_TOKEN_NOT_FOUND);
+        }
+
+        RefreshToken refreshToken = refreshTokenRepository.findByToken(refreshTokenValue)
                 .orElseThrow(() -> new BusinessException(ErrorCode.REFRESH_TOKEN_NOT_FOUND));
 
         validateRefreshToken(refreshToken);
@@ -178,14 +174,17 @@ public class AuthService {
         refreshToken.revoke();
 
         String newAccessToken = jwtTokenProvider.createAccessToken(user);
-        RefreshToken newRefreshToken = createRefreshToken(user.getId());
+        boolean persistent = refreshToken.isPersistent();
+        RefreshToken newRefreshToken = createRefreshToken(user.getId(), persistent);
 
-        return TokenReissueResponse.of(
+        TokenReissueResponse response = TokenReissueResponse.of(
                 newAccessToken,
-                newRefreshToken.getToken(),
                 jwtTokenProvider.getAccessTokenExpirationMillis(),
-                jwtTokenProvider.getRefreshTokenExpirationMillis()
+                jwtTokenProvider.getRefreshTokenExpirationMillis(),
+                LoginUserResponse.from(user)
         );
+
+        return TokenReissueResult.of(response, newRefreshToken.getToken(), persistent);
     }
 
     @Transactional
@@ -270,6 +269,10 @@ public class AuthService {
     }
 
     private void blacklistAccessToken(String accessToken) {
+        if (!StringUtils.hasText(accessToken)) {
+            return;
+        }
+
         if (accessTokenBlacklistRepository.existsByToken(accessToken)) {
             return;
         }
@@ -290,7 +293,7 @@ public class AuthService {
         return passwordResetUrl + "?token=" + encodedToken;
     }
 
-    private RefreshToken createRefreshToken(Long userId) {
+    private RefreshToken createRefreshToken(Long userId, boolean persistent) {
         revokeActiveRefreshTokens(userId);
 
         LocalDateTime expiresAt = LocalDateTime.now()
@@ -299,7 +302,8 @@ public class AuthService {
         RefreshToken refreshToken = RefreshToken.create(
                 userId,
                 RefreshTokenGenerator.generate(),
-                expiresAt
+                expiresAt,
+                persistent
         );
 
         return refreshTokenRepository.save(refreshToken);
@@ -395,6 +399,30 @@ public class AuthService {
 
         if (passwordResetToken.isInvalid()) {
             throw new BusinessException(ErrorCode.INVALID_PASSWORD_RESET_TOKEN);
+        }
+    }
+
+    public record LoginResult(
+            LoginResponse response,
+            String refreshToken,
+            boolean persistent
+    ) {
+        public static LoginResult of(LoginResponse response, String refreshToken, boolean persistent) {
+            return new LoginResult(response, refreshToken, persistent);
+        }
+    }
+
+    public record TokenReissueResult(
+            TokenReissueResponse response,
+            String refreshToken,
+            boolean persistent
+    ) {
+        public static TokenReissueResult of(
+                TokenReissueResponse response,
+                String refreshToken,
+                boolean persistent
+        ) {
+            return new TokenReissueResult(response, refreshToken, persistent);
         }
     }
 }

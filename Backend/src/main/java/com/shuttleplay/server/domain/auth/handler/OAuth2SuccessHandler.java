@@ -2,6 +2,7 @@ package com.shuttleplay.server.domain.auth.handler;
 
 import com.shuttleplay.server.domain.auth.entity.RefreshToken;
 import com.shuttleplay.server.domain.auth.repository.RefreshTokenRepository;
+import com.shuttleplay.server.domain.auth.service.RefreshTokenCookieService;
 import com.shuttleplay.server.domain.auth.util.RefreshTokenGenerator;
 import com.shuttleplay.server.domain.user.entity.User;
 import com.shuttleplay.server.domain.user.repository.UserRepository;
@@ -12,8 +13,6 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -28,6 +27,7 @@ public class OAuth2SuccessHandler implements org.springframework.security.web.au
     private final UserRepository userRepository;
     private final RefreshTokenRepository refreshTokenRepository;
     private final JwtTokenProvider jwtTokenProvider;
+    private final RefreshTokenCookieService refreshTokenCookieService;
 
     @Value("${app.oauth2-profile-completion-redirect-url}")
     private String oauth2ProfileCompletionRedirectUrl;
@@ -48,16 +48,16 @@ public class OAuth2SuccessHandler implements org.springframework.security.web.au
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
-        String accessToken = jwtTokenProvider.createAccessToken(user);
         RefreshToken refreshToken = createRefreshToken(user.getId());
 
-        String redirectUrl = createRedirectUrl(
-                accessToken,
+        refreshTokenCookieService.addRefreshTokenCookie(
+                response,
                 refreshToken.getToken(),
-                user.isProfileCompleted()
+                jwtTokenProvider.getRefreshTokenExpirationMillis(),
+                true
         );
 
-        response.sendRedirect(redirectUrl);
+        response.sendRedirect(createRedirectUrl(user.isProfileCompleted()));
     }
 
     private Long extractUserId(OAuth2User oauth2User) {
@@ -88,28 +88,18 @@ public class OAuth2SuccessHandler implements org.springframework.security.web.au
         RefreshToken refreshToken = RefreshToken.create(
                 userId,
                 RefreshTokenGenerator.generate(),
-                expiresAt
+                expiresAt,
+                true
         );
 
         return refreshTokenRepository.save(refreshToken);
     }
 
-    private String createRedirectUrl(
-            String accessToken,
-            String refreshToken,
-            boolean profileCompleted
-    ) {
+    private String createRedirectUrl(boolean profileCompleted) {
         String baseRedirectUrl = profileCompleted
                 ? oauth2MainRedirectUrl
                 : oauth2ProfileCompletionRedirectUrl;
 
-        return baseRedirectUrl
-                + "?accessToken=" + encode(accessToken)
-                + "&refreshToken=" + encode(refreshToken)
-                + "&profileCompleted=" + profileCompleted;
-    }
-
-    private String encode(String value) {
-        return URLEncoder.encode(value, StandardCharsets.UTF_8);
+        return baseRedirectUrl + "?profileCompleted=" + profileCompleted;
     }
 }
