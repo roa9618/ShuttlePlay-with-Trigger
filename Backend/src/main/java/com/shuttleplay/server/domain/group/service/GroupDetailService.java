@@ -4,6 +4,7 @@ import com.shuttleplay.server.domain.group.entity.*;
 import com.shuttleplay.server.domain.group.enums.*;
 import com.shuttleplay.server.domain.group.repository.*;
 import com.shuttleplay.server.domain.notification.enums.NotificationType;
+import com.shuttleplay.server.domain.notification.enums.NotificationPreferenceType;
 import com.shuttleplay.server.domain.notification.service.NotificationService;
 import com.shuttleplay.server.domain.user.entity.User;
 import com.shuttleplay.server.domain.user.enums.*;
@@ -469,7 +470,7 @@ public class GroupDetailService {
     private int recentParticipationCount(GroupMember member) { return (int) votes.countByMemberIdAndStatusAndSession_StartsAtBetweenAndSession_Status(member.getId(), SessionVoteStatus.ATTENDING, LocalDateTime.now().minusDays(28), LocalDateTime.now(), GroupSessionStatus.CLOSED); }
     private void log(GroupMember actor, String action, String detail) { logs.save(GroupOperationLog.create(actor.getGroup(), actor, action, detail)); }
     private void notifyAll(Group group, String message) { notifyAll(group, message, "/groups/" + group.getId()); }
-    private void notifyAll(Group group, String message, String targetPath) { members.findAllByGroupIdAndStatus(group.getId(), GroupMemberStatus.ACTIVE).forEach(m -> notifications.send(m.getUser(), NotificationType.GROUP, group.getName(), message, targetPath)); }
+    private void notifyAll(Group group, String message, String targetPath) { members.findAllByGroupIdAndStatus(group.getId(), GroupMemberStatus.ACTIVE).forEach(m -> notifications.sendIfEnabled(m.getUser(), NotificationType.GROUP, group.getName(), message, targetPath, NotificationPreferenceType.SCHEDULE_CHANGE)); }
     private void notifyCommentTarget(GroupPost post, GroupComment parent, GroupMember author) { GroupMember target = parent == null ? post.getAuthor() : parent.getAuthor(); if (!Objects.equals(target.getId(), author.getId())) notifications.send(target.getUser(), NotificationType.GROUP, "새 댓글 알림", post.getTitle(), "/groups/" + post.getGroup().getId() + "/board?postId=" + post.getId()); }
     private String sessionPath(Long groupId, Long sessionId) { return "/groups/" + groupId + "/schedule?sessionId=" + sessionId; }
     private String membersPath(Long groupId) { return "/groups/" + groupId + "/members"; }

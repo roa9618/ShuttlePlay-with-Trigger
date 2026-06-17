@@ -217,6 +217,23 @@ public class User extends BaseEntity {
         this.profileCompleted = true;
     }
 
+    public void updateProfile(
+            String name,
+            Gender gender,
+            AgeGroup ageGroup,
+            Grade grade
+    ) {
+        this.name = name;
+        this.gender = gender;
+        this.ageGroup = ageGroup;
+        this.grade = grade;
+        this.profileCompleted = true;
+    }
+
+    public void updateProfileImageUrl(String profileImageUrl) {
+        this.profileImageUrl = profileImageUrl;
+    }
+
     public void updatePassword(String encodedPassword) {
         this.password = encodedPassword;
     }
