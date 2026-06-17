@@ -1,10 +1,13 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { ApiClientError } from '../utils/apiClient';
+import { ApiClientError, apiClient } from '../utils/apiClient';
 import { logoutAuth } from '../utils/authApi';
 import {
+  broadcastAuthLogout,
   endAuthSession,
   getAuthAccessToken,
   getAuthSession,
+  startTokenAuthSession,
+  subscribeAuthBroadcast,
   updateAuthSession,
   type AuthSession,
 } from '../utils/authSession';
@@ -24,6 +27,22 @@ type AuthContextValue = {
   logout: () => void;
 };
 
+type AuthSessionResponse = {
+  accessToken: string;
+  user: {
+    id: number;
+    name: string;
+    email: string;
+    role: 'USER' | 'ADMIN';
+    provider: string;
+    profileCompleted: boolean;
+    gender: string | null;
+    ageGroup: string | null;
+    grade: string | null;
+    profileImageUrl: string | null;
+  };
+};
+
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 function toAuthSession(user: Awaited<ReturnType<typeof getCurrentUser>>): AuthSession {
@@ -41,9 +60,24 @@ function toAuthSession(user: Awaited<ReturnType<typeof getCurrentUser>>): AuthSe
   };
 }
 
+function toSessionFromAuthResponse(response: AuthSessionResponse): AuthSession {
+  return {
+    id: response.user.id,
+    email: response.user.email,
+    name: response.user.name,
+    role: response.user.role,
+    provider: response.user.provider,
+    profileCompleted: response.user.profileCompleted,
+    gender: response.user.gender,
+    ageGroup: response.user.ageGroup,
+    grade: response.user.grade,
+    profileImageUrl: response.user.profileImageUrl,
+  };
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<AuthSession | null>(() => getAuthSession());
-  const [isAuthLoading, setIsAuthLoading] = useState(false);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
 
   const clearSession = useCallback(() => {
     endAuthSession();
@@ -51,15 +85,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const refreshSession = useCallback(async () => {
-    const accessToken = getAuthAccessToken();
-
-    if (!accessToken) {
-      clearSession();
-      return null;
-    }
-
     try {
       setIsAuthLoading(true);
+
+      if (!getAuthAccessToken()) {
+        const authSession = await apiClient.post<AuthSessionResponse>('/auth/session');
+        const nextSession = toSessionFromAuthResponse(authSession);
+
+        startTokenAuthSession(nextSession, {
+          accessToken: authSession.accessToken,
+        });
+        setSession(nextSession);
+
+        return nextSession;
+      }
 
       const currentUser = await getCurrentUser();
       const nextSession = toAuthSession(currentUser);
@@ -94,28 +133,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(() => {
     const accessToken = getAuthAccessToken();
 
-    if (!accessToken) {
+    const clearAfterLogout = () => {
       clearSystemNotificationLoginRequest();
       clearSession();
+      broadcastAuthLogout();
+    };
+
+    if (!accessToken) {
+      clearAfterLogout();
       return;
     }
 
     void disableSystemNotifications()
       .finally(() => logoutAuth())
-      .finally(() => {
-        clearSystemNotificationLoginRequest();
-        clearSession();
-      });
+      .finally(clearAfterLogout);
   }, [clearSession]);
 
   useEffect(() => {
-    if (!getAuthAccessToken()) {
-      setSession(null);
-      return;
-    }
-
     refreshSession();
   }, [refreshSession]);
+
+  useEffect(() => {
+    return subscribeAuthBroadcast((eventType) => {
+      if (eventType === 'LOGOUT') {
+        clearSystemNotificationLoginRequest();
+        clearSession();
+        return;
+      }
+
+      void refreshSession();
+    });
+  }, [clearSession, refreshSession]);
 
   useEffect(() => {
     if (session) {

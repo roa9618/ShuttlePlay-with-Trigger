@@ -1,9 +1,10 @@
 import {
   endAuthSession,
-  getAuthAccessToken,
-  getAuthRefreshToken,
+  updateAuthSession,
   updateAuthTokens,
 } from './authSession';
+import { getAuthAccessToken } from './authSession';
+import type { AuthSession, UserRole } from './authSession';
 
 export const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api').replace(/\/$/, '');
 export const API_ORIGIN = API_BASE_URL.replace(/\/api$/, '');
@@ -30,12 +31,25 @@ type ApiRequestOptions = Omit<RequestInit, 'body'> & {
   auth?: boolean;
 };
 
+type LoginUserResponse = {
+  id: number;
+  name: string;
+  email: string;
+  role: UserRole;
+  provider: string;
+  profileCompleted: boolean;
+  gender: string | null;
+  ageGroup: string | null;
+  grade: string | null;
+  profileImageUrl: string | null;
+};
+
 type TokenReissueResponse = {
   accessToken: string;
-  refreshToken: string;
   tokenType?: string;
   expiresIn?: number;
   refreshTokenExpiresIn?: number | null;
+  user: LoginUserResponse;
 };
 
 export class ApiClientError extends Error {
@@ -72,6 +86,21 @@ function isWrappedApiResponse<T>(value: unknown): value is ApiResponse<T> {
   return isObject(value) && typeof value.success === 'boolean';
 }
 
+function toAuthSession(user: LoginUserResponse): AuthSession {
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    role: user.role,
+    provider: user.provider,
+    profileCompleted: user.profileCompleted,
+    gender: user.gender,
+    ageGroup: user.ageGroup,
+    grade: user.grade,
+    profileImageUrl: user.profileImageUrl,
+  };
+}
+
 async function parseJsonResponse(response: Response): Promise<unknown | null> {
   const text = await response.text();
 
@@ -104,21 +133,9 @@ function unwrapResponseData<T>(parsedResponse: unknown, status: number): T {
 }
 
 async function requestTokenReissue() {
-  const refreshToken = getAuthRefreshToken();
-
-  if (!refreshToken) {
-    endAuthSession();
-    return null;
-  }
-
-  const response = await fetch(buildApiUrl('/auth/token/reissue'), {
+  const response = await fetch(buildApiUrl('/auth/session'), {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      refreshToken,
-    }),
+    credentials: 'include',
   });
 
   const parsedResponse = await parseJsonResponse(response);
@@ -130,17 +147,18 @@ async function requestTokenReissue() {
 
   const reissueData = unwrapResponseData<TokenReissueResponse>(parsedResponse, response.status);
 
-  if (!reissueData?.accessToken || !reissueData?.refreshToken) {
+  if (!reissueData?.accessToken || !reissueData?.user) {
     endAuthSession();
     return null;
   }
 
   const nextTokens = {
     accessToken: reissueData.accessToken,
-    refreshToken: reissueData.refreshToken,
   };
+  const nextSession = toAuthSession(reissueData.user);
 
   updateAuthTokens(nextTokens);
+  updateAuthSession(nextSession);
 
   return nextTokens;
 }
@@ -172,6 +190,7 @@ async function executeRequest<T>(
 
   const response = await fetch(buildApiUrl(path), {
     ...requestOptions,
+    credentials: 'include',
     headers: requestHeaders,
     body: requestBody,
   });
