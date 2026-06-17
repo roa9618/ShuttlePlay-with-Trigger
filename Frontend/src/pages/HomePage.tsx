@@ -1,25 +1,23 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import Logo from '../components/Logo';
 import ShuttlecockIcon from '../components/ShuttlecockIcon';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 import { Calendar, ChevronDown, ChevronRight, ClipboardCheck, Download, LogIn, LogOut, QrCode, Settings, UserPlus, Users } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { consumeAuthRedirectPath, getAuthAccessToken, getAuthRedirectPath, getAuthSession, setAuthRedirectPath, updateAuthTokens } from '../utils/authSession';
+import { getAuthAccessToken, getAuthSession, setAuthRedirectPath } from '../utils/authSession';
 import { usePwaInstall } from '../utils/usePwaInstall';
 import { styles } from './HomePage.styles';
 
 export default function HomePage() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
   const { install, isInstalled, installGuide } = usePwaInstall();
-  const { session, isAuthenticated, refreshSession, setSessionFromStorage, logout } = useAuth();
+  const { session, isAuthenticated, setSessionFromStorage, logout } = useAuth();
   const [toastMessage, setToastMessage] = useState('');
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const profileMenuRef = useRef<HTMLDivElement | null>(null);
-  const oauthHandledRef = useRef(false);
   const displaySession = session ?? (getAuthAccessToken() ? getAuthSession() : null);
 
   const mainActions = [
@@ -50,58 +48,6 @@ export default function HomePage() {
     { title: '내 기록', path: '/my-record', icon: ClipboardCheck },
     { title: '설정', path: '/settings', icon: Settings },
   ];
-
-  useEffect(() => {
-    if (oauthHandledRef.current) {
-      return;
-    }
-
-    const accessToken = searchParams.get('accessToken') ?? searchParams.get('access_token');
-    const refreshToken = searchParams.get('refreshToken') ?? searchParams.get('refresh_token');
-    const profileCompleted = searchParams.get('profileCompleted');
-
-    if (!accessToken || !refreshToken) {
-      return;
-    }
-
-    oauthHandledRef.current = true;
-
-    const handleOAuthRedirect = async () => {
-      updateAuthTokens({
-        accessToken,
-        refreshToken,
-      });
-
-      window.history.replaceState(null, '', window.location.pathname);
-      const redirectPath = getAuthRedirectPath();
-
-      if (profileCompleted === 'false') {
-        navigate(`/social-signup?redirect=${encodeURIComponent(redirectPath)}`, {
-          replace: true,
-        });
-        return;
-      }
-
-      const nextSession = await refreshSession();
-
-      if (nextSession) {
-        consumeAuthRedirectPath();
-        navigate(redirectPath, {
-          replace: true,
-        });
-        return;
-      }
-
-      navigate('/login', {
-        replace: true,
-        state: {
-          error: '소셜 로그인 정보를 확인할 수 없습니다.',
-        },
-      });
-    };
-
-    handleOAuthRedirect();
-  }, [searchParams, refreshSession, navigate]);
 
   useEffect(() => {
     if (!session && getAuthAccessToken()) {

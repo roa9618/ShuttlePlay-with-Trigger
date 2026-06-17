@@ -10,7 +10,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Sparkles } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { ApiClientError } from '../utils/apiClient';
-import { consumeAuthRedirectPath, getAuthRedirectPath, normalizeAuthRedirectPath, setAuthRedirectPath, updateAuthTokens } from '../utils/authSession';
+import {
+  broadcastAuthUserUpdated,
+  consumeAuthRedirectPath,
+  getAuthRedirectPath,
+  normalizeAuthRedirectPath,
+  setAuthRedirectPath,
+} from '../utils/authSession';
 import { footerDocuments, type FooterDocumentKey } from '../utils/footerContent';
 import { getCurrentUser, getProfileCompletion, updateProfileCompletion } from '../utils/userApi';
 import { styles } from './SignupPage.styles';
@@ -72,8 +78,6 @@ export default function SocialSignupPage() {
   };
 
   useEffect(() => {
-    const accessToken = searchParams.get('accessToken') ?? searchParams.get('access_token');
-    const refreshToken = searchParams.get('refreshToken') ?? searchParams.get('refresh_token');
     const redirectParam = searchParams.get('redirect');
     const socialName = getSocialNameFromParams(searchParams);
 
@@ -89,17 +93,6 @@ export default function SocialSignupPage() {
         name: current.name || socialName,
       }));
     }
-
-    if (!accessToken || !refreshToken) {
-      return;
-    }
-
-    updateAuthTokens({
-      accessToken,
-      refreshToken,
-    });
-
-    window.history.replaceState(null, '', window.location.pathname);
   }, [searchParams]);
 
   useEffect(() => {
@@ -217,6 +210,7 @@ export default function SocialSignupPage() {
         .catch(() => null)
         .finally(() => {
           setSessionFromStorage();
+          broadcastAuthUserUpdated();
         });
 
       moveToReturnPath();

@@ -13,6 +13,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { API_ORIGIN, ApiClientError, apiClient } from '../utils/apiClient';
 import {
   consumeAuthRedirectPath,
+  broadcastAuthLogin,
   getAuthRedirectPath,
   normalizeAuthRedirectPath,
   setAuthRedirectPath,
@@ -35,10 +36,9 @@ type SocialProvider = {
 
 type LoginResponse = {
   accessToken: string;
-  refreshToken: string;
   tokenType: string;
   expiresIn: number;
-  refreshTokenExpiresIn: number | null;
+  refreshTokenExpiresIn?: number | null;
   user: {
     id: number;
     name: string;
@@ -208,10 +208,10 @@ export default function LoginPage() {
 
       startTokenAuthSession(session, {
         accessToken: response.accessToken,
-        refreshToken: response.refreshToken,
       }, rememberLogin);
 
       setSessionFromStorage();
+      broadcastAuthLogin();
 
       const returnPath = getReturnPath();
       consumeAuthRedirectPath();

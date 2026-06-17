@@ -4,30 +4,16 @@ import Logo from '../components/Logo';
 import ShuttlecockIcon from '../components/ShuttlecockIcon';
 import { Sparkles } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { consumeAuthRedirectPath, getAuthRedirectPath, startTokenAuthSession, type AuthSession, type UserRole } from '../utils/authSession';
+import { broadcastAuthLogin, consumeAuthRedirectPath, getAuthRedirectPath } from '../utils/authSession';
 import { styles } from './LoginPage.styles';
-
-function normalizeRole(role: string | null): UserRole {
-  if (role === 'ADMIN') {
-    return 'ADMIN';
-  }
-
-  return 'USER';
-}
-
-function normalizeProfileCompleted(value: string | null) {
-  return value === 'true';
-}
 
 export default function OAuthCallbackPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { setSessionFromStorage } = useAuth();
+  const { refreshSession } = useAuth();
 
   useEffect(() => {
     const error = searchParams.get('error');
-    const accessToken = searchParams.get('accessToken');
-    const refreshToken = searchParams.get('refreshToken');
 
     if (error) {
       navigate('/login', {
@@ -39,44 +25,38 @@ export default function OAuthCallbackPage() {
       return;
     }
 
-    if (!accessToken || !refreshToken) {
-      navigate('/login', {
+    const handleOAuthCallback = async () => {
+      const redirectPath = getAuthRedirectPath();
+      const nextSession = await refreshSession();
+
+      if (!nextSession) {
+        navigate('/login', {
+          replace: true,
+          state: {
+            error: '소셜 로그인 정보를 확인할 수 없습니다.',
+          },
+        });
+        return;
+      }
+
+      broadcastAuthLogin();
+
+      if (nextSession.profileCompleted) {
+        consumeAuthRedirectPath();
+
+        navigate(redirectPath, {
+          replace: true,
+        });
+        return;
+      }
+
+      navigate(`/social-signup?redirect=${encodeURIComponent(redirectPath)}`, {
         replace: true,
-        state: {
-          error: '소셜 로그인 정보를 확인할 수 없습니다.',
-        },
       });
-      return;
-    }
-
-    const profileCompleted = normalizeProfileCompleted(searchParams.get('profileCompleted'));
-
-    const session: AuthSession = {
-      id: Number(searchParams.get('id')) || undefined,
-      email: searchParams.get('email') ?? '',
-      name: searchParams.get('name') ?? '회원',
-      role: normalizeRole(searchParams.get('role')),
-      provider: searchParams.get('provider') ?? undefined,
-      profileCompleted,
     };
 
-    startTokenAuthSession(session, {
-      accessToken,
-      refreshToken,
-    });
-
-    setSessionFromStorage();
-
-    const redirectPath = getAuthRedirectPath();
-
-    if (profileCompleted) {
-      consumeAuthRedirectPath();
-    }
-
-    navigate(profileCompleted ? redirectPath : `/social-signup?redirect=${encodeURIComponent(redirectPath)}`, {
-      replace: true,
-    });
-  }, [navigate, searchParams, setSessionFromStorage]);
+    handleOAuthCallback();
+  }, [navigate, searchParams, refreshSession]);
 
   return (
     <div className = {styles.page}>

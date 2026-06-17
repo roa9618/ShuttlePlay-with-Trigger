@@ -33,15 +33,19 @@ public class RefreshToken extends BaseEntity {
     @Column(nullable = false)
     private boolean revoked;
 
-    private RefreshToken(Long userId, String token, LocalDateTime expiresAt) {
+    @Column(nullable = false, columnDefinition = "boolean default false")
+    private boolean persistent;
+
+    private RefreshToken(Long userId, String token, LocalDateTime expiresAt, boolean persistent) {
         this.userId = userId;
         this.token = token;
         this.expiresAt = expiresAt;
         this.revoked = false;
+        this.persistent = persistent;
     }
 
-    public static RefreshToken create(Long userId, String token, LocalDateTime expiresAt) {
-        return new RefreshToken(userId, token, expiresAt);
+    public static RefreshToken create(Long userId, String token, LocalDateTime expiresAt, boolean persistent) {
+        return new RefreshToken(userId, token, expiresAt, persistent);
     }
 
     public boolean isExpired() {

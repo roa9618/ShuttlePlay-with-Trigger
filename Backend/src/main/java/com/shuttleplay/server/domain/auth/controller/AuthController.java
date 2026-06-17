@@ -7,7 +7,6 @@ import com.shuttleplay.server.domain.auth.dto.request.LoginRequest;
 import com.shuttleplay.server.domain.auth.dto.request.PasswordResetConfirmRequest;
 import com.shuttleplay.server.domain.auth.dto.request.PasswordResetSendRequest;
 import com.shuttleplay.server.domain.auth.dto.request.RegisterRequest;
-import com.shuttleplay.server.domain.auth.dto.request.TokenReissueRequest;
 import com.shuttleplay.server.domain.auth.dto.response.CheckEmailResponse;
 import com.shuttleplay.server.domain.auth.dto.response.EmailVerificationConfirmResponse;
 import com.shuttleplay.server.domain.auth.dto.response.EmailVerificationSendResponse;
@@ -18,15 +17,18 @@ import com.shuttleplay.server.domain.auth.dto.response.PasswordResetSendResponse
 import com.shuttleplay.server.domain.auth.dto.response.RegisterResponse;
 import com.shuttleplay.server.domain.auth.dto.response.TokenReissueResponse;
 import com.shuttleplay.server.domain.auth.service.AuthService;
+import com.shuttleplay.server.domain.auth.service.RefreshTokenCookieService;
 import com.shuttleplay.server.global.common.ApiResponse;
 import com.shuttleplay.server.global.security.CustomUserDetails;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.util.StringUtils;
+import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -40,6 +42,7 @@ public class AuthController {
     private static final String BEARER_PREFIX = "Bearer ";
 
     private final AuthService authService;
+    private final RefreshTokenCookieService refreshTokenCookieService;
 
     @PostMapping("/check-email")
     public ResponseEntity<ApiResponse<CheckEmailResponse>> checkEmail(
@@ -84,29 +87,51 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<LoginResponse>> login(
-            @Valid @RequestBody LoginRequest request
+            @Valid @RequestBody LoginRequest request,
+            HttpServletResponse servletResponse
     ) {
-        LoginResponse response = authService.login(request);
+        AuthService.LoginResult result = authService.login(request);
 
-        return ResponseEntity.ok(ApiResponse.success("로그인되었습니다.", response));
+        refreshTokenCookieService.addRefreshTokenCookie(
+                servletResponse,
+                result.refreshToken(),
+                result.response().getRefreshTokenExpiresIn(),
+                result.persistent()
+        );
+
+        return ResponseEntity.ok(ApiResponse.success("로그인되었습니다.", result.response()));
     }
 
-    @PostMapping("/token/reissue")
+    @PostMapping({"/token/reissue", "/session"})
     public ResponseEntity<ApiResponse<TokenReissueResponse>> reissueToken(
-            @Valid @RequestBody TokenReissueRequest request
+            @CookieValue(
+                    name = RefreshTokenCookieService.REFRESH_TOKEN_COOKIE_NAME,
+                    required = false
+            ) String refreshToken,
+            HttpServletResponse servletResponse
     ) {
-        TokenReissueResponse response = authService.reissueToken(request);
+        AuthService.TokenReissueResult result = authService.reissueToken(refreshToken);
 
-        return ResponseEntity.ok(ApiResponse.success("토큰이 재발급되었습니다.", response));
+        refreshTokenCookieService.addRefreshTokenCookie(
+                servletResponse,
+                result.refreshToken(),
+                result.response().getRefreshTokenExpiresIn(),
+                result.persistent()
+        );
+
+        return ResponseEntity.ok(ApiResponse.success("토큰이 재발급되었습니다.", result.response()));
     }
 
     @PostMapping("/logout")
     public ResponseEntity<ApiResponse<LogoutResponse>> logout(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            HttpServletRequest request
+            HttpServletRequest request,
+            HttpServletResponse servletResponse
     ) {
         String accessToken = resolveAccessToken(request);
         LogoutResponse response = authService.logout(userDetails.getId(), accessToken);
+
+        refreshTokenCookieService.clearRefreshTokenCookie(servletResponse);
 
         return ResponseEntity.ok(ApiResponse.success("로그아웃되었습니다.", response));
     }

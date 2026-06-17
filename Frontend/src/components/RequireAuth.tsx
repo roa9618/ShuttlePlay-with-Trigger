@@ -4,7 +4,11 @@ import { setAuthRedirectPath } from '../utils/authSession';
 
 export default function RequireAuth() {
   const location = useLocation();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isAuthLoading } = useAuth();
+
+  if (isAuthLoading) {
+    return null;
+  }
 
   if (!isAuthenticated) {
     const returnPath = `${location.pathname}${location.search}${location.hash}`;

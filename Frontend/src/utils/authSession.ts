@@ -15,82 +15,36 @@ export type AuthSession = {
 
 export type AuthTokens = {
   accessToken: string;
-  refreshToken: string;
 };
 
 const AUTH_SESSION_KEY = 'shuttleplay-auth-session';
 const AUTH_TOKENS_KEY = 'shuttleplay-auth-tokens';
 const AUTH_REDIRECT_PATH_KEY = 'shuttleplay-auth-redirect-path';
+const AUTH_CHANNEL_NAME = 'shuttleplay-auth-channel';
 
-function parseStoredValue<T>(storedValue: string | null, storage: Storage, key: string): T | null {
-  if (!storedValue) {
+let memorySession: AuthSession | null = null;
+let memoryAccessToken: string | null = null;
+let authChannel: BroadcastChannel | null = null;
+
+export type AuthBroadcastEventType = 'LOGIN' | 'LOGOUT' | 'USER_UPDATED';
+
+function getAuthChannel() {
+  if (typeof window === 'undefined' || typeof BroadcastChannel === 'undefined') {
     return null;
   }
 
-  try {
-    return JSON.parse(storedValue) as T;
-  } catch {
-    storage.removeItem(key);
-    return null;
+  if (!authChannel) {
+    authChannel = new BroadcastChannel(AUTH_CHANNEL_NAME);
   }
+
+  return authChannel;
 }
 
-function getStoredValue<T>(key: string): T | null {
-  const localStorageValue = parseStoredValue<T>(
-    window.localStorage.getItem(key),
-    window.localStorage,
-    key,
-  );
-
-  if (localStorageValue) {
-    return localStorageValue;
-  }
-
-  return parseStoredValue<T>(
-    window.sessionStorage.getItem(key),
-    window.sessionStorage,
-    key,
-  );
-}
-
-function getActiveStorage() {
-  if (window.localStorage.getItem(AUTH_SESSION_KEY)) {
-    return window.localStorage;
-  }
-
-  if (window.sessionStorage.getItem(AUTH_SESSION_KEY)) {
-    return window.sessionStorage;
-  }
-
-  if (window.localStorage.getItem(AUTH_TOKENS_KEY)) {
-    return window.localStorage;
-  }
-
-  if (window.sessionStorage.getItem(AUTH_TOKENS_KEY)) {
-    return window.sessionStorage;
-  }
-
-  return window.localStorage;
-}
-
-function getInactiveStorage(storage: Storage) {
-  return storage === window.localStorage ? window.sessionStorage : window.localStorage;
-}
-
-function persistSession(session: AuthSession, tokens: AuthTokens | null, remember = false) {
-  const storage = window.localStorage;
-  const inactiveStorage = getInactiveStorage(storage);
-
-  inactiveStorage.removeItem(AUTH_SESSION_KEY);
-  inactiveStorage.removeItem(AUTH_TOKENS_KEY);
-
-  storage.setItem(AUTH_SESSION_KEY, JSON.stringify(session));
-
-  if (tokens) {
-    storage.setItem(AUTH_TOKENS_KEY, JSON.stringify(tokens));
-  } else {
-    storage.removeItem(AUTH_TOKENS_KEY);
-  }
+function removeLegacyStoredAuth() {
+  window.sessionStorage.removeItem(AUTH_SESSION_KEY);
+  window.sessionStorage.removeItem(AUTH_TOKENS_KEY);
+  window.localStorage.removeItem(AUTH_SESSION_KEY);
+  window.localStorage.removeItem(AUTH_TOKENS_KEY);
 }
 
 export function normalizeAuthRedirectPath(path: string | null | undefined) {
@@ -115,56 +69,53 @@ export function normalizeAuthRedirectPath(path: string | null | undefined) {
 }
 
 export function getAuthSession(): AuthSession | null {
-  return getStoredValue<AuthSession>(AUTH_SESSION_KEY);
+  return memorySession;
 }
 
 export function getAuthTokens(): AuthTokens | null {
-  return getStoredValue<AuthTokens>(AUTH_TOKENS_KEY);
+  if (!memoryAccessToken) {
+    return null;
+  }
+
+  return {
+    accessToken: memoryAccessToken,
+  };
 }
 
 export function getAuthAccessToken() {
-  return getAuthTokens()?.accessToken ?? null;
-}
-
-export function getAuthRefreshToken() {
-  return getAuthTokens()?.refreshToken ?? null;
+  return memoryAccessToken;
 }
 
 export function isAuthenticated() {
-  return getAuthSession() !== null;
+  return memorySession !== null && memoryAccessToken !== null;
 }
 
 export function hasRole(role: UserRole) {
-  return getAuthSession()?.role === role;
+  return memorySession?.role === role;
 }
 
 export function startAuthSession(session: AuthSession, remember = false, tokens: AuthTokens | null = null) {
-  persistSession(session, tokens, remember);
+  void remember;
+  removeLegacyStoredAuth();
+  memorySession = session;
+  memoryAccessToken = tokens?.accessToken ?? memoryAccessToken;
 }
 
 export function startTokenAuthSession(session: AuthSession, tokens: AuthTokens, remember = false) {
-  persistSession(session, tokens, remember);
+  void remember;
+  removeLegacyStoredAuth();
+  memorySession = session;
+  memoryAccessToken = tokens.accessToken;
 }
 
 export function updateAuthTokens(tokens: AuthTokens) {
-  const storage = getActiveStorage();
-
-  storage.setItem(AUTH_TOKENS_KEY, JSON.stringify(tokens));
-  getInactiveStorage(storage).removeItem(AUTH_TOKENS_KEY);
+  removeLegacyStoredAuth();
+  memoryAccessToken = tokens.accessToken;
 }
 
 export function updateAuthSession(session: AuthSession) {
-  const storage = getActiveStorage();
-  const currentTokens = getAuthTokens();
-
-  storage.setItem(AUTH_SESSION_KEY, JSON.stringify(session));
-
-  if (currentTokens) {
-    storage.setItem(AUTH_TOKENS_KEY, JSON.stringify(currentTokens));
-  }
-
-  getInactiveStorage(storage).removeItem(AUTH_SESSION_KEY);
-  getInactiveStorage(storage).removeItem(AUTH_TOKENS_KEY);
+  removeLegacyStoredAuth();
+  memorySession = session;
 }
 
 export function setAuthRedirectPath(path: string | null | undefined) {
@@ -184,9 +135,44 @@ export function consumeAuthRedirectPath() {
 }
 
 export function endAuthSession() {
-  window.sessionStorage.removeItem(AUTH_SESSION_KEY);
-  window.sessionStorage.removeItem(AUTH_TOKENS_KEY);
+  memorySession = null;
+  memoryAccessToken = null;
   window.sessionStorage.removeItem(AUTH_REDIRECT_PATH_KEY);
-  window.localStorage.removeItem(AUTH_SESSION_KEY);
-  window.localStorage.removeItem(AUTH_TOKENS_KEY);
+  removeLegacyStoredAuth();
+}
+
+export function broadcastAuthLogin() {
+  getAuthChannel()?.postMessage({ type: 'LOGIN' });
+}
+
+export function broadcastAuthLogout() {
+  getAuthChannel()?.postMessage({ type: 'LOGOUT' });
+}
+
+export function broadcastAuthUserUpdated() {
+  getAuthChannel()?.postMessage({ type: 'USER_UPDATED' });
+}
+
+export function subscribeAuthBroadcast(listener: (eventType: AuthBroadcastEventType) => void) {
+  const channel = getAuthChannel();
+
+  if (!channel) {
+    return () => undefined;
+  }
+
+  const handleMessage = (event: MessageEvent) => {
+    if (
+      event.data?.type === 'LOGIN'
+      || event.data?.type === 'LOGOUT'
+      || event.data?.type === 'USER_UPDATED'
+    ) {
+      listener(event.data.type);
+    }
+  };
+
+  channel.addEventListener('message', handleMessage);
+
+  return () => {
+    channel.removeEventListener('message', handleMessage);
+  };
 }
