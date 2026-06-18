@@ -23,8 +23,8 @@ export default function HomePage() {
   const mainActions = [
     {
       title: '모임 참여',
-      description: '초대 링크나 QR로 오늘 모임에 참여하세요',
-      path: '/sessions/demo/join',
+      description: 'QR과 입장 코드로 일정에 간편하게 참여해요',
+      path: '/session-entry',
       icon: QrCode,
       badge: '참가자',
       tone: 'accent',

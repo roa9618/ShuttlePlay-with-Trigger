@@ -36,14 +36,17 @@ export default function Layout() {
     '/gallery',
   ];
 
-  // Check if current path should show desktop layout
-  const showDesktopLayout = desktopRoutes.some(route => location.pathname.startsWith(route)) ||
+  const isSessionEntryFlow = location.pathname.startsWith('/session-entry') ||
+    /^\/sessions\/[^/]+\/(join|guest-join|attendance|late|entry-result|status|guest-report)(\/|$)/.test(location.pathname);
+
+  // Session entry pages always use the centered, sidebar-free layout.
+  const showDesktopLayout = !isSessionEntryFlow && (desktopRoutes.some(route => location.pathname.startsWith(route)) ||
     location.pathname.includes('/dashboard') ||
     location.pathname.includes('/participants') ||
     location.pathname.includes('/queue') ||
     location.pathname.includes('/current') ||
     location.pathname.includes('/result/') ||
-    location.pathname.includes('/report');
+    location.pathname.includes('/report'));
 
   const showFooter = location.pathname === '/';
 

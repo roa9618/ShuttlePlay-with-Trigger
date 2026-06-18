@@ -100,7 +100,7 @@ const tabPaths: Record<TabKey, string> = {
   settings: 'settings',
 };
 
-type ScheduleItem = { id: number; title: string; startsAt: string; endsAt: string | null; date: string; time: string; place: string; joined: number; undecided: number; absent: number; guests: number; deadline: string; status: ScheduleStatus; sessionType: string; voteStatus: VoteStatus; matches: number | null; votingAllowed: boolean; guestAllowed: boolean; guestLinkAllowed: boolean };
+type ScheduleItem = { id: number; entryCode?: string; title: string; startsAt: string; endsAt: string | null; date: string; time: string; place: string; joined: number; undecided: number; absent: number; guests: number; deadline: string; status: ScheduleStatus; sessionType: string; voteStatus: VoteStatus; matches: number | null; votingAllowed: boolean; guestAllowed: boolean; guestLinkAllowed: boolean };
 type MemberItem = { id: number; name: string; profileImageUrl: string | null; gender: string; age: string; grade: string; role: string; participation: number; recent: number; rate: number; matches: number | null; winRate: number | null; doublesMmr: number; mixedMmr: number; streak: number | null; absenceRate: number | null };
 type GuestItem = { id: number; name: string; profileImageUrl: string | null; gender: string; age: string; grade: string; registered: boolean; userId: number | null; participation: number; lastParticipationAt: string | null; matches: number | null; winRate: number | null; doublesMmr: number | null; mixedMmr: number | null; memo: string | null };
 type PostItem = { id: number; authorId: number; type: string; pinned: boolean; title: string; author: string; date: string; views: number; comments: number; content: string; attachmentNames: string | null };
@@ -123,6 +123,7 @@ function toScheduleItem(session: GroupSessionResponse): ScheduleItem {
         : 'VOTING';
   return {
     id: session.id,
+    entryCode: session.entryCode,
     title: session.title,
     startsAt: session.startsAt,
     endsAt: session.endsAt,
@@ -512,7 +513,9 @@ export default function GroupDetailPage() {
   };
 
   const handleCopySessionGuestLink = async (sessionId: number) => {
-    await navigator.clipboard?.writeText(`${window.location.origin}/sessions/${sessionId}/guest-join`);
+    const schedule = scheduleItems.find(item => item.id === sessionId);
+    const code = schedule?.entryCode ?? (dashboard?.upcomingSession?.id === sessionId ? dashboard.upcomingSession.entryCode : undefined);
+    await navigator.clipboard?.writeText(`${window.location.origin}/sessions/${sessionId}/join${code ? `?code=${encodeURIComponent(code)}` : ''}`);
     showToast('운동 일정 공유 링크를 복사했습니다.');
   };
 
@@ -553,9 +556,7 @@ export default function GroupDetailPage() {
   };
 
   const handleEnterSchedule = (schedule: ScheduleItem) => {
-    navigate(canManageSchedule
-      ? `/sessions/${schedule.id}/dashboard`
-      : schedule.status === 'IN_PROGRESS' ? `/sessions/${schedule.id}/current` : `/sessions/${schedule.id}/status`);
+    navigate(`/sessions/${schedule.id}/join`);
   };
 
   const handleRequest = (requestId: number, approve: boolean) => {
@@ -822,7 +823,7 @@ export default function GroupDetailPage() {
         <Modal title = {getModalTitle(modal, selectedSchedule?.title, selectedPost?.title, selectedMember?.name, selectedGuest?.name)} onClose = {handleCloseModal} onBack = {modal.type === 'editGuest' ? () => setModal({ type: 'participants', id: modal.id }) : modal.type === 'participants' || modal.type === 'addGuest' || modal.type === 'manageSchedule' ? () => setModal({ type: 'schedule', id: modal.id }) : modal.type === 'memberPermissions' || modal.type === 'ownershipTransfer' || modal.type === 'memberRemoval' ? () => setModal({ type: 'member', id: modal.id }) : undefined} centeredHeader = {modal.type === 'createSchedule' || modal.type === 'schedule' || modal.type === 'post' || modal.type === 'writePost' || modal.type === 'member' || modal.type === 'guest' || modal.type === 'groupDeletion'} fixedScheduleSize = {modal.type === 'createSchedule' || modal.type === 'schedule' || modal.type === 'post' || modal.type === 'participants' || modal.type === 'addGuest' || modal.type === 'editGuest' || modal.type === 'manageSchedule' || modal.type === 'writePost' || modal.type === 'member' || modal.type === 'guest' || modal.type === 'memberPermissions' || modal.type === 'ownershipTransfer' || modal.type === 'memberRemoval' || modal.type === 'groupDeletion'}>
           {modal.type === 'createSchedule' && canManageSchedule && <CreateScheduleModal groupId = {numericGroupId} groupGuestAllowed = {guestAllowed} initialDate = {modal.initialDate} onComplete = {async () => { setModal(null); setListRefreshKey(current => current + 1); await loadGroupDetail(); }} onError = {error => showRequestError(error, '운동 일정을 만들지 못했습니다.')} />}
           {selectedSchedule && (
-            <ScheduleModal schedule = {selectedSchedule} canManage = {canManageSchedule} canAddGuest = {canManageSchedule && selectedSchedule.guestAllowed} canChangeVote = {canChangeVoteForSchedule(selectedSchedule, sameDayVoteChangeAllowed, postDeadlineVoteChangeAllowed)} canEnter = {canEnterSchedule(selectedSchedule, currentTime)} onVote = {status => handleVote(status, selectedSchedule.id)} onEnter = {() => handleEnterSchedule(selectedSchedule)} onOpenParticipants = {id => setModal({ type: 'participants', id })} onAddGuest = {id => setModal({ type: 'addGuest', id })} onManage = {id => setModal({ type: 'manageSchedule', id })} onShareGuestLink = {handleCopySessionGuestLink} />
+            <ScheduleModal schedule = {selectedSchedule} canManage = {canManageSchedule} canAddGuest = {canManageSchedule && selectedSchedule.guestAllowed} canChangeVote = {canChangeVoteForSchedule(selectedSchedule, sameDayVoteChangeAllowed, postDeadlineVoteChangeAllowed)} canEnter = {canEnterSchedule(selectedSchedule, currentTime) && !(selectedSchedule.voteStatus === 'ABSENT' && !canChangeVoteForSchedule(selectedSchedule, sameDayVoteChangeAllowed, postDeadlineVoteChangeAllowed))} onVote = {status => handleVote(status, selectedSchedule.id)} onEnter = {() => handleEnterSchedule(selectedSchedule)} onOpenParticipants = {id => setModal({ type: 'participants', id })} onAddGuest = {id => setModal({ type: 'addGuest', id })} onManage = {id => setModal({ type: 'manageSchedule', id })} onShareGuestLink = {handleCopySessionGuestLink} />
           )}
           {selectedPost && <PostModal groupId = {numericGroupId} post = {selectedPost} myMemberId = {groupInfo?.myMemberId} canManage = {canManagePosts} canEdit = {canManagePosts || groupInfo?.myMemberId === selectedPost.authorId} canComment = {canComment} onChanged = {async () => { setListRefreshKey(current => current + 1); await loadGroupDetail(); }} onError = {showRequestError} />}
           {modal.type === 'member' && selectedMember && (
@@ -893,7 +894,7 @@ function HomeTab({
   onNavigateReport: (id: number) => void;
 }) {
   const upcoming = dashboard?.upcomingSession ? toScheduleItem(dashboard.upcomingSession) : scheduleItems.find(schedule => schedule.status !== 'COMPLETED' && schedule.status !== 'CANCELLED');
-  const canEnter = canEnterSchedule(upcoming, currentTime);
+  const canEnter = canEnterSchedule(upcoming, currentTime) && !(upcoming?.voteStatus === 'ABSENT' && !canChangeVote);
   const recent = dashboard?.recentSessions.map(toScheduleItem) ?? [];
   const participationTrend = dashboard?.participationTrend.map(item => item.attendance) ?? [0, 0, 0, 0];
   const maxParticipation = Math.max(...participationTrend, 1);
@@ -972,6 +973,7 @@ function HomeTab({
                   ))}
                 </div>}
                 {canEnter && <Button className = {styles.roundButton} onClick = {() => onEnterSchedule(upcoming)}>입장</Button>}
+                {!canEnter && upcoming.status !== 'COMPLETED' && upcoming.status !== 'CANCELLED' && <span className="text-sm text-muted-foreground">입장은 운동 시작 1시간 전부터 가능해요.</span>}
                 <Button variant = "outline" className = {styles.roundButton} onClick = {() => onOpenSchedule(upcoming.id)}>일정 상세</Button>
               </div>
             </div> : <EmptyState className = {styles.preservedEmptyState} icon = {CalendarDays} title = "예정된 운동 일정이 없습니다." description = "새로운 운동 일정이 등록되면 이곳에서 확인할 수 있습니다." />}

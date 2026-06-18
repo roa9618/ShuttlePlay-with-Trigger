@@ -38,6 +38,9 @@ import GalleryPage from "../pages/GalleryPage";
 import NotFoundPage from "../pages/NotFoundPage";
 import NoticePage from "../pages/NoticePage";
 import AdminDashboardPage from "../pages/AdminDashboardPage";
+import SessionEntryPage from "../pages/SessionEntryPage";
+import SessionEntryResultPage from "../pages/SessionEntryResultPage";
+import SessionEntryPreviewPage from "../pages/SessionEntryPreviewPage";
 
 export const router = createBrowserRouter([
   {
@@ -53,12 +56,19 @@ export const router = createBrowserRouter([
       { path: "password-reset/confirm", Component: PasswordResetConfirmPage, handle: { title: "새 비밀번호 설정" } },
 
       // Mobile-optimized pages (no sidebar)
-      { path: "sessions/:sessionId/join", Component: JoinSessionPage, handle: { title: "세션 참가" } },
+      { path: "session-entry", Component: SessionEntryPage, handle: { title: "일정 입장" } },
+      { path: "session-entry/previews/:previewType", Component: SessionEntryPreviewPage, handle: { title: "일정 입장 화면 미리보기" } },
+      { path: "session-entry/previews/results/:resultType", Component: SessionEntryResultPage, handle: { title: "일정 입장 결과 미리보기" } },
+      { path: "session-entry/result/:resultType", Component: SessionEntryResultPage, handle: { title: "일정 입장 안내" } },
+      { path: "sessions/:sessionId/join", Component: JoinSessionPage, handle: { title: "일정 참가" } },
+      { path: "sessions/:sessionId/entry-result/:resultType", Component: SessionEntryResultPage, handle: { title: "일정 입장 안내" } },
       { path: "sessions/:sessionId/guest-join", Component: GuestJoinPage, handle: { title: "게스트 참가" } },
       { path: "sessions/:sessionId/attendance", Component: AttendancePage, handle: { title: "출석 체크" } },
       { path: "sessions/:sessionId/late", Component: LateRegistrationPage, handle: { title: "지각 등록" } },
+      { path: "sessions/:sessionId/guest-report", Component: ParticipantSessionReportPage, handle: { title: "게스트 일정 리포트" } },
       { path: "sessions/:sessionId/status", Component: ParticipantStatusPage, handle: { title: "참가 상태" } },
       { path: "sessions/:sessionId/next-match", Component: NextMatchPage, handle: { title: "다음 경기" } },
+      { path: "sessions/demo/my-report", Component: ParticipantSessionReportPage, handle: { title: "오늘 내 운동 기록" } },
 
       // Large display (no sidebar)
       { path: "sessions/:sessionId/display", Component: DisplayBoardPage, handle: { title: "경기 현황판" } },
@@ -89,8 +99,8 @@ export const router = createBrowserRouter([
           { path: "my-record", Component: MyRecordPage, handle: { title: "내 기록" } },
           { path: "my-record/mmr", Component: MmrHistoryPage, handle: { title: "MMR 변동" } },
           { path: "my-record/matches", Component: MatchHistoryPage, handle: { title: "전체 경기 기록" } },
-          { path: "sessions/:sessionId/report", Component: SessionReportPage, handle: { title: "세션 리포트" } },
-          { path: "sessions/:sessionId/my-report", Component: ParticipantSessionReportPage, handle: { title: "내 세션 리포트" } },
+          { path: "sessions/:sessionId/report", Component: SessionReportPage, handle: { title: "일정 리포트" } },
+          { path: "sessions/:sessionId/my-report", Component: ParticipantSessionReportPage, handle: { title: "내 일정 리포트" } },
           { path: "settings", Component: SettingsPage, handle: { title: "설정" } },
           { path: "notifications", Component: NotificationsPage, handle: { title: "전체 알림" } },
           { path: "notices", Component: NoticePage, handle: { title: "공지사항" } },
