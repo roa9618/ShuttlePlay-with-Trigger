@@ -30,7 +30,9 @@ export default function GalleryPage() {
     { name: '경기 결과 입력', path: '/sessions/demo/result/new', description: '경기 결과 및 점수 입력' },
     { name: '경기 결과 수정', path: '/sessions/demo/result/1/edit', description: '저장된 결과 수정' },
     { name: '세션 리포트', path: '/sessions/demo/report', description: '세션 통계 및 요약' },
-    { name: '내 기록', path: '/my-record', description: '개인 경기 기록 및 월별 캘린더' },
+    { name: '내 기록', path: '/my-record', description: '개인 운동과 경기 기록 요약' },
+    { name: 'MMR 변동', path: '/my-record/mmr', description: '복식·혼복 MMR 변화 그래프' },
+    { name: '전체 경기 기록', path: '/my-record/matches', description: '필터와 페이지네이션을 제공하는 경기 이력' },
     { name: '설정', path: '/settings', description: '프로필 및 알림 설정' },
     { name: '전체 알림', path: '/notifications', description: '알림 목록 확인 및 읽음 처리' },
     { name: '페이지 갤러리', path: '/gallery', description: '전체 화면 목록과 테스트 진입점' },
@@ -51,6 +53,8 @@ export default function GalleryPage() {
     { name: '다음 경기 예정', path: '/sessions/demo/next-match', description: '경기 시작 알림' },
     { name: '오늘 내 운동 기록', path: '/sessions/demo/my-report', description: '당일 경기, 승패, MMR 변화' },
     { name: '내 기록', path: '/my-record', description: '월별 기록과 최근 경기 확인' },
+    { name: 'MMR 변동', path: '/my-record/mmr', description: '복식·혼복 MMR 변화 확인' },
+    { name: '전체 경기 기록', path: '/my-record/matches', description: '전체 경기 이력 조회' },
     { name: '설정', path: '/settings', description: '프로필, 알림, PWA 설정' },
   ];
 
