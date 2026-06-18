@@ -38,6 +38,7 @@ public class GroupDetailService {
     private final NotificationService notifications;
     private final GroupNotificationDispatchService notificationDispatch;
     private final GroupEventService events;
+    private final SessionEntryCodeService entryCodes;
 
     public Map<String, Object> group(Long userId, Long groupId) {
         Optional<GroupMember> membership = access.viewerMembership(groupId, userId);
@@ -228,6 +229,7 @@ public class GroupDetailService {
                 guestLinkAllowed,
                 guestAllowed
         ));
+        entryCodes.ensureCode(session);
         log(actor, "SESSION_CREATED", session.getTitle());
         notifyAll(actor.getGroup(), "새 운동 일정이 등록되었습니다.", sessionPath(groupId, session.getId()));
         events.sessions(groupId, "SESSION_CREATED");
@@ -380,7 +382,7 @@ public class GroupDetailService {
 
     private Map<String, Object> detailedSession(GroupSession s) { Map<String, Object> m = sessionMap(s); m.put("attending", voteCount(s, SessionVoteStatus.ATTENDING)); m.put("undecided", undecidedCount(s)); m.put("absent", voteCount(s, SessionVoteStatus.ABSENT)); m.put("guests", guests.findAllBySessionId(s.getId()).stream().map(this::guestMap).toList()); return m; }
     private Map<String, Object> sessionMapWithVote(GroupSession session, GroupMember member) { Map<String, Object> result = sessionMap(session); result.put("myVoteStatus", votes.findBySessionIdAndMemberId(session.getId(), member.getId()).map(GroupSessionVote::getStatus).orElse(null)); return result; }
-    private Map<String, Object> sessionMap(GroupSession s) { Map<String, Object> m = map(); m.put("id", s.getId()); m.put("title", s.getTitle()); m.put("startsAt", s.getStartsAt()); m.put("endsAt", s.getEndsAt()); m.put("place", s.getPlace()); m.put("voteDeadline", s.getVoteDeadline()); m.put("sessionType", s.getSessionType()); m.put("courtCount", s.getCourtCount()); m.put("votingAllowed", s.isVotingAllowed()); m.put("guestLinkAllowed", s.isGuestLinkAllowed()); m.put("guestAllowed", s.isGuestAllowed()); m.put("attendanceCount", s.getAttendanceCount()); m.put("attending", voteCount(s, SessionVoteStatus.ATTENDING)); m.put("undecided", undecidedCount(s)); m.put("absent", voteCount(s, SessionVoteStatus.ABSENT)); m.put("guestCount", guests.findAllBySessionId(s.getId()).size()); m.put("status", s.getStatus()); return m; }
+    private Map<String, Object> sessionMap(GroupSession s) { Map<String, Object> m = map(); m.put("id", s.getId()); m.put("entryCode", s.getEntryCode() == null || s.getEntryCode().isBlank() ? entryCodes.ensurePersistedCode(s.getId()) : s.getEntryCode()); m.put("title", s.getTitle()); m.put("startsAt", s.getStartsAt()); m.put("endsAt", s.getEndsAt()); m.put("place", s.getPlace()); m.put("voteDeadline", s.getVoteDeadline()); m.put("sessionType", s.getSessionType()); m.put("courtCount", s.getCourtCount()); m.put("votingAllowed", s.isVotingAllowed()); m.put("guestLinkAllowed", s.isGuestLinkAllowed()); m.put("guestAllowed", s.isGuestAllowed()); m.put("attendanceCount", s.getAttendanceCount()); m.put("attending", voteCount(s, SessionVoteStatus.ATTENDING)); m.put("undecided", undecidedCount(s)); m.put("absent", voteCount(s, SessionVoteStatus.ABSENT)); m.put("guestCount", guests.findAllBySessionId(s.getId()).size()); m.put("status", s.getStatus()); return m; }
     private Map<String, Object> memberMap(GroupMember m, SessionVoteStatus status) { Map<String, Object> x = map(); User u = m.getUser(); int recentCount = recentParticipationCount(m); long recentSessions = sessions.findAllByGroupIdAndStartsAtBetweenAndStatusAndIsDeletedFalse(m.getGroup().getId(), LocalDateTime.now().minusDays(28), LocalDateTime.now(), GroupSessionStatus.CLOSED).size(); x.put("id", m.getId()); x.put("name", u.getName()); x.put("profileImageUrl", u.getProfileImageUrl()); x.put("gender", u.getGender()); x.put("ageGroup", u.getAgeGroup()); x.put("grade", u.getGrade()); x.put("role", m.getRole()); x.put("participationCount", votes.countByMemberIdAndStatusAndSession_Status(m.getId(), SessionVoteStatus.ATTENDING, GroupSessionStatus.CLOSED)); x.put("monthlyParticipationRate", recentSessions == 0 ? 0 : Math.round(recentCount * 100f / recentSessions)); x.put("recentFourWeekParticipationCount", recentCount); x.put("doublesMmr", u.getDoublesMmr()); x.put("mixedMmr", u.getMixedMmr()); x.put("voteStatus", status); return x; }
     private Map<String, Object> guestMap(GroupSessionGuest g) { return Map.of("id", g.getId(), "name", g.getName(), "gender", g.getGender(), "ageGroup", g.getAgeGroup(), "grade", g.getGrade(), "status", g.getStatus()); }
     private Map<String, Object> guestParticipantMap(GroupSessionGuest g) { Map<String, Object> x = map(); x.putAll(guestMap(g)); x.put("guest", true); x.put("profileImageUrl", null); x.put("role", "GUEST"); x.put("voteStatus", g.getStatus()); return x; }

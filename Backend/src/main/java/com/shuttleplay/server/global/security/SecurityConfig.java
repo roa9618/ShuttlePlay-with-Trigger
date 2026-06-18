@@ -72,6 +72,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/sessions/*/guest-join").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/sessions/*/guest-join").permitAll()
+                        .requestMatchers("/api/session-entry/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .oauth2Login(oauth2 -> oauth2

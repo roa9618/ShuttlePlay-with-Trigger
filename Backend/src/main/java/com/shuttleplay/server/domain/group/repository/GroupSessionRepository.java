@@ -10,6 +10,11 @@ import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface GroupSessionRepository extends JpaRepository<GroupSession, Long> {
+    boolean existsByEntryCode(String entryCode);
+    List<GroupSession> findAllByEntryCodeIsNullAndIsDeletedFalse();
+
+    @EntityGraph(attributePaths = {"group"})
+    Optional<GroupSession> findByEntryCodeAndIsDeletedFalse(String entryCode);
     @EntityGraph(attributePaths = {"group"})
     List<GroupSession> findAllByGroupIdInAndStartsAtBetweenAndStatusNot(
             Collection<Long> groupIds,

@@ -73,6 +73,9 @@ public class GroupSession extends BaseEntity {
     @Column(nullable = false)
     private int attendanceCount;
 
+    @Column(name = "entry_code", unique = true, length = 8)
+    private String entryCode;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private GroupSessionStatus status;
@@ -125,5 +128,9 @@ public class GroupSession extends BaseEntity {
 
     public void updateAttendanceCount(int attendanceCount) {
         this.attendanceCount = attendanceCount;
+    }
+
+    public void assignEntryCode(String entryCode) {
+        if (this.entryCode == null || this.entryCode.isBlank()) this.entryCode = entryCode;
     }
 }
