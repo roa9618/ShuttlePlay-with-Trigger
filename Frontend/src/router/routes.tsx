@@ -26,6 +26,8 @@ import CurrentMatchesPage from "../pages/CurrentMatchesPage";
 import MatchResultInputPage from "../pages/MatchResultInputPage";
 import MatchResultEditPage from "../pages/MatchResultEditPage";
 import MyRecordPage from "../pages/MyRecordPage";
+import MmrHistoryPage from "../pages/MmrHistoryPage";
+import MatchHistoryPage from "../pages/MatchHistoryPage";
 import SessionReportPage from "../pages/SessionReportPage";
 import ParticipantSessionReportPage from "../pages/ParticipantSessionReportPage";
 import DisplayBoardPage from "../pages/DisplayBoardPage";
@@ -82,6 +84,8 @@ export const router = createBrowserRouter([
           { path: "sessions/:sessionId/result/new", Component: MatchResultInputPage, handle: { title: "경기 결과 입력" } },
           { path: "sessions/:sessionId/result/:matchId/edit", Component: MatchResultEditPage, handle: { title: "경기 결과 수정" } },
           { path: "my-record", Component: MyRecordPage, handle: { title: "내 기록" } },
+          { path: "my-record/mmr", Component: MmrHistoryPage, handle: { title: "MMR 변동" } },
+          { path: "my-record/matches", Component: MatchHistoryPage, handle: { title: "전체 경기 기록" } },
           { path: "sessions/:sessionId/report", Component: SessionReportPage, handle: { title: "세션 리포트" } },
           { path: "sessions/:sessionId/my-report", Component: ParticipantSessionReportPage, handle: { title: "내 세션 리포트" } },
           { path: "settings", Component: SettingsPage, handle: { title: "설정" } },

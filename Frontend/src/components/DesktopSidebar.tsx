@@ -5,6 +5,8 @@ import {
   Home,
   Users,
   BarChart3,
+  ChartNoAxesCombined,
+  ListChecks,
   Settings,
   LogOut,
   Grid3x3,
@@ -66,7 +68,16 @@ export default function DesktopSidebar() {
   const navigation = [
     { name: '홈', path: '/', icon: Home },
     { name: '내 모임', path: '/groups', icon: Users },
-    { name: '내 기록', path: '/my-record', icon: BarChart3 },
+    {
+      name: '내 기록',
+      path: '/my-record',
+      icon: BarChart3,
+      children: [
+        { name: '기록 요약', path: '/my-record' },
+        { name: 'MMR 변동', path: '/my-record/mmr', icon: ChartNoAxesCombined },
+        { name: '전체 경기 기록', path: '/my-record/matches', icon: ListChecks },
+      ],
+    },
     { name: '설정', path: '/settings', icon: Settings },
     { name: '페이지 갤러리', path: '/gallery', icon: Grid3x3 },
   ];
@@ -246,13 +257,26 @@ export default function DesktopSidebar() {
           const Icon = item.icon;
           const active = isActive(item.path);
 
-          return (
-            <Link key = {item.path} to = {item.path} className = {styles.navLink(active)}
-            >
-              <Icon className = {styles.iconIcon} />
-              <span className = {styles.labelText}>{item.name}</span>
+          return <div key={item.path}>
+            <Link to={item.path} className={styles.navLink(active)}>
+              <Icon className={styles.iconIcon} />
+              <span className={styles.labelText}>{item.name}</span>
             </Link>
-          );
+            {item.children && <div className={styles.subNav(active)} aria-hidden={!active}>
+              <div>
+                {item.children.map(child => {
+                  const ChildIcon = child.icon;
+                  const childActive = child.path === '/my-record'
+                    ? location.pathname === child.path
+                    : location.pathname.startsWith(child.path);
+                  return <Link key={child.path} to={child.path} tabIndex={active ? undefined : -1} className={styles.subNavLink(childActive)}>
+                    {ChildIcon ? <ChildIcon /> : <span />}
+                    {child.name}
+                  </Link>;
+                })}
+              </div>
+            </div>}
+          </div>;
         })}
       </nav>
 
