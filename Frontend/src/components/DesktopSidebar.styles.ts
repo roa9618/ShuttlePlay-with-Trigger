@@ -114,4 +114,18 @@ export const styles = {
       ? 'bg-primary text-primary-foreground shadow-sm'
       : 'text-muted-foreground hover:bg-secondary hover:text-foreground',
   ].join(' '),
+  subNav: (open: boolean) => [
+    'grid overflow-hidden transition-[grid-template-rows,opacity,transform,margin] duration-300 ease-out',
+    '[&>div]:ml-5 [&>div]:space-y-1 [&>div]:overflow-hidden [&>div]:border-l [&>div]:border-primary/15 [&>div]:pl-3',
+    open
+      ? 'mt-1 grid-rows-[1fr] translate-y-0 opacity-100'
+      : 'pointer-events-none mt-0 grid-rows-[0fr] -translate-y-1 opacity-0',
+  ].join(' '),
+  subNavLink: (active: boolean) => [
+    'flex h-9 items-center gap-2 rounded-lg px-3 text-xs font-medium transition-colors',
+    '[&_svg]:h-3.5 [&_svg]:w-3.5 [&>span]:h-1.5 [&>span]:w-1.5 [&>span]:rounded-full',
+    active
+      ? 'bg-primary/10 text-primary [&>span]:bg-primary'
+      : 'text-muted-foreground hover:bg-primary/[0.05] hover:text-primary [&>span]:bg-muted-foreground/35',
+  ].join(' '),
 } as const;
