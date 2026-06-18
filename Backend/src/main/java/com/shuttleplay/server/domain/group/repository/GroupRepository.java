@@ -10,6 +10,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface GroupRepository extends JpaRepository<Group, Long> {
+    long countByStatus(GroupStatus status);
+
     Optional<Group> findByIdAndStatus(Long id, GroupStatus status);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)

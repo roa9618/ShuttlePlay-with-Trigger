@@ -4,7 +4,7 @@ export type GroupDetailRole = 'OWNER' | 'MANAGER' | 'MEMBER';
 export type GroupPermissions = { schedule: boolean; notice: boolean; joinRequests: boolean; members: boolean; posts: boolean; operationLogs: boolean; guests: boolean };
 export type GroupDetailResponse = {
   id: number; name: string; profileImageUrl: string | null; activityRegion: string; description: string;
-  createdAt: string; ownerName: string; memberCount: number; myMemberId: number; myRole: GroupDetailRole; permissions: GroupPermissions; guestAllowed: boolean;
+  createdAt: string; ownerName: string; memberCount: number; myMemberId: number | null; myRole: GroupDetailRole; permissions: GroupPermissions; guestAllowed: boolean; serviceAdmin?: boolean;
 };
 export type GroupSettingsResponse = GroupDetailResponse & {
   newJoinAllowed: boolean; approvalRequired: boolean; guestAllowed: boolean;

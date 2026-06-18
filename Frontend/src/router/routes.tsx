@@ -1,6 +1,7 @@
 import { createBrowserRouter } from "react-router-dom";
 import Layout from "../components/Layout";
 import RequireAuth from "../components/RequireAuth";
+import RequireAdmin from "../components/RequireAdmin";
 import HomePage from "../pages/HomePage";
 import LoginPage from "../pages/LoginPage";
 import SignupPage from "../pages/SignupPage";
@@ -35,6 +36,8 @@ import SettingsPage from "../pages/SettingsPage";
 import NotificationsPage from "../pages/NotificationsPage";
 import GalleryPage from "../pages/GalleryPage";
 import NotFoundPage from "../pages/NotFoundPage";
+import NoticePage from "../pages/NoticePage";
+import AdminDashboardPage from "../pages/AdminDashboardPage";
 
 export const router = createBrowserRouter([
   {
@@ -90,9 +93,16 @@ export const router = createBrowserRouter([
           { path: "sessions/:sessionId/my-report", Component: ParticipantSessionReportPage, handle: { title: "내 세션 리포트" } },
           { path: "settings", Component: SettingsPage, handle: { title: "설정" } },
           { path: "notifications", Component: NotificationsPage, handle: { title: "전체 알림" } },
+          { path: "notices", Component: NoticePage, handle: { title: "공지사항" } },
+          {
+            Component: RequireAdmin,
+            children: [
+              { path: "gallery", Component: GalleryPage, handle: { title: "셔틀플레이 페이지 갤러리" } },
+              { path: "admin/:section", Component: AdminDashboardPage, handle: { title: "서비스 관리자 대시보드" } },
+            ],
+          },
         ],
       },
-      { path: "gallery", Component: GalleryPage, handle: { title: "셔틀플레이 페이지 갤러리" } },
       { path: "*", Component: NotFoundPage, handle: { title: "페이지를 찾을 수 없음" } },
     ],
   },

@@ -273,6 +273,7 @@ export default function GroupDetailPage() {
   const [postAttachmentAllowed, setPostAttachmentAllowed] = useState(true);
 
   const [currentRole, setCurrentRole] = useState<GroupRole>('OWNER');
+  const [serviceAdmin, setServiceAdmin] = useState(false);
   const [managerPermissions, setManagerPermissions] = useState<GroupPermissions>({
     schedule: false, notice: false, joinRequests: false, members: false, posts: false, operationLogs: false, guests: false,
   });
@@ -285,9 +286,9 @@ export default function GroupDetailPage() {
   const canManageMembers = isOwner || (isManager && managerPermissions.members);
   const canManageGuests = isOwner || (isManager && managerPermissions.guests);
   const canManagePosts = isOwner || (isManager && managerPermissions.posts);
-  const canViewHistory = isOwner || (isManager && managerPermissions.operationLogs);
-  const canWritePost = memberPostAllowed;
-  const canComment = memberCommentAllowed;
+  const canViewHistory = serviceAdmin || isOwner || (isManager && managerPermissions.operationLogs);
+  const canWritePost = !serviceAdmin && memberPostAllowed;
+  const canComment = !serviceAdmin && memberCommentAllowed;
   const activeTab = getActiveTab(location.pathname);
 
   const numericGroupId = Number(groupId);
@@ -314,6 +315,7 @@ export default function GroupDetailPage() {
     const group = await groupDetailApi.getGroup(numericGroupId);
     setGroupInfo(group);
     setCurrentRole(group.myRole);
+    setServiceAdmin(Boolean(group.serviceAdmin));
     setManagerPermissions(group.permissions);
     setGuestAllowed(group.guestAllowed);
 
@@ -1503,7 +1505,7 @@ function ScheduleModal({ schedule, canManage, canAddGuest, canChangeVote, onVote
   );
 }
 
-function PostModal({ groupId, post, myMemberId, canManage, canEdit, canComment, onChanged, onError }: { groupId: number; post: PostItem; myMemberId?: number; canManage: boolean; canEdit: boolean; canComment: boolean; onChanged: () => Promise<void>; onError: (error: unknown, fallback: string) => void }) {
+function PostModal({ groupId, post, myMemberId, canManage, canEdit, canComment, onChanged, onError }: { groupId: number; post: PostItem; myMemberId?: number | null; canManage: boolean; canEdit: boolean; canComment: boolean; onChanged: () => Promise<void>; onError: (error: unknown, fallback: string) => void }) {
   const [deleted, setDeleted] = useState(false);
   const [pinned, setPinned] = useState(post.pinned);
   const [editingPost, setEditingPost] = useState(false);

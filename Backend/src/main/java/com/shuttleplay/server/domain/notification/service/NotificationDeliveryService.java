@@ -1,6 +1,7 @@
 package com.shuttleplay.server.domain.notification.service;
 
 import com.shuttleplay.server.domain.notification.dto.response.NotificationItemResponse;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -18,6 +19,7 @@ public class NotificationDeliveryService {
     public void dispatch(Long userId, String email, NotificationItemResponse response) {
         try {
             messagingTemplate.convertAndSendToUser(email, "/queue/notifications", response);
+            messagingTemplate.convertAndSend("/topic/admin", Map.of("domain", "NOTIFICATION", "type", "DISPATCHED"));
         } catch (RuntimeException exception) {
             log.warn("WebSocket notification delivery failed for user {}", userId, exception);
         }

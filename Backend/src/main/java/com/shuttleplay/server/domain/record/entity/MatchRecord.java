@@ -28,6 +28,9 @@ public class MatchRecord extends BaseEntity {
     @Column(name = "team_a_score", nullable = false) private int teamAScore;
     @Column(name = "team_b_score", nullable = false) private int teamBScore;
     @Column(name = "result_confirmed_at", nullable = false) private LocalDateTime resultConfirmedAt;
+    @Column(nullable = false) private boolean invalidated;
+    @Column(name = "invalidation_reason", length = 500) private String invalidationReason;
+    @Column(name = "invalidated_at") private LocalDateTime invalidatedAt;
     @OneToMany(mappedBy = "match", fetch = FetchType.LAZY) private List<MatchPlayer> players = new ArrayList<>();
 
     public static MatchRecord create(GroupSession session, MatchType matchType, PlayStyle playStyle,
@@ -42,6 +45,13 @@ public class MatchRecord extends BaseEntity {
         match.teamAScore = teamAScore;
         match.teamBScore = teamBScore;
         match.resultConfirmedAt = LocalDateTime.now();
+        match.invalidated = false;
         return match;
+    }
+
+    public void invalidate(String reason) {
+        this.invalidated = true;
+        this.invalidationReason = reason;
+        this.invalidatedAt = LocalDateTime.now();
     }
 }

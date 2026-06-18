@@ -242,6 +242,16 @@ public class User extends BaseEntity {
         this.status = UserStatus.INACTIVE;
     }
 
+    public void activate() {
+        if (this.status != UserStatus.DELETED) {
+            this.status = UserStatus.ACTIVE;
+        }
+    }
+
+    public void updateRole(UserRole role) {
+        this.role = role;
+    }
+
     public void deleteUser() {
         this.status = UserStatus.DELETED;
         softDelete();
