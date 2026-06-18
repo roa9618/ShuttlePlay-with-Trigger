@@ -2,6 +2,7 @@ package com.shuttleplay.server.global.config;
 
 import com.shuttleplay.server.domain.group.enums.GroupMemberStatus;
 import com.shuttleplay.server.domain.group.repository.GroupMemberRepository;
+import com.shuttleplay.server.domain.user.enums.UserStatus;
 import com.shuttleplay.server.global.security.CustomUserDetails;
 import com.shuttleplay.server.global.security.CustomUserDetailsService;
 import com.shuttleplay.server.global.security.JwtTokenProvider;
@@ -31,6 +32,7 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     private static final String BEARER_PREFIX = "Bearer ";
     private static final Pattern GROUP_TOPIC = Pattern.compile("^/topic/groups/(\\d+)(?:/.*)?$");
+    private static final String ADMIN_TOPIC = "/topic/admin";
 
     private final JwtTokenProvider jwtTokenProvider;
     private final CustomUserDetailsService customUserDetailsService;
@@ -71,6 +73,10 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                     CustomUserDetails userDetails = customUserDetailsService.loadUserById(
                             jwtTokenProvider.getUserId(token)
                     );
+                    if (!userDetails.isEnabled()) {
+                        throw new BusinessException(userDetails.getStatus() == UserStatus.DELETED
+                                ? ErrorCode.DELETED_USER : ErrorCode.INACTIVE_USER);
+                    }
                     accessor.setUser(new UsernamePasswordAuthenticationToken(
                             userDetails,
                             null,
@@ -79,15 +85,22 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                 }
 
                 if (accessor != null && StompCommand.SUBSCRIBE.equals(accessor.getCommand())) {
+                    if (ADMIN_TOPIC.equals(accessor.getDestination())
+                            && (!(accessor.getUser() instanceof UsernamePasswordAuthenticationToken authentication)
+                            || !(authentication.getPrincipal() instanceof CustomUserDetails userDetails)
+                            || userDetails.getAuthorities().stream().noneMatch(authority -> "ROLE_ADMIN".equals(authority.getAuthority())))) {
+                        throw new BusinessException(ErrorCode.FORBIDDEN);
+                    }
                     Matcher matcher = GROUP_TOPIC.matcher(String.valueOf(accessor.getDestination()));
                     if (matcher.matches()
                             && (!(accessor.getUser() instanceof UsernamePasswordAuthenticationToken authentication)
                             || !(authentication.getPrincipal() instanceof CustomUserDetails userDetails)
-                            || groupMemberRepository.findByGroupIdAndUserIdAndStatus(
+                            || (userDetails.getAuthorities().stream().noneMatch(authority -> "ROLE_ADMIN".equals(authority.getAuthority()))
+                            && groupMemberRepository.findByGroupIdAndUserIdAndStatus(
                                     Long.parseLong(matcher.group(1)),
                                     userDetails.getId(),
                                     GroupMemberStatus.ACTIVE
-                            ).isEmpty())) {
+                            ).isEmpty()))) {
                         throw new BusinessException(ErrorCode.FORBIDDEN);
                     }
                 }

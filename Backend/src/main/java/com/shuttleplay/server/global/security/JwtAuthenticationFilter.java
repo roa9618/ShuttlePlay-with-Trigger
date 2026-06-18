@@ -1,6 +1,7 @@
 package com.shuttleplay.server.global.security;
 
 import com.shuttleplay.server.domain.auth.repository.AccessTokenBlacklistRepository;
+import com.shuttleplay.server.domain.user.enums.UserStatus;
 import com.shuttleplay.server.global.error.BusinessException;
 import com.shuttleplay.server.global.error.ErrorCode;
 import jakarta.servlet.FilterChain;
@@ -40,6 +41,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 if (jwtTokenProvider.validateToken(token)) {
                     Long userId = jwtTokenProvider.getUserId(token);
                     CustomUserDetails userDetails = customUserDetailsService.loadUserById(userId);
+                    if (!userDetails.isEnabled()) {
+                        throw new BusinessException(userDetails.getStatus() == UserStatus.DELETED
+                                ? ErrorCode.DELETED_USER : ErrorCode.INACTIVE_USER);
+                    }
 
                     UsernamePasswordAuthenticationToken authentication =
                             new UsernamePasswordAuthenticationToken(

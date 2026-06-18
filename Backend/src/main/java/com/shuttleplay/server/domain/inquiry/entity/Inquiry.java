@@ -56,6 +56,12 @@ public class Inquiry extends BaseEntity {
     @Column(nullable = false)
     private LocalDateTime privacyAgreedAt;
 
+    @Column(length = 2000)
+    private String adminMemo;
+
+    @Column
+    private LocalDateTime processedAt;
+
     @Builder
     private Inquiry(InquiryCategory category, String name, String email, String subject,
                     String message, InquiryStatus status, LocalDateTime privacyAgreedAt) {
@@ -79,5 +85,14 @@ public class Inquiry extends BaseEntity {
                 .status(InquiryStatus.RECEIVED)
                 .privacyAgreedAt(LocalDateTime.now())
                 .build();
+    }
+
+    public void updateStatus(InquiryStatus status) {
+        this.status = status;
+        this.processedAt = status == InquiryStatus.RESOLVED ? LocalDateTime.now() : null;
+    }
+
+    public void updateAdminMemo(String adminMemo) {
+        this.adminMemo = adminMemo == null || adminMemo.isBlank() ? null : adminMemo.trim();
     }
 }

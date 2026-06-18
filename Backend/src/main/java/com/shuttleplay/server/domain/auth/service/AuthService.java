@@ -40,9 +40,11 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.Optional;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -62,6 +64,7 @@ public class AuthService {
     private final EmailService emailService;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
+    private final SimpMessagingTemplate messagingTemplate;
 
     @Value("${app.password-reset-url}")
     private String passwordResetUrl;
@@ -131,6 +134,7 @@ public class AuthService {
         );
 
         User savedUser = userRepository.save(user);
+        messagingTemplate.convertAndSend("/topic/admin", Map.of("domain", "USER", "type", "REGISTERED", "userId", savedUser.getId()));
 
         return RegisterResponse.from(savedUser);
     }

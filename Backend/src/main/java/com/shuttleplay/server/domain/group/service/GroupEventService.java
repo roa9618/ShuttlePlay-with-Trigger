@@ -17,5 +17,6 @@ public class GroupEventService {
     public void joinRequests(Long id, String type) { send("/topic/groups/" + id + "/join-requests", type); }
     private void send(String destination, String type) {
         messagingTemplate.convertAndSend(destination, Map.of("type", type, "occurredAt", LocalDateTime.now()));
+        messagingTemplate.convertAndSend("/topic/admin", Map.of("domain", "GROUP", "type", type, "occurredAt", LocalDateTime.now()));
     }
 }

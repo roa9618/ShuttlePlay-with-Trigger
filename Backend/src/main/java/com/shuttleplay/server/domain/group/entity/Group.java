@@ -153,4 +153,9 @@ public class Group extends BaseEntity {
         this.status = GroupStatus.INACTIVE;
         softDelete();
     }
+
+    public void updateAdminStatus(GroupStatus status) {
+        this.status = status;
+        if (status == GroupStatus.ACTIVE) restore(); else softDelete();
+    }
 }
