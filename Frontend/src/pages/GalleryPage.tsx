@@ -1,8 +1,7 @@
 import { Link } from 'react-router-dom';
-import Logo from '../components/Logo';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
-import { Monitor, Smartphone, Tv, ChevronRight } from 'lucide-react';
+import { Monitor, Smartphone, Tv, ChevronRight, Grid3x3 } from 'lucide-react';
 import { styles } from './GalleryPage.styles';
 
 export default function GalleryPage() {
@@ -35,9 +34,16 @@ export default function GalleryPage() {
     { name: '전체 경기 기록', path: '/my-record/matches', description: '필터와 페이지네이션을 제공하는 경기 이력' },
     { name: '설정', path: '/settings', description: '프로필 및 알림 설정' },
     { name: '전체 알림', path: '/notifications', description: '알림 목록 확인 및 읽음 처리' },
+    { name: '공지사항', path: '/notices', description: '서비스 공지 조회와 관리자 작성·수정' },
     { name: '페이지 갤러리', path: '/gallery', description: '전체 화면 목록과 테스트 진입점' },
     { name: '404', path: '/not-found-preview', description: '존재하지 않는 경로 안내 화면' },
   ];
+
+  const adminPages = [
+    ['관리자 홈', 'home'], ['회원 관리', 'users'], ['모임 관리', 'groups'],
+    ['일정 관리', 'sessions'], ['경기 관리', 'matches'], ['MMR / 기록 관리', 'records'], ['알림 / 푸시 관리', 'notifications'],
+    ['문의 / 신고 관리', 'inquiries'], ['운영 로그', 'logs'], ['시스템 상태 관리', 'system'],
+  ].map(([name, path]) => ({ name, path: `/admin/${path}`, description: '서비스 전체 관리자 전용 운영 화면' }));
 
   const mobilePages = [
     { name: '메인 페이지', path: '/', description: '모바일 메인 화면' },
@@ -64,18 +70,9 @@ export default function GalleryPage() {
 
   return (
     <div className = {styles.page}>
-      <div className = {styles.header}>
-        <div className = {styles.content}>
-          <Logo size = "md" className = {styles.logoWrapper} />
-        </div>
-      </div>
-
       <div className = {styles.content2}>
         <div className = {styles.sectionHeader}>
-          <h1 className = {styles.pageTitle}>셔틀플레이 페이지 갤러리</h1>
-          <p className = {styles.descriptionText}>
-            전체 화면 구조를 확인하고 테스트하세요
-          </p>
+          <h1 className = {styles.pageTitle}>페이지 갤러리</h1>
         </div>
 
         <div className = {styles.stack}>
@@ -122,6 +119,16 @@ export default function GalleryPage() {
                 </Link>
               ))}
             </div>
+          </div>
+
+          {/* Mobile Pages */}
+          <div>
+            <div className={styles.row}>
+              <div className={styles.row2}><Grid3x3 className={styles.monitorIcon} /></div>
+              <div><h2 className={styles.sectionTitle}>서비스 관리자 화면</h2><p className={styles.descriptionText2}>권한별 서비스 전체 운영 기능</p></div>
+              <Badge className={styles.badge}>{adminPages.length}개</Badge>
+            </div>
+            <div className={styles.statsGrid}>{adminPages.map(page => <Link key={page.path} to={page.path}><div className={styles.header2}><div className={styles.betweenRow}><div className={styles.row3}><h3 className={styles.cardTitle}>{page.name}</h3><p className={styles.descriptionText3}>{page.description}</p></div><ChevronRight className={styles.chevronRightIcon} /></div><div className={styles.footerActions}><Button size="sm" className={styles.fullWidthButton}>화면 보기</Button></div></div></Link>)}</div>
           </div>
 
           {/* Mobile Pages */}
@@ -216,7 +223,7 @@ export default function GalleryPage() {
         </div>
 
         <div className = {styles.contentBox}>
-          <h3 className = {styles.cardTitle2}>총 {desktopPages.length + mobilePages.length + largeDisplayPages.length}개 화면</h3>
+          <h3 className = {styles.cardTitle2}>총 {desktopPages.length + adminPages.length + mobilePages.length + largeDisplayPages.length}개 화면</h3>
           <p className = {styles.descriptionText4}>
             데스크탑, 모바일, 큰 화면용 레이아웃이 각각 구현되었습니다
           </p>

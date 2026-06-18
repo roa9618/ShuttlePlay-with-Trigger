@@ -31,6 +31,8 @@ export default function Layout() {
     '/my-record',
     '/settings',
     '/notifications',
+    '/notices',
+    '/admin',
     '/gallery',
   ];
 

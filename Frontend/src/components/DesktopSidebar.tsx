@@ -9,11 +9,13 @@ import {
   ListChecks,
   Settings,
   LogOut,
-  Grid3x3,
   Bell,
   BellOff,
   CheckCheck,
   ChevronRight,
+  Megaphone,
+  Images,
+  LayoutDashboard,
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { useAuth } from '../contexts/AuthContext';
@@ -78,8 +80,13 @@ export default function DesktopSidebar() {
         { name: '전체 경기 기록', path: '/my-record/matches', icon: ListChecks },
       ],
     },
+    { name: '공지사항', path: '/notices', icon: Megaphone },
     { name: '설정', path: '/settings', icon: Settings },
-    { name: '페이지 갤러리', path: '/gallery', icon: Grid3x3 },
+  ];
+
+  const adminNavigation = [
+    { name: '페이지 갤러리', path: '/gallery', icon: Images },
+    { name: '관리자 대시보드', path: '/admin/home', icon: LayoutDashboard },
   ];
 
   const isActive = (path: string) => {
@@ -278,6 +285,16 @@ export default function DesktopSidebar() {
             </div>}
           </div>;
         })}
+        {session?.role === 'ADMIN' && <>
+          <div className={styles.adminDivider}><span>관리자 전용</span></div>
+          {adminNavigation.map(item => {
+            const Icon = item.icon;
+            return <Link key={item.path} to={item.path} className={styles.navLink(isActive(item.path))}>
+              <Icon className={styles.iconIcon} />
+              <span className={styles.labelText}>{item.name}</span>
+            </Link>;
+          })}
+        </>}
       </nav>
 
       <div className = {styles.footerActions}>
