@@ -57,7 +57,7 @@ class MyRecordServiceTest {
     @Test
     void summaryReturnsProfileAndEmptyStatisticsWhenThereAreNoRecords() {
         when(user.getCreatedAt()).thenReturn(LocalDateTime.of(2026, 1, 1, 0, 0));
-        when(user.getName()).thenReturn("노우현");
+        when(user.getName()).thenReturn("홍길동");
         when(user.getGender()).thenReturn(Gender.MALE);
         when(user.getAgeGroup()).thenReturn(AgeGroup.TWENTIES);
         when(user.getGrade()).thenReturn(Grade.C);
@@ -71,7 +71,7 @@ class MyRecordServiceTest {
 
         MyRecordSummaryResponse response = service.summary(1L, YearMonth.of(2026, 6));
 
-        assertThat(response.profile().name()).isEqualTo("노우현");
+        assertThat(response.profile().name()).isEqualTo("홍길동");
         assertThat(response.profile().gender()).isEqualTo("MALE");
         assertThat(response.mmr().doubles()).isEqualTo(1100);
         assertThat(response.mmr().mixed()).isEqualTo(1100);
@@ -84,7 +84,7 @@ class MyRecordServiceTest {
     @Test
     @SuppressWarnings("unchecked")
     void matchesUsesDatabasePaginationAndMapsARecord() {
-        MatchPlayer player = player(1L, "노우현", 1);
+        MatchPlayer player = player(1L, "홍길동", 1);
         MatchPlayer partner = player(2L, "파트너", 1);
         MatchPlayer opponentA = player(3L, "상대1", 2);
         MatchPlayer opponentB = player(4L, "상대2", 2);
