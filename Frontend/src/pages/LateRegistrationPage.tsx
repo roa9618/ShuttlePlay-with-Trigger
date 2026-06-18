@@ -1,82 +1,15 @@
-import { Link, useParams } from 'react-router-dom';
-import Logo from '../components/Logo';
+import { FormEvent, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { Clock } from 'lucide-react';
+import { SessionFlowIcon, SessionFlowPage } from '../components/SessionFlowLayout';
 import { Button } from '../components/ui/button';
-import { Label } from '../components/ui/label';
-import { Textarea } from '../components/ui/textarea';
-import { Clock, ArrowLeft } from 'lucide-react';
-import { useState } from 'react';
-import { styles } from './LateRegistrationPage.styles';
+import { Input } from '../components/ui/input';
+import { sessionEntryApi } from '../utils/sessionEntryApi';
+import { ApiClientError } from '../utils/apiClient';
+import { setAuthRedirectPath } from '../utils/authSession';
 
 export default function LateRegistrationPage() {
-  const { sessionId } = useParams();
-  const [selectedMinutes, setSelectedMinutes] = useState<number | null>(null);
-  const [reason, setReason] = useState('');
-
-  const quickOptions = [
-    { label: '10분 늦음', value: 10 },
-    { label: '20분 늦음', value: 20 },
-    { label: '30분 늦음', value: 30 },
-    { label: '1시간 늦음', value: 60 },
-  ];
-
-  return (
-    <div className = {styles.page}>
-      <div className = {styles.emptyState}>
-        <Logo size = "sm" className = {styles.logoWrapper} />
-      </div>
-
-      <div className = {styles.content}>
-        <Link to = {`/sessions/${sessionId}/attendance`} className = {styles.backLink}>
-          <ArrowLeft className = {styles.arrowLeftIcon} />
-          돌아가기
-        </Link>
-
-        <div className = {styles.stack}>
-          <div className = {styles.row}>
-            <Clock className = {styles.clockIcon} />
-          </div>
-          <h1 className = {styles.pageTitle}>지각 예정 등록</h1>
-          <p className = {styles.descriptionText}>
-            예상 도착 시간을 알려주세요
-          </p>
-        </div>
-
-        <div className = {styles.header}>
-          <div>
-            <Label className = {styles.labelIcon}>얼마나 늦으실 것 같나요?</Label>
-            <div className = {styles.cardGrid}>
-              {quickOptions.map((option) => (
-                <Button key = {option.value} type = "button" variant = "outline" size = "default" onClick = {() => setSelectedMinutes(option.value)} className = {styles.minuteOptionButton(selectedMinutes === option.value)}
-                >
-                  {option.label}
-                </Button>
-              ))}
-            </div>
-          </div>
-
-          <div className = {styles.stack2}>
-            <Label htmlFor = "reason">지각 사유 (선택)</Label>
-            <Textarea id = "reason" placeholder = "간단히 사유를 입력해주세요" className = {styles.textareaIcon} rows = {3} value = {reason} onChange = {(e) => setReason(e.target.value)}
-            />
-            <p className = {styles.descriptionText2}>
-              운영자와 다른 참가자들에게 공유됩니다
-            </p>
-          </div>
-
-          <div className = {styles.footerActions}>
-            <Link to = {`/sessions/${sessionId}/status`}>
-              <Button className = {styles.fullWidthButton} size = "lg">
-                등록하기
-              </Button>
-            </Link>
-            <Link to = {`/sessions/${sessionId}/attendance`}>
-              <Button variant = "outline" className = {styles.fullWidthButton} size = "lg">
-                취소
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+  const id = Number(useParams().sessionId); const navigate = useNavigate(); const [minutes, setMinutes] = useState('10'); const [reason, setReason] = useState(''); const [error, setError] = useState(''); const [busy, setBusy] = useState(false);
+  const submit = async (event: FormEvent) => { event.preventDefault(); const lateMinutes = Number(minutes); if (!Number.isInteger(lateMinutes) || lateMinutes < 1 || lateMinutes > 180) { setError('1분에서 180분 사이로 입력해 주세요.'); return; } setBusy(true); try { const next = await sessionEntryApi.attendance(id, { status: 'LATE', lateMinutes, reason }); if (next.restrictionReason) { navigate(`/sessions/${id}/entry-result/${next.restrictionReason.toLowerCase().replaceAll('_', '-')}`, { state: { entry: next } }); return; } navigate(`/sessions/${id}/entry-result/late-complete`, { state: { entry: next } }); } catch (errorValue) { if (errorValue instanceof ApiClientError && errorValue.status === 401) { const path = `/sessions/${id}/late`; setAuthRedirectPath(path); navigate(`/login?redirect=${encodeURIComponent(path)}`); } else if (errorValue instanceof ApiClientError && errorValue.status === 403) setError('참가자 정보를 찾지 못했어요. 일정 입장 화면에서 다시 확인해 주세요.'); else setError('지각 정보를 저장하지 못했어요.'); } finally { setBusy(false); } };
+  return <SessionFlowPage><form onSubmit={submit}><div className="text-center"><SessionFlowIcon><Clock className="h-9 w-9" /></SessionFlowIcon><h1 className="mt-4 text-[1.65rem] font-bold md:text-4xl">조금 늦어요</h1><p className="mt-2 text-sm text-muted-foreground">예상 지각 시간을 알려주세요.</p></div><label className="mt-4 block font-bold" htmlFor="late-minutes">몇 분 정도 늦나요?</label><div className="relative mt-2"><Input id="late-minutes" type="number" min="1" max="180" value={minutes} onChange={e => setMinutes(e.target.value)} className="h-14 rounded-2xl pr-14 text-lg"/><span className="absolute right-5 top-4 text-muted-foreground">분</span></div><label className="mt-3 block font-bold" htmlFor="late-reason">이유 <span className="font-normal text-muted-foreground">(선택)</span></label><Input id="late-reason" value={reason} maxLength={300} onChange={e => setReason(e.target.value)} placeholder="예: 교통이 막혀요" className="mt-2 h-14 rounded-2xl"/><p className="min-h-8 pt-2 text-center text-sm text-destructive">{error}</p><Button type="submit" disabled={busy} className="h-14 w-full rounded-2xl text-[17px] font-bold">도착 예정 알리기</Button>{error.includes('참가자 정보') && <Button type="button" variant="outline" className="mt-2 h-14 w-full rounded-2xl hover:bg-secondary hover:text-foreground" onClick={() => navigate('/session-entry')}>일정 입장으로 이동</Button>}</form></SessionFlowPage>;
 }

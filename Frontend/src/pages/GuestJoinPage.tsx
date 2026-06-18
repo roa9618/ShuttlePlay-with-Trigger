@@ -26,7 +26,7 @@ const ageOptions = [
   { value: 'SIXTIES_AND_ABOVE', label: '60대 이상' },
 ];
 
-const gradeOptions = ['E', 'D', 'C', 'B', 'A', 'S', 'SS'].map(value => ({ value, label: `${value}급` }));
+const gradeOptions = ['E', 'D', 'C', 'B', 'A', 'S', 'SS'].map(value => ({ value, label: value }));
 const voteOptions: Array<{ value: GuestJoinVoteStatus; label: string; description: string }> = [
   { value: 'ATTENDING', label: '참여', description: '운동에 참여할게요.' },
   { value: 'UNDECIDED', label: '미정', description: '아직 결정하지 못했어요.' },

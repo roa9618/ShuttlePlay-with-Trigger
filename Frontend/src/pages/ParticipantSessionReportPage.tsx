@@ -14,6 +14,7 @@ const matches = [
 
 export default function ParticipantSessionReportPage() {
   const { sessionId } = useParams();
+  const routeSessionId = sessionId ?? 'demo';
 
   return (
     <div className = {styles.page}>
@@ -22,7 +23,7 @@ export default function ParticipantSessionReportPage() {
       </div>
 
       <div className = {styles.content}>
-        <Link to = {`/sessions/${sessionId}/status`} className = {styles.backLink}>
+        <Link to = {`/sessions/${routeSessionId}/status`} className = {styles.backLink}>
           <ArrowLeft className = {styles.arrowLeftIcon} />
           내 상태
         </Link>

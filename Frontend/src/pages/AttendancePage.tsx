@@ -1,143 +1,18 @@
-import { Link, useParams, useNavigate } from 'react-router-dom';
-import Logo from '../components/Logo';
+import { useEffect, useState } from 'react';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { Check, Clock, X } from 'lucide-react';
+import { SessionFlowIcon, SessionFlowPage } from '../components/SessionFlowLayout';
 import { Button } from '../components/ui/button';
-import { Badge } from '../components/ui/badge';
-import { Check, Clock, X, Calendar, Users, MapPin } from 'lucide-react';
-import { useActionFeedback } from '../utils/useActionFeedback';
-import { styles } from './AttendancePage.styles';
+import { sessionEntryApi, type SessionEntryPreview } from '../utils/sessionEntryApi';
+import { ApiClientError } from '../utils/apiClient';
+import { setAuthRedirectPath } from '../utils/authSession';
 
 export default function AttendancePage() {
-  const { sessionId } = useParams();
-  const navigate = useNavigate();
-  const { message, showMessage } = useActionFeedback();
+  const { sessionId } = useParams(); const id = Number(sessionId); const navigate = useNavigate(); const location = useLocation();
+  const [entry, setEntry] = useState<SessionEntryPreview | null>((location.state as { entry?: SessionEntryPreview } | null)?.entry ?? null);
+  const [error, setError] = useState(''); const [busy, setBusy] = useState(false);
+  useEffect(() => { if (!entry && Number.isFinite(id)) void sessionEntryApi.bySession(id).then(setEntry).catch(errorValue => { if (errorValue instanceof ApiClientError && errorValue.status === 401) { const path = `/sessions/${id}/attendance`; setAuthRedirectPath(path); navigate(`/login?redirect=${encodeURIComponent(path)}`); } else if (errorValue instanceof ApiClientError && errorValue.status === 403) setError('참가자 정보를 찾지 못했어요. 일정 입장 화면에서 다시 확인해 주세요.'); else setError('일정 정보를 불러오지 못했어요.'); }); }, [entry, id, navigate]);
+  const send = async (status: 'ARRIVED' | 'ABSENT') => { setBusy(true); setError(''); try { const next = await sessionEntryApi.attendance(id, { status }); if (next.restrictionReason) { navigate(`/sessions/${id}/entry-result/${next.restrictionReason.toLowerCase().replaceAll('_', '-')}`, { state: { entry: next } }); return; } navigate(`/sessions/${id}/entry-result/${status === 'ARRIVED' ? 'arrival-complete' : 'absence-complete'}`, { state: { entry: next } }); } catch (errorValue) { if (errorValue instanceof ApiClientError && errorValue.status === 401) { const path = `/sessions/${id}/attendance`; setAuthRedirectPath(path); navigate(`/login?redirect=${encodeURIComponent(path)}`); } else if (errorValue instanceof ApiClientError && errorValue.status === 403) setError('참가자 정보를 찾지 못했어요. 일정 입장 화면에서 다시 확인해 주세요.'); else setError('출석 상태를 저장하지 못했어요. 다시 시도해 주세요.'); } finally { setBusy(false); } };
 
-  const handleCheckIn = () => {
-    navigate(`/sessions/${sessionId}/status`);
-  };
-
-  return (
-    <div className = {styles.page}>
-      <div className = {styles.header}>
-        <Logo size = "md" className = {styles.logoWrapper} />
-      </div>
-
-      <div className = {styles.content}>
-        <div className = {styles.stack}>
-          <div className = {styles.row}>
-            <Check className = {styles.checkIcon} />
-          </div>
-          <div>
-            <h1 className = {styles.pageTitle}>도착하셨나요?</h1>
-            <p className = {styles.descriptionText}>
-              현재 상태를 선택하세요.
-            </p>
-          </div>
-        </div>
-
-        <div className = {styles.header2}>
-          <div className = {styles.sectionHeader}>
-            <div className = {styles.mediaRow}>
-              <div className = {styles.row2}>
-                <Users className = {styles.usersIcon} />
-              </div>
-              <div className = {styles.row3}>
-                <h2 className = {styles.sectionTitle}>6월 3일 (화) 운동</h2>
-                <Badge variant = "outline">강남 배드민턴 클럽</Badge>
-              </div>
-            </div>
-
-            <div className = {styles.statsGrid}>
-              <div className = {styles.row4}>
-                <Calendar className = {styles.calendarIcon} />
-                <div className = {styles.textContent}>
-                  <p className = {styles.descriptionText2}>날짜</p>
-                  <p className = {styles.summaryText}>6월 3일 (화)</p>
-                </div>
-              </div>
-              <div className = {styles.row4}>
-                <Clock className = {styles.calendarIcon} />
-                <div className = {styles.textContent}>
-                  <p className = {styles.descriptionText2}>시간</p>
-                  <p className = {styles.summaryText}>19:00 - 22:00</p>
-                </div>
-              </div>
-              <div className = {styles.row4}>
-                <MapPin className = {styles.calendarIcon} />
-                <div className = {styles.textContent}>
-                  <p className = {styles.descriptionText2}>장소</p>
-                  <p className = {styles.summaryText}>강남구민회관</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className = {styles.stack2}>
-            <Button onClick = {handleCheckIn} className = {styles.fullWidthButton} size = "lg"
-            >
-              <div className = {styles.row5}>
-                <div className = {styles.row6}>
-                  <Check className = {styles.checkIcon2} />
-                </div>
-                <div className = {styles.row7}>
-                  <p className = {styles.summaryText2}>도착했어요</p>
-                  <p className = {styles.paragraphText}>경기에 참여할 수 있어요</p>
-                </div>
-              </div>
-            </Button>
-
-            <Link to = {`/sessions/${sessionId}/late`} className = {styles.cardLink}>
-              <Button variant = "outline" className = {styles.fullWidthButton2} size = "lg"
-              >
-                <div className = {styles.row5}>
-                  <div className = {styles.row8}>
-                    <Clock className = {styles.clockIcon} />
-                  </div>
-                  <div className = {styles.row7}>
-                    <p className = {styles.summaryText3}>조금 늦어요</p>
-                    <p className = {styles.descriptionText3}>도착 예정 시간 등록</p>
-                  </div>
-                </div>
-              </Button>
-            </Link>
-
-            <Button variant = "outline" className = {styles.fullWidthButton3} size = "lg" onClick = {() => {
-                showMessage('불참 처리되었습니다.');
-                window.setTimeout(() => navigate('/'), 500);
-              }}
-            >
-              <div className = {styles.row5}>
-                <div className = {styles.row9}>
-                  <X className = {styles.xIcon} />
-                </div>
-                <div className = {styles.row7}>
-                  <p className = {styles.summaryText4}>오늘 못 가요</p>
-                  <p className = {styles.descriptionText3}>오늘 참여할 수 없어요</p>
-                </div>
-              </div>
-            </Button>
-          </div>
-        </div>
-
-        <div className = {styles.contentBox}>
-          <div className = {styles.mediaRow2}>
-            <div className = {styles.row10}>
-              <span className = {styles.labelText}>!</span>
-            </div>
-            <div className = {styles.stack3}>
-              <p className = {styles.summaryText5}>현재 상태</p>
-              <p className = {styles.paragraphText2}>
-                참여 등록 완료 · 아직 체육관에 도착하지 않음
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {message && (
-          <div className = {styles.header3}>
-            {message}
-          </div>
-        )}
-      </div>
-    </div>
-  );
+  return <SessionFlowPage tone="success"><div className="text-center"><SessionFlowIcon tone="success"><Check className="h-9 w-9" /></SessionFlowIcon><h1 className="mt-4 text-[1.65rem] font-bold leading-tight tracking-[-0.02em] md:text-4xl">오늘 출석은 어떻게 할까요?</h1><p className="mt-2 text-sm text-muted-foreground">{entry ? `${entry.groupName} · ${entry.title}` : '일정 확인 중…'}</p></div><div className="mt-4 space-y-2.5"><Button disabled={busy || !entry} className="h-16 w-full justify-start rounded-2xl bg-emerald-600 px-4 text-left hover:bg-emerald-700" onClick={() => void send('ARRIVED')}><span className="mr-3 flex h-10 w-10 items-center justify-center rounded-xl bg-white/20"><Check /></span><span><strong className="block text-lg">도착했어요</strong><small>바로 경기 가능 상태로 바뀌어요</small></span></Button><Button disabled={busy || !entry} variant="outline" className="h-16 w-full justify-start rounded-2xl border-amber-200 bg-amber-50/50 px-4 text-left text-amber-950 hover:bg-amber-100 hover:text-amber-950" onClick={() => navigate(`/sessions/${id}/late`, { state: { entry } })}><span className="mr-3 flex h-10 w-10 items-center justify-center rounded-xl bg-amber-100"><Clock className="text-amber-700" /></span><span><strong className="block text-lg">조금 늦어요</strong><small className="text-amber-800/70">도착 예정 시간을 알려주세요</small></span></Button><Button disabled={busy || !entry} variant="outline" className="h-16 w-full justify-start rounded-2xl border-rose-200 bg-rose-50/50 px-4 text-left text-rose-800 hover:bg-rose-100 hover:text-rose-900" onClick={() => void send('ABSENT')}><span className="mr-3 flex h-10 w-10 items-center justify-center rounded-xl bg-rose-100"><X /></span><span><strong className="block text-lg">오늘 못 가요</strong><small>불참 상태로 저장해요</small></span></Button><p className="min-h-5 text-center text-sm text-destructive">{error}</p>{error && !entry && <Button type="button" variant="outline" className="h-14 w-full rounded-2xl hover:bg-secondary hover:text-foreground" onClick={() => navigate('/session-entry')}>일정 입장으로 이동</Button>}</div></SessionFlowPage>;
 }
