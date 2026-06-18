@@ -18,9 +18,9 @@ export const styles = {
   descriptionText3: 'text-sm text-muted-foreground line-clamp-2',
   chevronRightIcon: 'w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors ml-2 flex-shrink-0',
   footerActions: 'pt-4 border-t border-border',
-  fullWidthButton: 'w-full rounded-full',
+  fullWidthButton: 'w-full rounded-full hover:border-primary hover:bg-primary/10 hover:text-primary',
   contentBox: 'mt-12 bg-gradient-to-br from-secondary/50 to-transparent rounded-3xl p-8 border border-border text-center',
   cardTitle2: 'text-xl font-medium mb-3',
   descriptionText4: 'text-muted-foreground mb-6',
-  roundButton: 'rounded-full',
+  roundButton: 'rounded-full hover:bg-primary/90 hover:text-primary-foreground',
 } as const;

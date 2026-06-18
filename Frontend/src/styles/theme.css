@@ -264,3 +264,13 @@
     color: var(--foreground) !important;
   }
 }
+
+@layer components {
+  .session-flow-card button {
+    min-height: 56px !important;
+  }
+
+  .session-flow-card input {
+    min-height: 52px !important;
+  }
+}

@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface GroupSessionGuestRepository extends JpaRepository<GroupSessionGuest, Long> {
     Optional<GroupSessionGuest> findByIdAndSessionId(Long id, Long sessionId);
+    Optional<GroupSessionGuest> findBySessionIdAndUserId(Long sessionId, Long userId);
     List<GroupSessionGuest> findAllBySessionId(Long sessionId);
     List<GroupSessionGuest> findAllBySession_Group_IdAndSession_StatusAndSession_IsDeletedFalseOrderBySession_StartsAtDesc(Long groupId, GroupSessionStatus status);
     Optional<GroupSessionGuest> findBySessionIdAndNameIgnoreCaseAndGenderAndAgeGroupAndGrade(Long sessionId, String name, Gender gender, AgeGroup ageGroup, Grade grade);
