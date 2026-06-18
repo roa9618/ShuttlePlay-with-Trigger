@@ -40,23 +40,25 @@ public class GroupDetailService {
     private final GroupEventService events;
 
     public Map<String, Object> group(Long userId, Long groupId) {
-        GroupMember me = access.member(groupId, userId);
-        me.updateLastAccessedAt();
-        Group group = me.getGroup();
+        Optional<GroupMember> membership = access.viewerMembership(groupId, userId);
+        membership.ifPresent(GroupMember::updateLastAccessedAt);
+        Group group = access.viewGroup(groupId, userId);
         Map<String, Object> result = map();
         result.put("id", group.getId()); result.put("name", group.getName()); result.put("profileImageUrl", group.getProfileImageUrl());
         result.put("activityRegion", group.getActivityRegion()); result.put("description", group.getDescription());
         result.put("createdAt", group.getCreatedAt()); result.put("ownerName", group.getOwner().getName());
         result.put("memberCount", members.countByGroupIdAndStatus(groupId, GroupMemberStatus.ACTIVE));
         result.put("guestAllowed", group.isGuestAllowed());
-        result.put("myMemberId", me.getId());
-        result.put("myRole", me.getRole()); result.put("permissions", permissionMap(me));
+        result.put("myMemberId", membership.map(GroupMember::getId).orElse(null));
+        result.put("myRole", membership.map(GroupMember::getRole).orElse(GroupMemberRole.MEMBER));
+        result.put("serviceAdmin", membership.isEmpty() && access.isAdmin(userId));
+        result.put("permissions", membership.map(this::permissionMap).orElseGet(() -> permissionMap(false, false, false, false, false, false, false)));
         return result;
     }
 
     @Transactional(readOnly = true)
     public Map<String, Object> dashboard(Long userId, Long groupId) {
-        GroupMember me = access.member(groupId, userId);
+        Optional<GroupMember> membership = access.viewerMembership(groupId, userId);
         LocalDateTime now = LocalDateTime.now();
         List<GroupSession> recent = sessions.findAllByGroupIdAndStartsAtBetweenAndStatusAndIsDeletedFalse(groupId, now.minusDays(28), now, GroupSessionStatus.CLOSED);
         List<GroupMember> groupMembers = members.findAllByGroupIdAndStatus(groupId, GroupMemberStatus.ACTIVE);
@@ -69,11 +71,11 @@ public class GroupDetailService {
             trend.add(Map.of("week", 4 - week, "attendance", sessions.findAllByGroupIdAndStartsAtBetweenAndStatusAndIsDeletedFalse(groupId, from, to, GroupSessionStatus.CLOSED).stream().mapToInt(GroupSession::getAttendanceCount).sum()));
         }
         Map<String, Object> result = map();
-        result.put("upcomingSession", sessions.findAllByGroupIdAndStartsAtBetweenAndStatusInAndIsDeletedFalse(groupId, now, now.plusYears(1), List.of(GroupSessionStatus.CREATED, GroupSessionStatus.ATTENDANCE_OPEN)).stream().min(Comparator.comparing(GroupSession::getStartsAt)).map(session -> sessionMapWithVote(session, me)).orElse(null));
+        result.put("upcomingSession", sessions.findAllByGroupIdAndStartsAtBetweenAndStatusInAndIsDeletedFalse(groupId, now, now.plusYears(1), List.of(GroupSessionStatus.CREATED, GroupSessionStatus.ATTENDANCE_OPEN)).stream().min(Comparator.comparing(GroupSession::getStartsAt)).map(session -> membership.map(member -> sessionMapWithVote(session, member)).orElseGet(() -> sessionMap(session))).orElse(null));
         result.put("recentSessions", sessions.findTop3ByGroupIdAndStatusAndIsDeletedFalseOrderByStartsAtDesc(groupId, GroupSessionStatus.CLOSED).stream().map(this::sessionMap).toList());
         result.put("recentFourWeekSessionCount", recent.size());
         result.put("averageAttendance", recent.isEmpty() ? 0 : Math.round(recent.stream().mapToInt(GroupSession::getAttendanceCount).average().orElse(0)));
-        int myRecentParticipationCount = recentParticipationCount(me);
+        int myRecentParticipationCount = membership.map(this::recentParticipationCount).orElse(0);
         result.put("peakActivityTime", peakTime(recent)); result.put("myRecentParticipationCount", myRecentParticipationCount);
         result.put("myMonthlyParticipationRate", recent.isEmpty() ? 0 : Math.round(myRecentParticipationCount * 100f / recent.size()));
         result.put("averageMatchCount", null);
@@ -84,7 +86,7 @@ public class GroupDetailService {
 
     @Transactional(readOnly = true)
     public Map<String, Object> operationGuide(Long userId, Long groupId) {
-        Group group = access.member(groupId, userId).getGroup();
+        Group group = access.viewGroup(groupId, userId);
         Map<String, Object> result = map();
         result.put("content", Optional.ofNullable(group.getOperationNotice()).orElse(""));
         logs.findFirstByGroupIdAndActionOrderByCreatedAtDesc(groupId, "OPERATION_GUIDE_UPDATED").ifPresentOrElse(log -> {
@@ -177,12 +179,12 @@ public class GroupDetailService {
 
     @Transactional(readOnly = true)
     public List<Map<String, Object>> sessionList(Long userId, Long groupId, int year, int month, Integer day) {
-        GroupMember member = access.member(groupId, userId);
+        Optional<GroupMember> membership = access.viewerMembership(groupId, userId);
         LocalDate fromDate = LocalDate.of(year, month, day == null ? 1 : day);
         LocalDate toDate = day == null ? fromDate.withDayOfMonth(fromDate.lengthOfMonth()) : fromDate;
         return sessions.findAllByGroupIdAndStartsAtBetweenAndIsDeletedFalse(groupId, fromDate.atStartOfDay(), toDate.atTime(LocalTime.MAX)).stream().map(session -> {
             Map<String, Object> result = sessionMap(session);
-            result.put("myVoteStatus", votes.findBySessionIdAndMemberId(session.getId(), member.getId()).map(GroupSessionVote::getStatus).orElse(null));
+            result.put("myVoteStatus", membership.isEmpty() ? null : votes.findBySessionIdAndMemberId(session.getId(), membership.get().getId()).map(GroupSessionVote::getStatus).orElse(null));
             return result;
         }).toList();
     }
@@ -195,7 +197,7 @@ public class GroupDetailService {
         return Map.of("upcomingCount", upcoming, "completedCount", completed, "cumulativeAttendance", attendance);
     }
     @Transactional(readOnly = true)
-    public Map<String, Object> session(Long userId, Long groupId, Long sessionId) { GroupMember member = access.member(groupId, userId); Map<String, Object> result = detailedSession(access.session(groupId, sessionId)); result.put("myVoteStatus", votes.findBySessionIdAndMemberId(sessionId, member.getId()).map(GroupSessionVote::getStatus).orElse(null)); return result; }
+    public Map<String, Object> session(Long userId, Long groupId, Long sessionId) { Optional<GroupMember> membership = access.viewerMembership(groupId, userId); Map<String, Object> result = detailedSession(access.session(groupId, sessionId)); result.put("myVoteStatus", membership.isEmpty() ? null : votes.findBySessionIdAndMemberId(sessionId, membership.get().getId()).map(GroupSessionVote::getStatus).orElse(null)); return result; }
     public Map<String, Object> createSession(Long userId, Long groupId, Map<String, Object> body) {
         GroupMember actor = access.scheduleManager(groupId, userId);
         LocalDateTime startsAt = dateTime(body, "startsAt");
@@ -250,7 +252,7 @@ public class GroupDetailService {
     }
     @Transactional(readOnly = true)
     public List<Map<String, Object>> participants(Long userId, Long groupId, Long sessionId, SessionVoteStatus status) {
-        access.member(groupId, userId); GroupSession session = access.session(groupId, sessionId);
+        access.viewGroup(groupId, userId); GroupSession session = access.session(groupId, sessionId);
         List<Map<String, Object>> result = new ArrayList<>(votes.findAllBySessionIdAndStatus(sessionId, status).stream().map(v -> memberMap(v.getMember(), v.getStatus())).toList());
         if (status == SessionVoteStatus.UNDECIDED) {
             Set<Long> votedMemberIds = votes.findAllBySessionId(sessionId).stream()
@@ -306,11 +308,11 @@ public class GroupDetailService {
 
     @Transactional(readOnly = true)
     public Map<String, Object> postList(Long userId, Long groupId, String keyword, GroupPostType type, int page, int size) {
-        access.member(groupId, userId); Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Order.desc("pinned"), Sort.Order.desc("createdAt")));
+        access.viewGroup(groupId, userId); Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Order.desc("pinned"), Sort.Order.desc("createdAt")));
         Page<GroupPost> result = type == null ? posts.findAllByGroupIdAndTitleContainingIgnoreCaseAndIsDeletedFalse(groupId, keyword, pageable) : posts.findAllByGroupIdAndTypeAndTitleContainingIgnoreCaseAndIsDeletedFalse(groupId, type, keyword, pageable);
         return page(result, p -> postMap(p, comments.countByPostIdAndIsDeletedFalse(p.getId())));
     }
-    public Map<String, Object> post(Long userId, Long groupId, Long postId) { access.member(groupId, userId); GroupPost post = access.post(groupId, postId); post.increaseViewCount(); return postMap(post, comments.countByPostIdAndIsDeletedFalse(postId)); }
+    public Map<String, Object> post(Long userId, Long groupId, Long postId) { access.viewGroup(groupId, userId); GroupPost post = access.post(groupId, postId); post.increaseViewCount(); return postMap(post, comments.countByPostIdAndIsDeletedFalse(postId)); }
     public Map<String, Object> createPost(Long userId, Long groupId, Map<String, Object> body) { GroupMember author = access.member(groupId, userId); GroupPostType type = GroupPostType.valueOf(text(body, "type")); if (type == GroupPostType.NOTICE || bool(body, "pinned")) access.postManager(groupId, userId); else if (!author.getGroup().isMemberPostAllowed() && author.getRole() == GroupMemberRole.MEMBER) throw new BusinessException(ErrorCode.FORBIDDEN); if (textOrNull(body, "attachmentNames") != null && !author.getGroup().isPostAttachmentAllowed()) throw new BusinessException(ErrorCode.FORBIDDEN); GroupPost post = posts.save(GroupPost.create(author.getGroup(), author, type, text(body, "title"), text(body, "content"), bool(body, "pinned"), textOrNull(body, "attachmentNames"))); if (post.getType() == GroupPostType.NOTICE) notifyAll(author.getGroup(), "새 공지사항이 등록되었습니다.", "/groups/" + groupId + "/board?postId=" + post.getId()); log(author, "POST_CREATED", post.getTitle()); events.posts(groupId, "POST_CREATED"); return postMap(post, 0); }
     @Transactional(readOnly = true)
     public void assertPostAttachmentAllowed(Long userId, Long groupId) { if (!access.member(groupId, userId).getGroup().isPostAttachmentAllowed()) throw new BusinessException(ErrorCode.FORBIDDEN); }
@@ -318,22 +320,22 @@ public class GroupDetailService {
     public void deletePost(Long userId, Long groupId, Long postId) { GroupMember actor = access.member(groupId, userId); GroupPost post = access.post(groupId, postId); requireAuthorOrPostManager(groupId, userId, actor, post.getAuthor()); post.softDelete(); log(actor, "POST_DELETED", post.getTitle()); events.posts(groupId, "POST_DELETED"); }
     public void pinPost(Long userId, Long groupId, Long postId) { GroupMember actor = access.postManager(groupId, userId); GroupPost post = access.post(groupId, postId); post.togglePin(); log(actor, "POST_PIN_UPDATED", post.getTitle()); events.posts(groupId, "POST_PIN_UPDATED"); }
     @Transactional(readOnly = true)
-    public List<Map<String, Object>> commentList(Long userId, Long groupId, Long postId) { access.member(groupId, userId); access.post(groupId, postId); return comments.findAllByPostIdAndIsDeletedFalseOrderByCreatedAtAsc(postId).stream().map(this::commentMap).toList(); }
+    public List<Map<String, Object>> commentList(Long userId, Long groupId, Long postId) { access.viewGroup(groupId, userId); access.post(groupId, postId); return comments.findAllByPostIdAndIsDeletedFalseOrderByCreatedAtAsc(postId).stream().map(this::commentMap).toList(); }
     public Map<String, Object> createComment(Long userId, Long groupId, Long postId, Long parentId, String content) { GroupMember author = access.member(groupId, userId); if (!author.getGroup().isMemberCommentAllowed() && author.getRole() == GroupMemberRole.MEMBER) throw new BusinessException(ErrorCode.FORBIDDEN); GroupPost post = access.post(groupId, postId); GroupComment parent = parentId == null ? null : comments.findByIdAndPostIdAndIsDeletedFalse(parentId, postId).orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND)); GroupComment comment = comments.save(GroupComment.create(post, author, parent, content)); notifyCommentTarget(post, parent, author); events.posts(groupId, "COMMENT_CREATED"); return commentMap(comment); }
     public void updateComment(Long userId, Long groupId, Long postId, Long commentId, String content) { GroupMember actor = access.member(groupId, userId); GroupComment comment = comments.findByIdAndPostIdAndIsDeletedFalse(commentId, postId).orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND)); requireAuthorOrPostManager(groupId, userId, actor, comment.getAuthor()); comment.update(content); events.posts(groupId, "COMMENT_UPDATED"); }
     public void deleteComment(Long userId, Long groupId, Long postId, Long commentId) { GroupMember actor = access.member(groupId, userId); GroupComment comment = comments.findByIdAndPostIdAndIsDeletedFalse(commentId, postId).orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND)); requireAuthorOrPostManager(groupId, userId, actor, comment.getAuthor()); comment.softDelete(); events.posts(groupId, "COMMENT_DELETED"); }
 
     @Transactional(readOnly = true)
     public Map<String, Object> memberList(Long userId, Long groupId, String keyword, GroupMemberRole role, Grade grade, int page, int size) {
-        access.member(groupId, userId);
+        access.viewGroup(groupId, userId);
         return page(members.findGroupMembers(groupId, GroupMemberStatus.ACTIVE, keyword, role, grade, PageRequest.of(page, size)), m -> memberMap(m, null));
     }
     @Transactional(readOnly = true)
     public Map<String, Object> member(Long userId, Long groupId, Long memberId) {
-        GroupMember requester = access.member(groupId, userId);
+        Optional<GroupMember> requester = access.viewerMembership(groupId, userId);
         GroupMember target = access.targetMember(groupId, memberId);
         Map<String, Object> result = memberMap(target, null);
-        if (requester.getRole() != GroupMemberRole.MEMBER) result.put("memo", target.getMemo());
+        if (access.isAdmin(userId) || requester.map(member -> member.getRole() != GroupMemberRole.MEMBER).orElse(false)) result.put("memo", target.getMemo());
         return result;
     }
     public void memo(Long userId, Long groupId, Long memberId, String memo) { GroupMember actor = access.memberManager(groupId, userId); GroupMember target = access.targetMember(groupId, memberId); target.updateMemo(memo); log(actor, "MEMBER_MEMO_UPDATED", target.getUser().getName()); }
@@ -364,7 +366,7 @@ public class GroupDetailService {
     public void processAllRequests(Long userId, Long groupId, boolean approve) { access.joinRequestManager(groupId, userId); joinRequests.findAllByGroupIdAndStatus(groupId, JoinRequestStatus.PENDING).forEach(request -> processRequest(userId, groupId, request.getId(), approve)); }
 
     @Transactional(readOnly = true)
-    public Map<String, Object> operationLogs(Long userId, Long groupId, int page, int size) { access.operationLogManager(groupId, userId); return page(logs.findAllByGroupIdOrderByCreatedAtDesc(groupId, PageRequest.of(page, size)), l -> Map.of("id", l.getId(), "actorName", l.getActor().getUser().getName(), "action", operationActionLabel(l.getAction()), "detail", l.getDetail(), "createdAt", l.getCreatedAt())); }
+    public Map<String, Object> operationLogs(Long userId, Long groupId, int page, int size) { if (access.isAdmin(userId)) access.viewGroup(groupId, userId); else access.operationLogManager(groupId, userId); return page(logs.findAllByGroupIdOrderByCreatedAtDesc(groupId, PageRequest.of(page, size)), l -> Map.of("id", l.getId(), "actorName", l.getActor().getUser().getName(), "action", operationActionLabel(l.getAction()), "detail", l.getDetail(), "createdAt", l.getCreatedAt())); }
     @Transactional(readOnly = true)
     public Map<String, Object> settings(Long userId, Long groupId) { Group group = access.owner(groupId, userId).getGroup(); Map<String, Object> result = group(userId, groupId); result.put("newJoinAllowed", group.isNewJoinAllowed()); result.put("approvalRequired", group.isApprovalRequired()); result.put("guestAllowed", group.isGuestAllowed()); result.put("sameDayVoteChangeAllowed", group.isSameDayVoteChangeAllowed()); result.put("postDeadlineVoteChangeAllowed", group.isPostDeadlineVoteChangeAllowed()); result.put("memberPostAllowed", group.isMemberPostAllowed()); result.put("memberCommentAllowed", group.isMemberCommentAllowed()); result.put("postAttachmentAllowed", group.isPostAttachmentAllowed()); return result; }
     @Transactional(readOnly = true)
@@ -426,6 +428,7 @@ public class GroupDetailService {
     private Map<String, Object> requestMap(GroupJoinRequest r) { User u = r.getRequester(); Map<String, Object> result = map(); result.put("id", r.getId()); result.put("name", u.getName()); result.put("profileImageUrl", u.getProfileImageUrl()); result.put("gender", u.getGender()); result.put("ageGroup", u.getAgeGroup()); result.put("grade", u.getGrade()); result.put("message", Optional.ofNullable(r.getMessage()).orElse("")); result.put("requestedAt", r.getCreatedAt()); return result; }
     private Map<String, Object> joinResult(Group group, String status) { Map<String, Object> result = map(); result.put("groupId", group.getId()); result.put("groupName", group.getName()); result.put("profileImageUrl", group.getProfileImageUrl()); result.put("approvalRequired", group.isApprovalRequired()); result.put("status", status); return result; }
     private Map<String, Object> permissionMap(GroupMember m) { return Map.of("schedule", m.isSchedulePermission(), "notice", m.isNoticePermission(), "joinRequests", m.isJoinRequestPermission(), "members", m.isMemberPermission(), "posts", m.isPostPermission(), "operationLogs", m.isOperationLogPermission(), "guests", m.isGuestPermission()); }
+    private Map<String, Object> permissionMap(boolean schedule, boolean notice, boolean joinRequests, boolean members, boolean posts, boolean operationLogs, boolean guests) { return Map.of("schedule", schedule, "notice", notice, "joinRequests", joinRequests, "members", members, "posts", posts, "operationLogs", operationLogs, "guests", guests); }
     private <T> Map<String, Object> page(Page<T> p, Function<T, Map<String, Object>> mapper) { return Map.of("items", p.stream().map(mapper).toList(), "page", p.getNumber(), "size", p.getSize(), "totalElements", p.getTotalElements(), "totalPages", p.getTotalPages()); }
     private int average(List<GroupMember> list, Function<User, Integer> getter) { return list.isEmpty() ? 0 : (int) Math.round(list.stream().map(GroupMember::getUser).map(getter).mapToInt(Integer::intValue).average().orElse(0)); }
     private String peakTime(List<GroupSession> list) { return list.isEmpty() ? "기록 없음" : list.stream().collect(Collectors.groupingBy(s -> s.getStartsAt().getDayOfWeek() + " " + s.getStartsAt().getHour(), Collectors.counting())).entrySet().stream().max(Map.Entry.comparingByValue()).orElseThrow().getKey(); }

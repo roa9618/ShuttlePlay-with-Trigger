@@ -4,8 +4,12 @@ import com.shuttleplay.server.domain.group.entity.*;
 import com.shuttleplay.server.domain.group.enums.*;
 import com.shuttleplay.server.domain.group.repository.*;
 import com.shuttleplay.server.global.error.*;
+import com.shuttleplay.server.domain.user.enums.UserRole;
+import com.shuttleplay.server.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -13,6 +17,24 @@ public class GroupAccessService {
     private final GroupMemberRepository memberRepository;
     private final GroupSessionRepository sessionRepository;
     private final GroupPostRepository postRepository;
+    private final GroupRepository groupRepository;
+    private final UserRepository userRepository;
+
+    public boolean isAdmin(Long userId) {
+        return userRepository.findById(userId).map(user -> user.getRole() == UserRole.ADMIN).orElse(false);
+    }
+
+    public Group viewGroup(Long groupId, Long userId) {
+        if (!isAdmin(userId)) return member(groupId, userId).getGroup();
+        return groupRepository.findById(groupId).orElseThrow(() -> new BusinessException(ErrorCode.GROUP_NOT_FOUND));
+    }
+
+    public Optional<GroupMember> viewerMembership(Long groupId, Long userId) {
+        Optional<GroupMember> membership = memberRepository.findByGroupIdAndUserIdAndStatus(groupId, userId, GroupMemberStatus.ACTIVE);
+        if (membership.isEmpty() && !isAdmin(userId)) throw new BusinessException(ErrorCode.GROUP_NOT_FOUND);
+        viewGroup(groupId, userId);
+        return membership;
+    }
 
     public GroupMember member(Long groupId, Long userId) {
         return memberRepository.findByGroupIdAndUserIdAndStatus(groupId, userId, GroupMemberStatus.ACTIVE)
