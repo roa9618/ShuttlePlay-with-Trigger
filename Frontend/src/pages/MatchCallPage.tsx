@@ -80,7 +80,7 @@ export default function MatchCallPage() {
   }
 
   if (!data) return <div className="min-h-dvh bg-background"><main className="flex min-h-dvh items-center justify-center text-muted-foreground">입장 호출 정보를 확인하고 있어요.</main></div>;
-  const match = data.nextMatch;
+  const match = data.currentMatch ?? data.nextMatch;
 
   return (
     <div className="min-h-dvh bg-background">

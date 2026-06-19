@@ -49,17 +49,11 @@
     z-index: 40;
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-start;
     border-bottom: 1px solid var(--border);
     padding: 10px 14px;
     background: color-mix(in srgb, var(--card) 92%, transparent);
     backdrop-filter: blur(10px);
-  }
-
-  .app-mobile-admin-bar span {
-    color: var(--muted-foreground);
-    font-size: 12px;
-    font-weight: 600;
   }
 
   .app-desktop-content {

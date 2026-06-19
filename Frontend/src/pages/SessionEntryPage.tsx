@@ -13,6 +13,40 @@ type QrDetector = { detect: (source: HTMLVideoElement) => Promise<Array<{ rawVal
 type QrReaderControls = { stop: () => void };
 type QrReader = { decodeFromVideoElement: (video: HTMLVideoElement, callback: (result?: { getText?: () => string; text?: string }) => void) => Promise<QrReaderControls> };
 
+function waitForVideoElement(ref: { current: HTMLVideoElement | null }) {
+  return new Promise<HTMLVideoElement>((resolve, reject) => {
+    let attempts = 0;
+    const findVideo = () => {
+      if (ref.current) {
+        resolve(ref.current);
+        return;
+      }
+      attempts += 1;
+      if (attempts >= 60) {
+        reject(new Error('카메라 화면을 준비하지 못했습니다.'));
+        return;
+      }
+      window.requestAnimationFrame(findVideo);
+    };
+    findVideo();
+  });
+}
+
+function waitForVideoMetadata(video: HTMLVideoElement) {
+  if (video.readyState >= HTMLMediaElement.HAVE_METADATA) return Promise.resolve();
+  return new Promise<void>((resolve, reject) => {
+    const timeout = window.setTimeout(() => {
+      video.removeEventListener('loadedmetadata', handleLoaded);
+      reject(new Error('카메라 영상을 불러오지 못했습니다.'));
+    }, 5_000);
+    const handleLoaded = () => {
+      window.clearTimeout(timeout);
+      resolve();
+    };
+    video.addEventListener('loadedmetadata', handleLoaded, { once: true });
+  });
+}
+
 export default function SessionEntryPage() {
   const navigate = useNavigate();
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -76,44 +110,42 @@ export default function SessionEntryPage() {
       });
       streamRef.current = stream;
       setCameraOpen(true);
-      window.setTimeout(async () => {
-        const video = videoRef.current;
-        if (!video) return;
-        video.srcObject = stream;
-        video.muted = true;
-        video.autoplay = true;
-        video.playsInline = true;
-        video.setAttribute('playsinline', 'true');
-        video.setAttribute('webkit-playsinline', 'true');
-        await video.play();
-        setCameraReady(true);
-        if (DetectorClass) {
-          const detector = new DetectorClass({ formats: ['qr_code'] });
-          scanTimerRef.current = window.setInterval(async () => {
-            if (!videoRef.current || videoRef.current.readyState < 2) return;
-            try {
-              const values = await detector.detect(videoRef.current);
-              const raw = values[0]?.rawValue;
-              if (raw) handleQrValue(raw);
-            } catch {
-              /* 다음 프레임에서 다시 시도합니다. */
-            }
-          }, 350);
-          return;
-        }
-        try {
-          const moduleUrl = 'https://cdn.jsdelivr.net/npm/@zxing/browser@0.1.5/+esm';
-          const zxing = await import(/* @vite-ignore */ moduleUrl) as unknown as { BrowserQRCodeReader: new () => QrReader };
-          const reader = new zxing.BrowserQRCodeReader();
-          readerControlsRef.current = await reader.decodeFromVideoElement(video, result => {
-            const raw = result?.getText?.() ?? result?.text;
+      const video = await waitForVideoElement(videoRef);
+      if (streamRef.current !== stream) return;
+      video.muted = true;
+      video.autoplay = true;
+      video.playsInline = true;
+      video.setAttribute('playsinline', 'true');
+      video.setAttribute('webkit-playsinline', 'true');
+      video.srcObject = stream;
+      await waitForVideoMetadata(video);
+      await video.play();
+      setCameraReady(true);
+      if (DetectorClass) {
+        const detector = new DetectorClass({ formats: ['qr_code'] });
+        scanTimerRef.current = window.setInterval(async () => {
+          if (!videoRef.current || videoRef.current.readyState < 2) return;
+          try {
+            const values = await detector.detect(videoRef.current);
+            const raw = values[0]?.rawValue;
             if (raw) handleQrValue(raw);
-          });
-        } catch {
-          setError('이 브라우저에서는 QR 인식기를 불러오지 못했어요. 아래 코드 입력을 이용해 주세요.');
-          closeCamera();
-        }
-      }, 0);
+          } catch {
+            /* 다음 프레임에서 다시 시도합니다. */
+          }
+        }, 350);
+        return;
+      }
+      try {
+        const moduleUrl = 'https://cdn.jsdelivr.net/npm/@zxing/browser@0.1.5/+esm';
+        const zxing = await import(/* @vite-ignore */ moduleUrl) as unknown as { BrowserQRCodeReader: new () => QrReader };
+        const reader = new zxing.BrowserQRCodeReader();
+        readerControlsRef.current = await reader.decodeFromVideoElement(video, result => {
+          const raw = result?.getText?.() ?? result?.text;
+          if (raw) handleQrValue(raw);
+        });
+      } catch {
+        setError('카메라 화면은 열렸지만 QR 인식기를 불러오지 못했어요. 아래 코드 입력을 이용해 주세요.');
+      }
     } catch (cameraError) {
       closeCamera();
       if (cameraError instanceof DOMException && cameraError.name === 'NotAllowedError') {
@@ -187,7 +219,7 @@ export default function SessionEntryPage() {
         <button type="button" className="relative block w-full overflow-hidden rounded-2xl bg-foreground" onClick={() => {
           void videoRef.current?.play().then(() => setCameraReady(true)).catch(() => undefined);
         }} aria-label="카메라 미리보기">
-          <video ref={videoRef} className="aspect-[4/3] min-h-[260px] w-full object-cover" autoPlay playsInline muted onLoadedMetadata={() => setCameraReady(true)} />
+          <video ref={videoRef} className="aspect-[4/3] min-h-[260px] w-full object-cover" autoPlay playsInline muted onPlaying={() => setCameraReady(true)} />
           {!cameraReady && <span className="absolute inset-0 flex items-center justify-center bg-foreground text-sm font-semibold text-background">카메라 화면을 준비하고 있어요</span>}
         </button>
         <Button type="button" variant="outline" className="mt-3 h-14 w-full rounded-2xl hover:border-primary hover:bg-primary/10 hover:text-primary" onClick={closeCamera}>직접 코드 입력하기</Button>
