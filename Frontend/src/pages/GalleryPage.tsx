@@ -65,6 +65,9 @@ export default function GalleryPage() {
   const mobilePages = [
     { name: '참가자 현황', path: '/sessions/demo/status', description: '내 상태 및 다음 경기' },
     { name: '다음 경기 예정', path: '/sessions/demo/next-match', description: '경기 시작 알림' },
+    { name: '지금 경기 입장', path: '/sessions/demo/match-call', description: '코트 입장 호출 확인' },
+    { name: '현재 경기중', path: '/sessions/demo/current-match', description: '현재 코트와 팀 정보 확인' },
+    { name: '경기 결과 입력', path: '/sessions/demo/match-result', description: '참가자 승패 및 점수 입력' },
     { name: '오늘 내 운동 기록', path: '/sessions/demo/my-report', description: '당일 경기, 승패, MMR 변화' },
   ];
 

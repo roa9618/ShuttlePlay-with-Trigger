@@ -20,6 +20,9 @@ import AttendancePage from "../pages/AttendancePage";
 import LateRegistrationPage from "../pages/LateRegistrationPage";
 import ParticipantStatusPage from "../pages/ParticipantStatusPage";
 import NextMatchPage from "../pages/NextMatchPage";
+import MatchCallPage from "../pages/MatchCallPage";
+import ParticipantCurrentMatchPage from "../pages/ParticipantCurrentMatchPage";
+import ParticipantMatchResultPage from "../pages/ParticipantMatchResultPage";
 import OrganizerDashboardPage from "../pages/OrganizerDashboardPage";
 import ParticipantManagementPage from "../pages/ParticipantManagementPage";
 import MatchQueuePage from "../pages/MatchQueuePage";
@@ -55,7 +58,6 @@ export const router = createBrowserRouter([
       { path: "password-reset", Component: PasswordResetPage, handle: { title: "비밀번호 재설정" } },
       { path: "password-reset/confirm", Component: PasswordResetConfirmPage, handle: { title: "새 비밀번호 설정" } },
 
-      // Mobile-optimized pages (no sidebar)
       { path: "session-entry", Component: SessionEntryPage, handle: { title: "일정 입장" } },
       { path: "session-entry/previews/:previewType", Component: SessionEntryPreviewPage, handle: { title: "일정 입장 화면 미리보기" } },
       { path: "session-entry/previews/results/:resultType", Component: SessionEntryResultPage, handle: { title: "일정 입장 결과 미리보기" } },
@@ -66,17 +68,19 @@ export const router = createBrowserRouter([
       { path: "sessions/:sessionId/attendance", Component: AttendancePage, handle: { title: "출석 체크" } },
       { path: "sessions/:sessionId/late", Component: LateRegistrationPage, handle: { title: "지각 등록" } },
       { path: "sessions/:sessionId/guest-report", Component: ParticipantSessionReportPage, handle: { title: "게스트 일정 리포트" } },
-      { path: "sessions/:sessionId/status", Component: ParticipantStatusPage, handle: { title: "참가 상태" } },
-      { path: "sessions/:sessionId/next-match", Component: NextMatchPage, handle: { title: "다음 경기" } },
+      { path: "sessions/:sessionId/status", Component: ParticipantStatusPage, handle: { title: "참가자 현황" } },
+      { path: "sessions/:sessionId/next-match", Component: NextMatchPage, handle: { title: "다음 경기 예정" } },
+      { path: "sessions/:sessionId/match-call", Component: MatchCallPage, handle: { title: "경기 입장 안내" } },
+      { path: "sessions/:sessionId/current-match", Component: ParticipantCurrentMatchPage, handle: { title: "현재 경기중" } },
+      { path: "sessions/:sessionId/match-result", Component: ParticipantMatchResultPage, handle: { title: "경기 결과 입력" } },
+      { path: "sessions/:sessionId/my-report", Component: ParticipantSessionReportPage, handle: { title: "오늘 내 운동 기록" } },
       { path: "sessions/demo/my-report", Component: ParticipantSessionReportPage, handle: { title: "오늘 내 운동 기록" } },
 
-      // Large display (no sidebar)
       { path: "sessions/:sessionId/display", Component: DisplayBoardPage, handle: { title: "경기 현황판" } },
 
       {
         Component: RequireAuth,
         children: [
-          // Desktop-optimized pages (with sidebar) - nested under Layout
           { path: "groups", Component: GroupListPage, handle: { title: "내 모임" } },
           { path: "groups/entry/manage", element: <GroupEntryRedirectPage />, handle: { title: "모임 운영" } },
           { path: "groups/entry/create-session", element: <GroupEntryRedirectPage createSession />, handle: { title: "일정 생성" } },
@@ -97,10 +101,9 @@ export const router = createBrowserRouter([
           { path: "sessions/:sessionId/result/new", Component: MatchResultInputPage, handle: { title: "경기 결과 입력" } },
           { path: "sessions/:sessionId/result/:matchId/edit", Component: MatchResultEditPage, handle: { title: "경기 결과 수정" } },
           { path: "my-record", Component: MyRecordPage, handle: { title: "내 기록" } },
-          { path: "my-record/mmr", Component: MmrHistoryPage, handle: { title: "MMR 변동" } },
+          { path: "my-record/mmr", Component: MmrHistoryPage, handle: { title: "MMR 변화" } },
           { path: "my-record/matches", Component: MatchHistoryPage, handle: { title: "전체 경기 기록" } },
           { path: "sessions/:sessionId/report", Component: SessionReportPage, handle: { title: "일정 리포트" } },
-          { path: "sessions/:sessionId/my-report", Component: ParticipantSessionReportPage, handle: { title: "내 일정 리포트" } },
           { path: "settings", Component: SettingsPage, handle: { title: "설정" } },
           { path: "notifications", Component: NotificationsPage, handle: { title: "전체 알림" } },
           { path: "notices", Component: NoticePage, handle: { title: "공지사항" } },
