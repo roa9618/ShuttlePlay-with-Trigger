@@ -10,6 +10,7 @@ import static org.mockito.Mockito.when;
 
 import com.shuttleplay.server.domain.group.entity.Group;
 import com.shuttleplay.server.domain.group.entity.GroupSession;
+import com.shuttleplay.server.domain.group.repository.GroupSessionAttendanceRepository;
 import com.shuttleplay.server.domain.record.dto.MatchRecordPageResponse;
 import com.shuttleplay.server.domain.record.dto.MyRecordSummaryResponse;
 import com.shuttleplay.server.domain.record.entity.MatchPlayer;
@@ -17,7 +18,6 @@ import com.shuttleplay.server.domain.record.entity.MatchRecord;
 import com.shuttleplay.server.domain.record.enums.MatchType;
 import com.shuttleplay.server.domain.record.repository.MatchPlayerRepository;
 import com.shuttleplay.server.domain.record.repository.MmrHistoryRepository;
-import com.shuttleplay.server.domain.record.repository.SessionAttendanceRepository;
 import com.shuttleplay.server.domain.user.entity.User;
 import com.shuttleplay.server.domain.user.enums.AgeGroup;
 import com.shuttleplay.server.domain.user.enums.Gender;
@@ -41,7 +41,7 @@ import org.springframework.data.jpa.domain.Specification;
 class MyRecordServiceTest {
     @Mock private UserRepository users;
     @Mock private MatchPlayerRepository matchPlayers;
-    @Mock private SessionAttendanceRepository attendances;
+    @Mock private GroupSessionAttendanceRepository attendances;
     @Mock private MmrHistoryRepository mmrHistories;
 
     private MyRecordService service;
@@ -64,8 +64,8 @@ class MyRecordServiceTest {
         when(user.getDoublesMmr()).thenReturn(1100);
         when(user.getMixedMmr()).thenReturn(1100);
         when(matchPlayers.findUserMatchRecords(1L)).thenReturn(List.of());
-        when(attendances.findAllByUserIdAndAttendedAtBetweenAndIsDeletedFalseOrderByAttendedAtAsc(
-                eq(1L), any(LocalDateTime.class), any(LocalDateTime.class))).thenReturn(List.of());
+        when(attendances.findUserRecordAttendances(
+                eq(1L), any(LocalDateTime.class), any(LocalDateTime.class), any())).thenReturn(List.of());
         when(mmrHistories.findAllByUserIdAndMmrTypeAndChangedAtBetweenAndIsDeletedFalseOrderByChangedAtAsc(
                 eq(1L), any(), any(LocalDateTime.class), any(LocalDateTime.class))).thenReturn(List.of());
 
