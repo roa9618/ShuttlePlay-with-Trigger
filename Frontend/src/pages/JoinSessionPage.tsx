@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { ApiClientError } from '../utils/apiClient';
 import { sessionEntryApi, type SessionEntryPreview } from '../utils/sessionEntryApi';
 import { setAuthRedirectPath } from '../utils/authSession';
+import { sessionPath } from '../utils/publicId';
 
 const date = (value: string) => new Intl.DateTimeFormat('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' }).format(new Date(value));
 const time = (value: string) => new Intl.DateTimeFormat('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(value));
@@ -20,17 +21,17 @@ function FlowSelect({ value, placeholder, options, onChange, className = '' }: {
 }
 
 export default function JoinSessionPage() {
-  const { sessionId } = useParams(); const id = Number(sessionId); const navigate = useNavigate(); const location = useLocation(); const [searchParams] = useSearchParams();
+  const { sessionId } = useParams(); const id = sessionId ?? ''; const navigate = useNavigate(); const location = useLocation(); const [searchParams] = useSearchParams();
   const code = searchParams.get('code');
   const [entry, setEntry] = useState<SessionEntryPreview | null>((location.state as { entry?: SessionEntryPreview } | null)?.entry ?? null);
   const [loading, setLoading] = useState(!entry); const [error, setError] = useState(''); const [registered, setRegistered] = useState<boolean | null>(null);
   const [form, setForm] = useState({ name: '', gender: '', ageGroup: '', grade: '' });
 
   const moveToLogin = useCallback(() => { const path = `${location.pathname}${location.search}`; setAuthRedirectPath(path); navigate(`/login?redirect=${encodeURIComponent(path)}`); }, [location.pathname, location.search, navigate]);
-  const moveToResult = useCallback((reason: string, current: SessionEntryPreview | null = entry) => navigate(`/sessions/${id}/entry-result/${resultSlug(reason)}`, { state: { entry: current, code } }), [code, entry, id, navigate]);
+  const moveToResult = useCallback((reason: string, current: SessionEntryPreview | null = entry) => navigate(sessionPath(id, `/entry-result/${resultSlug(reason)}`), { state: { entry: current, code } }), [code, entry, id, navigate]);
 
   useEffect(() => {
-    if (!Number.isFinite(id) || entry) return;
+    if (!id || entry) return;
     void sessionEntryApi.bySession(id, code).then(setEntry).catch(errorValue => {
       if (errorValue instanceof ApiClientError && errorValue.status === 401) moveToLogin();
       else if (errorValue instanceof ApiClientError && (errorValue.status === 403 || errorValue.status === 404)) navigate('/session-entry/result/session-not-found');
@@ -59,7 +60,7 @@ export default function JoinSessionPage() {
       setEntry(next);
       if (next.restrictionReason) { moveToResult(next.restrictionReason, next); return; }
       if (!registered && next.registered && entry?.registered === false) { moveToResult('EXISTING_REGISTRATION_FOUND', next); return; }
-      navigate(`/sessions/${id}/attendance`, { state: { entry: next, code } });
+      navigate(sessionPath(id, '/attendance'), { state: { entry: next, code } });
     } catch (errorValue) {
       if (errorValue instanceof ApiClientError && errorValue.status === 401) moveToLogin();
       else setError('입장 정보를 확인하지 못했어요. 입력 내용을 다시 확인해 주세요.');

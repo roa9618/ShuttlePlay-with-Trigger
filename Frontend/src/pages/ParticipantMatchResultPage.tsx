@@ -7,6 +7,7 @@ import { Input } from '../components/ui/input';
 import { ApiClientError } from '../utils/apiClient';
 import { setAuthRedirectPath } from '../utils/authSession';
 import { sessionEntryApi, type SessionParticipantCurrentMatch } from '../utils/sessionEntryApi';
+import { sessionPath } from '../utils/publicId';
 import { connectSessionEntrySocket } from '../utils/sessionEntrySocket';
 
 type ResultValue = 'WIN' | 'LOSS';
@@ -34,7 +35,7 @@ export default function ParticipantMatchResultPage() {
   const { sessionId } = useParams();
   const location = useLocation();
   const isDemo = sessionId === 'demo';
-  const id = Number(sessionId);
+  const id = sessionId ?? '';
   const navigate = useNavigate();
   const stateData = (location.state as { currentMatch?: SessionParticipantCurrentMatch } | null)?.currentMatch ?? null;
   const [data, setData] = useState<SessionParticipantCurrentMatch | null>(stateData);
@@ -49,18 +50,18 @@ export default function ParticipantMatchResultPage() {
   const load = useCallback(async (force = false) => {
     if (stateData && !force) return;
     if (isDemo) { setData(demoCurrentMatch()); return; }
-    if (!Number.isFinite(id)) return;
+    if (!id) return;
     try {
       const next = await sessionEntryApi.currentMatch(id);
       setData(next);
       if (!next.currentMatch && next.playStatus !== 'PLAYING') {
         setCompletedByOther(true);
-        window.setTimeout(() => navigate(`/sessions/${id}/status`), 800);
+        window.setTimeout(() => navigate(sessionPath(id, '/status')), 800);
       }
       setError('');
     } catch (errorValue) {
       if (errorValue instanceof ApiClientError && errorValue.status === 401) {
-        const path = `/sessions/${id}/match-result`;
+        const path = sessionPath(id, '/match-result');
         setAuthRedirectPath(path);
         navigate(`/login?redirect=${encodeURIComponent(path)}`);
         return;
@@ -71,9 +72,9 @@ export default function ParticipantMatchResultPage() {
 
   useEffect(() => { void load(); }, [load]);
   useEffect(() => {
-    if (!data || isDemo) return undefined;
-    return connectSessionEntrySocket(data.groupId, data.sessionId, () => void load(true));
-  }, [data, isDemo, load]);
+    if (!data?.groupId || !data.sessionId || isDemo) return undefined;
+    return connectSessionEntrySocket(data.groupId, data.sessionId, () => load(true));
+  }, [data?.groupId, data?.sessionId, isDemo, load]);
 
   const match = data?.currentMatch;
   const canSubmit = !!result && !busy;
@@ -118,10 +119,10 @@ export default function ParticipantMatchResultPage() {
       if (response.resultAlreadySubmitted) {
         setCompletedByOther(true);
         setMessage('이미 다른 참가자가 결과를 입력했어요. 참가자 현황으로 돌아갈게요.');
-        window.setTimeout(() => navigate(`/sessions/${id}/status`), 700);
+        window.setTimeout(() => navigate(sessionPath(id, '/status')), 700);
         return;
       }
-      navigate(`/sessions/${id}/status`);
+      navigate(sessionPath(id, '/status'));
     } catch {
       setMessage('결과를 저장하지 못했어요. 잠시 후 다시 시도해 주세요.');
     } finally {
@@ -130,7 +131,7 @@ export default function ParticipantMatchResultPage() {
   };
 
   if (error) {
-    return <Shell><section className="w-full rounded-3xl border-2 border-destructive/20 bg-card p-6 text-center shadow-lg"><ShieldAlert className="mx-auto h-12 w-12 text-destructive" /><h1 className="mt-4 text-2xl font-bold">확인이 필요해요</h1><p className="mt-2 text-sm leading-6 text-muted-foreground">{error}</p><Button className="mt-5 h-14 w-full rounded-2xl text-base font-bold" onClick={() => navigate(`/sessions/${sessionId}/status`)}>참가자 현황으로 돌아가기</Button></section></Shell>;
+    return <Shell><section className="w-full rounded-3xl border-2 border-destructive/20 bg-card p-6 text-center shadow-lg"><ShieldAlert className="mx-auto h-12 w-12 text-destructive" /><h1 className="mt-4 text-2xl font-bold">확인이 필요해요</h1><p className="mt-2 text-sm leading-6 text-muted-foreground">{error}</p><Button className="mt-5 h-14 w-full rounded-2xl text-base font-bold" onClick={() => navigate(sessionPath(sessionId ?? id, '/status'))}>참가자 현황으로 돌아가기</Button></section></Shell>;
   }
   if (!data) return <Shell><p className="text-center text-muted-foreground">결과 입력 정보를 확인하고 있어요.</p></Shell>;
 
@@ -174,7 +175,7 @@ export default function ParticipantMatchResultPage() {
 
         <div className="mt-5 grid gap-2.5">
           <Button type="submit" className="h-16 w-full rounded-2xl text-lg font-bold" disabled={!canSubmit || completedByOther}>{busy ? '저장 중' : '결과 저장하기'}</Button>
-          <Button type="button" variant="outline" className="h-14 w-full rounded-2xl text-base font-bold hover:border-border hover:bg-secondary hover:text-foreground" onClick={() => navigate(`/sessions/${sessionId}/current-match`)}>현재 경기로 돌아가기</Button>
+          <Button type="button" variant="outline" className="h-14 w-full rounded-2xl text-base font-bold hover:border-border hover:bg-secondary hover:text-foreground" onClick={() => navigate(sessionPath(sessionId ?? id, '/current-match'))}>현재 경기로 돌아가기</Button>
         </div>
       </form>
     </Shell>

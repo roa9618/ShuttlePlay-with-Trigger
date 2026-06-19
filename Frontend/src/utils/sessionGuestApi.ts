@@ -41,8 +41,8 @@ export type GuestJoinRequest = {
 const options = { auth: true, credentials: 'include' as RequestCredentials };
 
 export const sessionGuestApi = {
-  getPreview: (sessionId: number) =>
+  getPreview: (sessionId: string) =>
     apiClient.get<GuestJoinPreviewResponse>(`/sessions/${sessionId}/guest-join`, options),
-  submit: (sessionId: number, body: GuestJoinRequest) =>
+  submit: (sessionId: string, body: GuestJoinRequest) =>
     apiClient.post<GuestJoinPreviewResponse>(`/sessions/${sessionId}/guest-join`, body, options),
 };

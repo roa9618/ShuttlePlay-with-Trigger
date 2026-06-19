@@ -7,6 +7,7 @@ import { setAuthRedirectPath } from '../utils/authSession';
 import { sessionEntryApi, type SessionParticipantAlert } from '../utils/sessionEntryApi';
 import { scheduleSessionAutoStart } from '../utils/sessionEntryAutoStart';
 import { connectSessionEntrySocket, vibrateParticipantAlert } from '../utils/sessionEntrySocket';
+import { sessionPath } from '../utils/publicId';
 
 const matchTypeLabel: Record<string, string> = { MENS_DOUBLES: '남복', WOMENS_DOUBLES: '여복', MIXED_DOUBLES: '혼복', ANY: '자유 매칭' };
 
@@ -29,21 +30,21 @@ function demoCall(): SessionParticipantAlert {
 export default function MatchCallPage() {
   const { sessionId } = useParams();
   const isDemo = sessionId === 'demo';
-  const id = Number(sessionId);
+  const id = sessionId ?? '';
   const navigate = useNavigate();
   const [data, setData] = useState<SessionParticipantAlert | null>(null);
   const [error, setError] = useState('');
-  const [realtimeConnected, setRealtimeConnected] = useState(true);
+  const [realtimeConnected, setRealtimeConnected] = useState(isDemo);
 
   const load = useCallback(async () => {
     if (isDemo) { setData(demoCall()); return; }
-    if (!Number.isFinite(id)) return;
+    if (!id) return;
     try {
       setData(await sessionEntryApi.matchCall(id));
       setError('');
     } catch (errorValue) {
       if (errorValue instanceof ApiClientError && errorValue.status === 401) {
-        const path = `/sessions/${id}/match-call`;
+        const path = sessionPath(id, '/match-call');
         setAuthRedirectPath(path);
         navigate(`/login?redirect=${encodeURIComponent(path)}`);
         return;
@@ -55,21 +56,27 @@ export default function MatchCallPage() {
   useEffect(() => { void load(); }, [load]);
   useEffect(() => { vibrateParticipantAlert('HIGH'); }, []);
   useEffect(() => {
-    if (!data || isDemo) return undefined;
-    return connectSessionEntrySocket(data.groupId, data.sessionId, () => void load(), setRealtimeConnected);
-  }, [data, isDemo, load]);
+    if (!data?.groupId || !data.sessionId || isDemo) return undefined;
+    return connectSessionEntrySocket(data.groupId, data.sessionId, load, setRealtimeConnected);
+  }, [data?.groupId, data?.sessionId, isDemo, load]);
   useEffect(() => {
     if (!data || isDemo) return undefined;
-    return scheduleSessionAutoStart(data, () => navigate(`/sessions/${data.sessionId}/current-match`), () => void load());
-  }, [data, isDemo, load, navigate]);
+    if ((data.playStatus !== 'CALLING' && data.playStatus !== 'PLAYING') || (!data.currentMatch && !data.nextMatch)) {
+      navigate(sessionPath(id, '/status'), { replace: true });
+      return undefined;
+    }
+    if (data.playStatus !== 'CALLING') return undefined;
+    return scheduleSessionAutoStart(data, () => navigate(sessionPath(id, '/current-match')), () => void load());
+  }, [data, id, isDemo, load, navigate]);
 
   const confirm = () => {
-    if (data?.nextMatch) window.sessionStorage.setItem(`session-next-prompt:${data.sessionId}:${data.nextMatch.matchQueueId ?? data.nextMatch.matchId ?? 'current'}:CALLING`, 'true');
-    navigate(`/sessions/${sessionId}/status`);
+    const matchId = data?.currentMatch?.matchId ?? data?.nextMatch?.matchId ?? 'current';
+    if (data) window.sessionStorage.setItem(`session-match-start-alert:${data.sessionId}:${matchId}`, 'true');
+    navigate(sessionPath(id, '/current-match'), { replace: true });
   };
 
   if (error) {
-    return <div className="min-h-dvh bg-background"><main className="mx-auto flex min-h-dvh max-w-lg items-center px-4"><section className="w-full rounded-3xl border-2 border-destructive/20 bg-card p-6 text-center shadow-lg"><ShieldAlert className="mx-auto h-12 w-12 text-destructive" /><h1 className="mt-4 text-2xl font-bold">확인이 필요해요</h1><p className="mt-2 text-sm leading-6 text-muted-foreground">{error}</p><Button className="mt-5 h-14 w-full rounded-2xl text-base font-bold" onClick={() => navigate(`/sessions/${sessionId}/status`)}>참가자 현황으로 돌아가기</Button></section></main></div>;
+    return <div className="min-h-dvh bg-background"><main className="mx-auto flex min-h-dvh max-w-lg items-center px-4"><section className="w-full rounded-3xl border-2 border-destructive/20 bg-card p-6 text-center shadow-lg"><ShieldAlert className="mx-auto h-12 w-12 text-destructive" /><h1 className="mt-4 text-2xl font-bold">확인이 필요해요</h1><p className="mt-2 text-sm leading-6 text-muted-foreground">{error}</p><Button className="mt-5 h-14 w-full rounded-2xl text-base font-bold" onClick={() => navigate(sessionPath(sessionId ?? id, '/status'))}>참가자 현황으로 돌아가기</Button></section></main></div>;
   }
 
   if (!data) return <div className="min-h-dvh bg-background"><main className="flex min-h-dvh items-center justify-center text-muted-foreground">입장 호출 정보를 확인하고 있어요.</main></div>;
