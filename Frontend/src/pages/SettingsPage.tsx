@@ -443,6 +443,15 @@ export default function SettingsPage() {
     }
   };
 
+  const handleNotificationPermissionGuide = () => {
+    const userAgent = window.navigator.userAgent;
+    const isIos = /iPhone|iPad|iPod/i.test(userAgent);
+    const guide = isIos
+      ? 'iPhone 설정 앱에서 알림을 허용해 주세요.\n\n1. 설정 앱 열기\n2. 알림 선택\n3. ShuttlePlay 또는 사용 중인 브라우저 선택\n4. 알림 허용 켜기'
+      : 'Android에서 알림을 허용해 주세요.\n\n1. 홈 화면의 ShuttlePlay 앱 아이콘을 길게 누르기\n2. 앱 정보 선택\n3. 알림 선택\n4. 알림 허용 켜기\n\n브라우저로 이용 중이면 주소창 왼쪽 사이트 설정에서도 알림을 허용할 수 있어요.';
+    window.alert(guide);
+  };
+
   const handleNotificationToggle = async (key: keyof UserNotificationSettingsResponse) => {
     const previousSettings = notificationSettings;
     const nextSettings = {
@@ -738,6 +747,15 @@ export default function SettingsPage() {
                     disabled={savingNotificationKey !== null}
                     onClick={() => void handleSystemNotification()}
                   />
+                  {systemNotificationStatus === 'denied' && (
+                    <div className={styles.noticeBox}>
+                      <strong>기기에서 알림 권한이 차단되어 있어요.</strong>
+                      <span>브라우저 정책상 웹앱이 설정 화면을 직접 열 수 없는 경우가 있어요. 아래 안내를 보고 기기 설정에서 알림을 허용해 주세요.</span>
+                      <Button type="button" variant="outline" className={`${styles.smallRoundButton} mt-4`} onClick={handleNotificationPermissionGuide}>
+                        설정 방법 보기
+                      </Button>
+                    </div>
+                  )}
 
                   {notificationItems.map(item => (
                     <SettingButton

@@ -23,6 +23,7 @@ export default function SessionEntryPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [cameraOpen, setCameraOpen] = useState(false);
+  const [cameraReady, setCameraReady] = useState(false);
 
   const closeCamera = () => {
     if (scanTimerRef.current !== null) window.clearInterval(scanTimerRef.current);
@@ -31,6 +32,7 @@ export default function SessionEntryPage() {
     readerControlsRef.current = null;
     streamRef.current?.getTracks().forEach(track => track.stop());
     streamRef.current = null;
+    setCameraReady(false);
     setCameraOpen(false);
   };
 
@@ -53,6 +55,7 @@ export default function SessionEntryPage() {
 
   const openCamera = async () => {
     setError('');
+    setCameraReady(false);
     const DetectorClass = (window as unknown as { BarcodeDetector?: new (options: { formats: string[] }) => QrDetector }).BarcodeDetector;
     if (!window.isSecureContext && window.location.hostname !== 'localhost') {
       setError('카메라는 HTTPS 환경에서 사용할 수 있어요. 배포 주소가 HTTPS인지 확인해 주세요.');
@@ -77,7 +80,13 @@ export default function SessionEntryPage() {
         const video = videoRef.current;
         if (!video) return;
         video.srcObject = stream;
+        video.muted = true;
+        video.autoplay = true;
+        video.playsInline = true;
+        video.setAttribute('playsinline', 'true');
+        video.setAttribute('webkit-playsinline', 'true');
         await video.play();
+        setCameraReady(true);
         if (DetectorClass) {
           const detector = new DetectorClass({ formats: ['qr_code'] });
           scanTimerRef.current = window.setInterval(async () => {
@@ -175,7 +184,12 @@ export default function SessionEntryPage() {
           </div>
           <Button type="button" variant="ghost" size="icon" className="rounded-full hover:bg-secondary" onClick={closeCamera} aria-label="카메라 닫기"><X /></Button>
         </div>
-        <div className="overflow-hidden rounded-2xl bg-foreground"><video ref={videoRef} className="aspect-[4/3] w-full object-cover" playsInline muted /></div>
+        <button type="button" className="relative block w-full overflow-hidden rounded-2xl bg-foreground" onClick={() => {
+          void videoRef.current?.play().then(() => setCameraReady(true)).catch(() => undefined);
+        }} aria-label="카메라 미리보기">
+          <video ref={videoRef} className="aspect-[4/3] min-h-[260px] w-full object-cover" autoPlay playsInline muted onLoadedMetadata={() => setCameraReady(true)} />
+          {!cameraReady && <span className="absolute inset-0 flex items-center justify-center bg-foreground text-sm font-semibold text-background">카메라 화면을 준비하고 있어요</span>}
+        </button>
         <Button type="button" variant="outline" className="mt-3 h-14 w-full rounded-2xl hover:border-primary hover:bg-primary/10 hover:text-primary" onClick={closeCamera}>직접 코드 입력하기</Button>
       </div>
     </div>}
