@@ -146,7 +146,7 @@ export default function ParticipantSessionReportPage() {
             </div>
             {report.matches.length ? (
               <div className="space-y-2">
-                {report.matches.slice(0, 2).map((match, index) => <MatchCard key={match.matchId} match={match} index={index} />)}
+                {report.matches.map((match, index) => <MatchCard key={match.matchId} match={match} index={index} />)}
               </div>
             ) : (
               <div className="rounded-3xl bg-secondary/40 px-5 py-8 text-center">

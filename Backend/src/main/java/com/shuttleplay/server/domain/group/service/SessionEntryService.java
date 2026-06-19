@@ -245,7 +245,7 @@ public class SessionEntryService {
         Map<String, Object> result = sessionMap(session);
         putParticipant(session, result, participant);
         boolean guest = participant.guest() != null;
-        result.put("guestRecordLimited", guest);
+        result.put("guestRecordLimited", guest && session.getStatus() != GroupSessionStatus.CLOSED);
         result.put("canOpenFullRecord", userId != null && isOperator(session, userId));
 
         GroupSessionAttendance attendance = attendanceEntry(session, participant);

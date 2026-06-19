@@ -35,7 +35,7 @@ export default function MmrHistoryPage() {
       <div className={styles.mmrSummary}><span><Trophy /></span><div><small>{type === 'DOUBLES' ? '현재 복식 MMR' : '현재 혼복 MMR'}</small><strong>{data?.currentMmr.toLocaleString() ?? '-'}</strong></div><p className={styles.change(change)}><ChangeIcon /> 전체 기간 {change > 0 ? '+' : ''}{change}</p></div>
       {loading ? <Empty text="MMR 이력을 불러오는 중입니다." /> : chart ? <div className={styles.chartWrap}>
         <div className={styles.chartAxis}><span>{chart.max}</span><span>{chart.min}</span></div>
-        <svg viewBox="0 0 100 100" preserveAspectRatio="none" className={styles.lineChart} role="img" aria-label="MMR 변화 그래프"><polyline points={chart.line} fill="none" vectorEffect="non-scaling-stroke" />{chart.points.map(point => <circle key={point.id} cx={point.x} cy={point.y} r="1.4"><title>{new Date(point.changedAt).toLocaleDateString('ko-KR')} · {point.afterMmr} ({point.change > 0 ? '+' : ''}{point.change})</title></circle>)}</svg>
+        <svg viewBox="0 0 100 100" preserveAspectRatio="none" className={styles.lineChart} role="img" aria-label="MMR 변화 그래프"><polyline points={chart.line} fill="none" vectorEffect="non-scaling-stroke" /></svg>
         <div className={styles.chartDates}><span>{new Date(chart.points[0].changedAt).toLocaleDateString('ko-KR')}</span><span>{new Date(chart.points.at(-1)!.changedAt).toLocaleDateString('ko-KR')}</span></div>
       </div> : <Empty text="아직 MMR 변동 기록이 없습니다." />}
     </section>
