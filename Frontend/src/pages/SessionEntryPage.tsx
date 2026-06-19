@@ -202,7 +202,7 @@ export default function SessionEntryPage() {
         <SessionFlowNotice>
           <div className="flex items-start gap-2.5">
             <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
-            <p>영문 대문자와 숫자 8자리예요. 0, O, 1, I는 사용하지 않아요.</p>
+            <p>영문 대문자와 숫자 8자리예요.</p>
           </div>
         </SessionFlowNotice>
       </div>
