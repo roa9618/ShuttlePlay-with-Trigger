@@ -854,8 +854,8 @@ export default function GroupDetailPage() {
           )}
           {modal.type === 'writePost' && canWritePost && <WritePostModal groupId = {numericGroupId} canManage = {canManagePosts} attachmentAllowed = {postAttachmentAllowed} onComplete = {() => { setListRefreshKey(current => current + 1); setModal(null); }} />}
           {modal.type === 'participants' && <ParticipantsModal groupId = {numericGroupId} schedule = {scheduleItems.find(schedule => schedule.id === modal.id)} canManage = {canManageSchedule} onEditGuest = {guest => setModal({ type: 'editGuest', id: modal.id, guest })} />}
-          {modal.type === 'addGuest' && <AddGuestModal groupId = {numericGroupId} sessionId = {modal.id} onComplete = {() => { setListRefreshKey(current => current + 1); void openScheduleModal(modal.id).then(loadGroupDetail).catch(error => showRequestError(error, '일정 상세를 다시 불러오지 못했습니다.')); }} />}
-          {modal.type === 'editGuest' && <AddGuestModal groupId = {numericGroupId} sessionId = {modal.id} guest = {modal.guest} onComplete = {() => setModal({ type: 'participants', id: modal.id })} />}
+          {modal.type === 'addGuest' && <AddGuestModal groupId = {numericGroupId} sessionId = {modal.id} sessionType = {scheduleItems.find(schedule => schedule.id === modal.id)?.sessionType} onComplete = {() => { setListRefreshKey(current => current + 1); void openScheduleModal(modal.id).then(loadGroupDetail).catch(error => showRequestError(error, '일정 상세를 다시 불러오지 못했습니다.')); }} />}
+          {modal.type === 'editGuest' && <AddGuestModal groupId = {numericGroupId} sessionId = {modal.id} sessionType = {scheduleItems.find(schedule => schedule.id === modal.id)?.sessionType} guest = {modal.guest} onComplete = {() => setModal({ type: 'participants', id: modal.id })} />}
           {modal.type === 'manageSchedule' && <ManageScheduleModal groupId = {numericGroupId} schedule = {scheduleItems.find(schedule => schedule.id === modal.id)} onComplete = {() => { setModal(null); setListRefreshKey(current => current + 1); void loadGroupDetail(); }} />}
           {modal.type === 'memberPermissions' && selectedMember && <MemberPermissionsModal groupId = {numericGroupId} member = {selectedMember} onComplete = {() => setModal(null)} />}
           {modal.type === 'ownershipTransfer' && selectedMember && <OwnershipTransferModal groupId = {numericGroupId} member = {selectedMember} onComplete = {() => setModal(null)} />}
@@ -978,7 +978,6 @@ function HomeTab({
                 </div>}
                 {canEnter && <Button className = {styles.roundButton} onClick = {() => onEnterSchedule(upcoming)}>입장</Button>}
                 {canManageSchedule && canOperateSchedule(upcoming) && <Button className = {styles.roundButton} onClick = {() => onOperateSchedule(upcoming)}><Activity /> 경기 운영</Button>}
-                {!canEnter && upcoming.status !== 'COMPLETED' && upcoming.status !== 'CANCELLED' && <span className="text-sm text-muted-foreground">입장은 운동 시작 1시간 전부터 가능해요.</span>}
                 <Button variant = "outline" className = {styles.roundButton} onClick = {() => onOpenSchedule(upcoming.id)}>일정 상세</Button>
               </div>
             </div> : <EmptyState className = {styles.preservedEmptyState} icon = {CalendarDays} title = "예정된 운동 일정이 없습니다." description = "새로운 운동 일정이 등록되면 이곳에서 확인할 수 있습니다." />}
@@ -1936,19 +1935,21 @@ function CreateScheduleModal({ groupId, groupGuestAllowed, initialDate, onComple
   );
 }
 
-function AddGuestModal({ groupId, sessionId, guest, onComplete }: { groupId: number; sessionId: number; guest?: GroupParticipantResponse; onComplete: (message: string) => void }) {
+function AddGuestModal({ groupId, sessionId, sessionType, guest, onComplete }: { groupId: number; sessionId: number; sessionType?: string; guest?: GroupParticipantResponse; onComplete: (message: string) => void }) {
   const genderLabel = guest?.gender === 'MALE' || guest?.gender === '남성' ? '남성' : guest?.gender === 'FEMALE' || guest?.gender === '여성' ? '여성' : '';
   const ageLabel = ({ TEENS: '10대', TWENTIES: '20대', THIRTIES: '30대', FORTIES: '40대', FIFTIES: '50대', SIXTIES_AND_ABOVE: '60대 이상' } as Record<string, string>)[guest?.ageGroup ?? ''] || guest?.ageGroup || '';
   const [name, setName] = useState(guest?.name ?? '');
   const [gender, setGender] = useState(genderLabel);
   const [age, setAge] = useState(ageLabel);
   const [grade, setGrade] = useState(guest?.grade ?? '');
+  const [affiliation, setAffiliation] = useState(guest?.affiliation ?? '');
   const submit = () => {
     const body = {
       name: name.trim(),
       gender: gender === '남성' ? 'MALE' : 'FEMALE',
       ageGroup: ({ '10대': 'TEENS', '20대': 'TWENTIES', '30대': 'THIRTIES', '40대': 'FORTIES', '50대': 'FIFTIES', '60대 이상': 'SIXTIES_AND_ABOVE' } as Record<string, string>)[age],
       grade,
+      affiliation: sessionType === 'EXCHANGE' ? affiliation.trim() : undefined,
     };
     return guest
       ? groupDetailApi.updateGuest(groupId, sessionId, guest.id, body).then(() => onComplete(''))
@@ -1960,6 +1961,7 @@ function AddGuestModal({ groupId, sessionId, guest, onComplete }: { groupId: num
       <label className = {styles.modalField}><span>성별</span><Select value = {gender} onValueChange = {setGender}><SelectTrigger className = {styles.selectTriggerWide}><SelectValue placeholder = "성별을 선택하세요" /></SelectTrigger><SelectContent><SelectItem className = {styles.guestSelectItem} value = "남성">남성</SelectItem><SelectItem className = {styles.guestSelectItem} value = "여성">여성</SelectItem></SelectContent></Select></label>
       <label className = {styles.modalField}><span>연령대</span><Select value = {age} onValueChange = {setAge}><SelectTrigger className = {styles.selectTriggerWide}><SelectValue placeholder = "연령대를 선택하세요" /></SelectTrigger><SelectContent>{['10대', '20대', '30대', '40대', '50대', '60대 이상'].map(item => <SelectItem className = {styles.guestSelectItem} key = {item} value = {item}>{item}</SelectItem>)}</SelectContent></Select></label>
       <label className = {styles.modalField}><span>급수</span><Select value = {grade} onValueChange = {setGrade}><SelectTrigger className = {styles.selectTriggerWide}><SelectValue placeholder = "급수를 선택하세요" /></SelectTrigger><SelectContent>{['E', 'D', 'C', 'B', 'A', 'S', 'SS'].map(item => <SelectItem className = {styles.guestSelectItem} key = {item} value = {item}>{item}</SelectItem>)}</SelectContent></Select></label>
+      {sessionType === 'EXCHANGE' && <label className = {styles.modalField}><span>소속 팀</span><Input value = {affiliation} onChange = {event => setAffiliation(event.target.value)} className = {styles.input} maxLength = {50} placeholder = "소속 팀 이름을 입력하세요" /></label>}
       <div className = {styles.modalActions}>
         {guest && <Button variant = "outline" className = {styles.dangerTextButton} onClick = {() => void groupDetailApi.deleteGuest(groupId, sessionId, guest.id).then(() => onComplete(''))}><Trash2 /> 게스트 삭제</Button>}
         <Button disabled = {!name.trim() || !gender || !age || !grade} className = {styles.roundButton} onClick = {() => void submit()}>{guest ? <Edit3 /> : <Plus />} {guest ? '게스트 정보 저장' : '게스트 추가'}</Button>

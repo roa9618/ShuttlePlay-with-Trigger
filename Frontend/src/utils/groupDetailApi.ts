@@ -39,7 +39,7 @@ export type GroupJoinLinkResponse = {
 export type GroupPostResponse = { id: number; type: string; title: string; content: string; pinned: boolean; viewCount: number; commentCount: number; authorId: number; authorName: string; attachmentNames: string | null; createdAt: string };
 export type GroupMemberResponse = { id: number; name: string; profileImageUrl: string | null; gender: string; ageGroup: string; grade: string; role: GroupDetailRole; participationCount: number; monthlyParticipationRate: number; recentFourWeekParticipationCount: number; doublesMmr: number; mixedMmr: number; memo: string | null };
 export type GroupGuestResponse = { id: number; name: string; profileImageUrl: string | null; gender: string; ageGroup: string; grade: string; registered: boolean; userId: number | null; participationCount: number; lastParticipationAt: string | null; doublesMmr: number | null; mixedMmr: number | null; winRate: number | null; averageMatchCount: number | null; memo: string | null };
-export type GroupParticipantResponse = { id: number; name: string; profileImageUrl: string | null; gender: string; ageGroup: string; grade: string; role: GroupDetailRole | 'GUEST'; voteStatus: string; guest?: boolean };
+export type GroupParticipantResponse = { id: number; name: string; profileImageUrl: string | null; gender: string; ageGroup: string; grade: string; affiliation?: string | null; role: GroupDetailRole | 'GUEST'; voteStatus: string; guest?: boolean };
 export type GroupCommentResponse = { id: number; parentId: number; authorId: number; authorName: string; content: string; createdAt: string };
 export type GroupDeletionSummaryResponse = { upcomingCount: number; inProgressCount: number };
 
