@@ -58,7 +58,6 @@ export default function Layout() {
         <DesktopSidebar />
         <header className = {styles.mobileAdminBar}>
           <Logo size = "sm" />
-          <span>운영</span>
         </header>
         <div className = {styles.desktopContent}>
           <Outlet />
