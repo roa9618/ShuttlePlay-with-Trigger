@@ -1,9 +1,10 @@
 import QRCode from 'qrcode';
+import { encodePublicId } from './publicId';
 
 const QR_SIZE = 512;
 
 export function createSessionEntryUrl(sessionId: number, entryCode: string, origin = window.location.origin) {
-  return `${origin.replace(/\/$/, '')}/sessions/${sessionId}/join?code=${encodeURIComponent(entryCode.trim().toUpperCase())}`;
+  return `${origin.replace(/\/$/, '')}/sessions/${encodePublicId(sessionId)}/join?code=${encodeURIComponent(entryCode.trim().toUpperCase())}`;
 }
 
 export function createSessionEntryQrFileName(entryCode?: string) {

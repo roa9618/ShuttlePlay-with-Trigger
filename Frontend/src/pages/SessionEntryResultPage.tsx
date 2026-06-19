@@ -3,6 +3,7 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { SessionFlowIcon, SessionFlowNotice, SessionFlowPage, type SessionFlowTone } from '../components/SessionFlowLayout';
 import { Button } from '../components/ui/button';
 import { setAuthRedirectPath } from '../utils/authSession';
+import { groupPath, sessionPath } from '../utils/publicId';
 import type { SessionEntryPreview } from '../utils/sessionEntryApi';
 
 const results = {
@@ -57,7 +58,7 @@ export default function SessionEntryResultPage() {
   const groupId = entry?.groupId ?? (preview ? '1' : null);
   const result = results[resultType as keyof typeof results] ?? ['안내를 확인해 주세요', '일정 입장 상태를 확인하지 못했어요.', AlertTriangle, '코드를 다시 입력해 주세요.'] as const;
   const [title, description, Icon, detail] = result;
-  const joinPath = `/sessions/${sessionId}/join${state?.code ? `?code=${encodeURIComponent(state.code)}` : ''}`;
+  const joinPath = `${sessionPath(sessionId, '/join')}${state?.code ? `?code=${encodeURIComponent(state.code)}` : ''}`;
   const retryCode = ['invalid-code-format', 'session-not-found', 'camera-unavailable'].includes(resultType);
   const canViewReport = preview || entry?.operator || entry?.participantType === 'MEMBER' || entry?.participantType === 'GUEST';
   const tone = resultTone(resultType);
@@ -68,9 +69,9 @@ export default function SessionEntryResultPage() {
   };
 
   const goToReport = () => {
-    if (entry?.operator) navigate(`/sessions/${sessionId}/report`);
-    else if (entry?.participantType === 'GUEST') navigate(`/sessions/${sessionId}/guest-report`);
-    else navigate(`/sessions/${sessionId}/my-report`);
+    if (entry?.operator) navigate(sessionPath(sessionId, '/report'));
+    else if (entry?.participantType === 'GUEST') navigate(sessionPath(sessionId, '/guest-report'));
+    else navigate(sessionPath(sessionId, '/my-report'));
   };
 
   const primaryAction = () => {
@@ -78,9 +79,9 @@ export default function SessionEntryResultPage() {
       const returnPath = withQueryParam(joinPath, 'intent', 'new-register');
       setAuthRedirectPath(returnPath);
       navigate(`/social-signup?redirect=${encodeURIComponent(returnPath)}`);
-    } else if (resultType === 'existing-registration-found') navigate(`/sessions/${sessionId}/attendance`, { state });
-    else if (resultType === 'arrival-complete') navigate(`/sessions/${sessionId}/status`);
-    else if (resultType === 'late-complete') navigate(`/sessions/${sessionId}/attendance`, { state });
+    } else if (resultType === 'existing-registration-found') navigate(sessionPath(sessionId, '/attendance'), { state });
+    else if (resultType === 'arrival-complete') navigate(sessionPath(sessionId, '/status'));
+    else if (resultType === 'late-complete') navigate(sessionPath(sessionId, '/attendance'), { state });
     else if (resultType === 'closed') {
       if (canViewReport) goToReport();
       else navigate('/');
@@ -111,7 +112,7 @@ export default function SessionEntryResultPage() {
     <div className="space-y-2.5">
       <Button className="h-14 w-full rounded-2xl text-[17px] font-bold shadow-sm" onClick={primaryAction}>{primaryLabel}</Button>
       {resultType === 'group-guest-disabled' && <Button variant="outline" className="h-14 w-full rounded-2xl border-border text-base font-semibold hover:border-border hover:bg-secondary hover:text-foreground" onClick={() => navigate('/signup')}>회원가입하기</Button>}
-      {groupId && groupDetailResults.has(resultType) && <Button variant="outline" className="h-14 w-full rounded-2xl border-border text-base font-semibold hover:border-border hover:bg-secondary hover:text-foreground" onClick={() => navigate(`/groups/${groupId}`)}>모임 상세로 이동</Button>}
+      {groupId && groupDetailResults.has(resultType) && <Button variant="outline" className="h-14 w-full rounded-2xl border-border text-base font-semibold hover:border-border hover:bg-secondary hover:text-foreground" onClick={() => navigate(groupPath(groupId))}>모임 상세로 이동</Button>}
       {resultType !== 'existing-registration-found' && resultType !== 'group-guest-disabled' && !retryCode && <Button variant="ghost" className="h-12 w-full rounded-2xl text-base hover:bg-secondary hover:text-secondary-foreground" onClick={() => navigate('/session-entry')}>다른 코드 입력하기</Button>}
       {resultType === 'group-guest-disabled' && <Button variant="ghost" className="h-12 w-full rounded-2xl text-base hover:bg-secondary hover:text-secondary-foreground" onClick={() => navigate('/')}>홈으로</Button>}
     </div>

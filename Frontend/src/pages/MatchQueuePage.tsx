@@ -1,277 +1,76 @@
-import { Link, useParams, useNavigate } from 'react-router-dom';
-import { useState } from 'react';
-import Logo from '../components/Logo';
+import { useCallback, useEffect, useState } from 'react';
+import { AlertTriangle, ChevronDown, ChevronUp, Edit3, ListPlus, Play, RefreshCw, Sparkles, Trash2, X } from 'lucide-react';
+import { useParams } from 'react-router-dom';
+import SessionOperationShell from '../components/SessionOperationShell';
+import { OperationSelect, OperationToast } from '../components/OperationControls';
 import { Button } from '../components/ui/button';
-import { Badge } from '../components/ui/badge';
-import { Input } from '../components/ui/input';
-import { Label } from '../components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
-import { ArrowLeft, Sparkles, RefreshCw, Edit, Plus, ShieldAlert, Users } from 'lucide-react';
-import { useActionFeedback } from '../utils/useActionFeedback';
-import { styles } from './MatchQueuePage.styles';
+import { sessionOperationApi, type OperationQueue, type QueueResponse } from '../utils/sessionOperationApi';
+import { useSessionOperationRealtime } from '../utils/useSessionOperationRealtime';
+import { operationStyles as s } from './SessionOperation.styles';
+
+const typeLabels: Record<string, string> = { ANY: '성별 무관', MENS_DOUBLES: '남자 복식', WOMENS_DOUBLES: '여자 복식', MIXED_DOUBLES: '혼합 복식' };
+const playLabels: Record<string, string> = { WAITING: '경기 대기', AVAILABLE: '경기 가능', NEXT_UP: '다음 경기 예정', CALLING: '입장 호출', PLAYING: '경기 중' };
+const genderLabels: Record<string, string> = { MALE: '남성', FEMALE: '여성' };
+const ageLabels: Record<string, string> = { TEENS: '10대', TWENTIES: '20대', THIRTIES: '30대', FORTIES: '40대', FIFTIES: '50대', SIXTIES_AND_ABOVE: '60대 이상' };
+const typeOptions = Object.entries(typeLabels).map(([value, label]) => ({ value, label }));
+const styleOptions = [{ value: 'FUN', label: '즐겜 · 참여 균형' }, { value: 'COMPETITIVE', label: '빡겜 · 실력 균형' }];
 
 export default function MatchQueuePage() {
-  const { sessionId } = useParams();
-  const navigate = useNavigate();
-  const [selectedAdjustments, setSelectedAdjustments] = useState<string[]>([]);
-  const { message, showMessage } = useActionFeedback();
+  const { sessionId = 'demo' } = useParams();
+  const [data, setData] = useState<QueueResponse | null>(null);
+  const [matchType, setMatchType] = useState('ANY');
+  const [playStyle, setPlayStyle] = useState('FUN');
+  const [notice, setNotice] = useState('');
+  const [editing, setEditing] = useState<OperationQueue | null>(null);
+  const [selectedPlayers, setSelectedPlayers] = useState<number[]>([]);
+  const [forcedPlayers, setForcedPlayers] = useState<number[]>([]);
+  const [excludedPlayers, setExcludedPlayers] = useState<number[]>([]);
+  const [manualOpen, setManualOpen] = useState(false);
+  const [manualPlayers, setManualPlayers] = useState(['', '', '', '']);
+  const [manualType, setManualType] = useState('ANY');
+  const [manualStyle, setManualStyle] = useState('FUN');
+  const load = useCallback(async () => setData(await sessionOperationApi.queues(sessionId)), [sessionId]);
+  useEffect(() => { void load(); }, [load]);
+  useSessionOperationRealtime(sessionId, data?.groupId, data?.sessionId, load);
 
-  const queue = [
-    {
-      teamA: ['김민수', '박지영'],
-      teamB: ['이준호', '최서연'],
-      mmrDiff: 12,
-      balance: '매우 좋음',
-      reason: 'MMR이 균형있게 분배되었습니다',
-      details: ['혼복 MMR 차이 12', '연속 휴식 2회 참가자 우선', '파트너 중복 없음'],
-    },
-    {
-      teamA: ['정민재', '강수진'],
-      teamB: ['오유진', '한지우'],
-      mmrDiff: 25,
-      balance: '좋음',
-      reason: '최근 경기 횟수를 고려한 매칭입니다',
-      details: ['총 경기 수가 적은 참가자 포함', '성별 보정 적용', '상대 중복 1회 이하'],
-    },
-    {
-      teamA: ['송민호', '윤서아'],
-      teamB: ['장현우', '김나영'],
-      mmrDiff: 8,
-      balance: '매우 좋음',
-      reason: '실력이 비슷한 선수들끼리 매칭되었습니다',
-      details: ['B-C 구간 중심', '신규 참가자 첫 경기 보호', '팀 예상 승률 51:49'],
-    },
-  ];
+  const participantLabel = (id: number) => {
+    const item = data?.participants.find(participant => participant.attendanceId === id);
+    return item ? `${item.name} · ${genderLabels[item.gender] ?? item.gender} · ${ageLabels[item.ageGroup] ?? item.ageGroup} · ${item.grade}급` : String(id);
+  };
+  const participantOptions = data?.participants.map(item => ({ value: String(item.attendanceId), label: participantLabel(item.attendanceId) })) ?? [];
+  const generate = async () => {
+    const result = await sessionOperationApi.generate(sessionId, { matchType, playStyle, courtCount: data?.courtCount ?? 1, preservedQueueIds: data?.queues.map(item => item.queueId) ?? [], forcedParticipantIds: forcedPlayers, excludedParticipantIds: excludedPlayers });
+    setNotice(result.message); await load();
+  };
+  const createManual = async () => {
+    const ids = manualPlayers.map(Number);
+    if (ids.some(id => !id) || new Set(ids).size !== 4) { setNotice('서로 다른 참가자 네 명을 선택해 주세요.'); return; }
+    try {
+      await sessionOperationApi.createManualQueue(sessionId, { teamAIds: ids.slice(0, 2), teamBIds: ids.slice(2), matchType: manualType, playStyle: manualStyle });
+      setManualOpen(false); setManualPlayers(['', '', '', '']); setNotice('수동 매칭을 경기 후보 큐에 추가했어요.'); await load();
+    } catch { setNotice('선택한 경기 유형과 참가자의 성별 또는 상태를 확인해 주세요.'); }
+  };
+  const assignEmptyCourts = async () => {
+    try { const result = await sessionOperationApi.assignEmptyCourts(sessionId); setNotice(result.message); await load(); }
+    catch { setNotice('빈 코트와 호출 가능한 경기 후보를 다시 확인해 주세요.'); }
+  };
+  const cancel = async (queueId: number) => { await sessionOperationApi.cancelQueue(sessionId, queueId); setNotice('경기 후보를 취소했어요.'); await load(); };
+  const openEdit = (queue: OperationQueue) => { setEditing(queue); setSelectedPlayers(queue.teams.flatMap(team => team.players.map(player => player.attendanceId))); };
+  const saveEdit = async () => {
+    if (!editing || new Set(selectedPlayers).size !== 4) { setNotice('서로 다른 참가자 네 명을 선택해 주세요.'); return; }
+    try { await sessionOperationApi.updateQueue(sessionId, editing.queueId, { teamAIds: selectedPlayers.slice(0, 2), teamBIds: selectedPlayers.slice(2, 4) }); setEditing(null); setNotice('후보 참가자 구성을 변경했어요.'); await load(); }
+    catch { setNotice('경기 유형과 참가자의 성별 또는 상태를 확인해 주세요.'); }
+  };
+  const reorder = async (queue: OperationQueue, direction: -1 | 1) => { await sessionOperationApi.reorderQueue(sessionId, queue.queueId, Math.max(1, queue.queueOrder + direction)); await load(); };
 
-  return (
-    <div className = {styles.page}>
-      <div className = {styles.header}>
-        <div className = {styles.headerInner}>
-          <div className = {styles.row}>
-            <Link to = {`/sessions/${sessionId}/dashboard`} className = {styles.backLink}>
-              <ArrowLeft className = {styles.arrowLeftIcon} />
-              대시보드
-            </Link>
-            <Logo size = "sm" />
-          </div>
-          <div className = {styles.row2}>
-            <Button className = {styles.roundButton} onClick = {() => showMessage('자동 매칭 후보를 다시 생성했습니다.')}
-            >
-              <Sparkles className = {styles.arrowLeftIcon} />
-              자동 매칭 생성
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      <div className = {styles.content}>
-        <div className = {styles.sectionHeader}>
-          <h1 className = {styles.pageTitle}>경기 후보 큐</h1>
-          <p className = {styles.descriptionText}>
-            다음 경기 후보를 확인하고 시작하세요
-          </p>
-        </div>
-
-        <div className = {styles.grid}>
-          <div className = {styles.header2}>
-            <div className = {styles.row3}>
-              <Sparkles className = {styles.sparklesIcon} />
-              <h2 className = {styles.sectionTitle}>생성 조건</h2>
-            </div>
-            <div className = {styles.cardGrid}>
-              <div className = {styles.stack}>
-                <Label>경기 유형</Label>
-                <Select defaultValue = "mixed">
-                  <SelectTrigger className = {styles.selectTrigger}>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value = "mens">남자 복식</SelectItem>
-                    <SelectItem value = "womens">여자 복식</SelectItem>
-                    <SelectItem value = "mixed">혼합 복식</SelectItem>
-                    <SelectItem value = "open">성별 무관</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className = {styles.stack}>
-                <Label>운영 성향</Label>
-                <Select defaultValue = "competitive">
-                  <SelectTrigger className = {styles.selectTrigger}>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value = "casual">즐겜</SelectItem>
-                    <SelectItem value = "competitive">빡겜</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className = {styles.statsGrid}>
-              <Input className = {styles.selectTrigger} defaultValue = "연속 경기 2회 제한" />
-              <Input className = {styles.selectTrigger} defaultValue = "중복 조합 회피" />
-              <Input className = {styles.selectTrigger} defaultValue = "신규 참가자 보호" />
-            </div>
-            <div className = {styles.wrapRow}>
-              <Button className = {styles.roundButton} onClick = {() => showMessage('전체 후보를 생성했습니다.')}>
-                <Sparkles className = {styles.arrowLeftIcon} />
-                전체 후보 생성
-              </Button>
-              <Button variant = "outline" className = {styles.roundButton} onClick = {() => showMessage('선택 후보를 재생성했습니다.')}>
-                <RefreshCw className = {styles.arrowLeftIcon} />
-                선택 후보만 재생성
-              </Button>
-            </div>
-          </div>
-
-          <div className = {styles.header2}>
-            <div className = {styles.row3}>
-              <Users className = {styles.sparklesIcon} />
-              <h2 className = {styles.sectionTitle}>수동 조정</h2>
-            </div>
-            <div className = {styles.cardGrid2}>
-              {['강제 포함', '강제 제외', '고정 파트너', '회피 조합'].map((label) => (
-                <Button key = {label} variant = "outline" className = {styles.adjustmentButton(selectedAdjustments.includes(label))} onClick = {() => {
-                    setSelectedAdjustments((prev) => prev.includes(label) ? prev.filter((item) => item !== label) : [...prev, label]);
-                    showMessage(`${label} 조건을 ${selectedAdjustments.includes(label) ? '해제했습니다.' : '추가했습니다.'}`);
-                  }}
-                >
-                  <Plus className = {styles.arrowLeftIcon} />
-                  {label} 추가
-                </Button>
-              ))}
-            </div>
-            <div className = {styles.summaryBox}>
-              <div className = {styles.mediaRow}>
-                <ShieldAlert className = {styles.shieldAlertIcon} />
-                <div>
-                  <p className = {styles.summaryText}>매칭 실패 없음</p>
-                  <p className = {styles.descriptionText2}>
-                    조건이 맞지 않는 참가자는 실패 처리하지 않고 대기 상태로 남기며, 다음 코트가 열릴 때 다시 후보에 넣습니다.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className = {styles.stack2}>
-          {queue.map((match, idx) => (
-            <div key = {idx} className = {styles.header3}>
-              <div className = {styles.betweenRow}>
-                <div className = {styles.row4}>
-                  <div className = {styles.row5}>
-                    <Badge className = {styles.badge}>
-                      후보 {idx + 1}
-                    </Badge>
-                    <Badge variant = "outline" className = {
-                      match.balance === '매우 좋음'
-                        ? 'border-primary text-primary'
-                        : 'border-accent text-accent-foreground'
-                    }>
-                      팀 밸런스: {match.balance}
-                    </Badge>
-                    <Badge variant = "outline">
-                      MMR 차이 {match.mmrDiff}
-                    </Badge>
-                  </div>
-
-                  <div className = {styles.statsGrid2}>
-                    <div className = {styles.summaryBox2}>
-                      <p className = {styles.descriptionText3}>A팀</p>
-                      <div className = {styles.stack}>
-                        {match.teamA.map((player, pIdx) => (
-                          <div key = {pIdx} className = {styles.row6}>
-                            <div className = {styles.row7}>
-                              <span className = {styles.labelText}>
-                                {player[0]}
-                              </span>
-                            </div>
-                            <span className = {styles.summaryText}>{player}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className = {styles.centeredBlock}>
-                      <span className = {styles.mutedText}>vs</span>
-                    </div>
-
-                    <div className = {styles.summaryBox2}>
-                      <p className = {styles.descriptionText3}>B팀</p>
-                      <div className = {styles.stack}>
-                        {match.teamB.map((player, pIdx) => (
-                          <div key = {pIdx} className = {styles.row6}>
-                            <div className = {styles.row7}>
-                              <span className = {styles.labelText}>
-                                {player[0]}
-                              </span>
-                            </div>
-                            <span className = {styles.summaryText}>{player}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className = {styles.summaryBox3}>
-                    <p className = {styles.descriptionText2}>
-                      <span className = {styles.labelText2}>매칭 설명:</span> {match.reason}
-                    </p>
-                    <div className = {styles.wrapRow2}>
-                      {match.details.map((detail) => (
-                        <Badge key = {detail} variant = "outline">{detail}</Badge>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                <div className = {styles.stack3}>
-                  <Button className = {styles.roundButton2} onClick = {() => {
-                      navigate(`/sessions/${sessionId}/current`);
-                    }}
-                  >
-                    경기 시작
-                  </Button>
-                  <Button variant = "outline" size = "sm" className = {styles.roundButton} onClick = {() => showMessage(`후보 ${idx + 1} 참가자 교체 모드를 열었습니다.`)}
-                  >
-                    <Edit className = {styles.arrowLeftIcon} />
-                    참가자 교체
-                  </Button>
-                  <Button variant = "outline" size = "sm" className = {styles.roundButton} onClick = {() => showMessage(`후보 ${idx + 1}의 A/B팀을 교체했습니다.`)}
-                  >
-                    팀 교체
-                  </Button>
-                  <Button variant = "outline" size = "sm" className = {styles.roundButton} onClick = {() => showMessage(`후보 ${idx + 1}을 재생성했습니다.`)}
-                  >
-                    <RefreshCw className = {styles.arrowLeftIcon} />
-                    재생성
-                  </Button>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {queue.length === 0 && (
-          <div className = {styles.summaryBox4}>
-            <Sparkles className = {styles.sparklesIcon2} />
-            <h3 className = {styles.cardTitle}>경기 후보가 없습니다</h3>
-            <p className = {styles.descriptionText4}>
-              자동 매칭을 사용하여 새로운 경기를 생성하세요
-            </p>
-            <Button className = {styles.roundButton} onClick = {() => showMessage('자동 매칭 후보를 생성했습니다.')}
-            >
-              <Sparkles className = {styles.arrowLeftIcon} />
-              자동 매칭 생성
-            </Button>
-          </div>
-        )}
-        {message && (
-          <div className = {styles.floatingNotice}>
-            {message}
-          </div>
-        )}
-      </div>
-    </div>
-  );
+  return <SessionOperationShell title="경기 후보 큐" description="자동 또는 수동으로 경기를 구성하고, 빈 코트에는 호출 가능한 후보가 순서대로 배정돼요." actions={<><Button className={s.primaryButton} onClick={() => void assignEmptyCourts()}><Play className={s.iconSm} />빈 코트 경기 배정</Button><Button variant="outline" className={s.outlineButton} onClick={() => void load()}><RefreshCw className={s.iconSm} />새로고침</Button></>}>
+    {!data ? <div className={s.empty}>경기 후보를 불러오고 있어요.</div> : <div className={s.stack}>
+      <section className={s.card}><div className="grid grid-cols-[1fr_1fr_auto_auto] items-end gap-4"><label><span className={s.label}>경기 유형</span><OperationSelect value={matchType} onValueChange={setMatchType} options={typeOptions} /></label><label><span className={s.label}>운영 방식</span><OperationSelect value={playStyle} onValueChange={setPlayStyle} options={styleOptions} /></label><Button className={s.primaryButton} onClick={() => void generate()}><Sparkles className={s.iconSm} />자동 매칭 생성</Button><Button variant="outline" className={s.outlineButton} onClick={() => setManualOpen(true)}><ListPlus className={s.iconSm} />수동 매칭 생성</Button></div><div className="mt-4 grid grid-cols-2 gap-4"><label><span className={s.label}>가능한 한 우선 포함</span><select multiple className="h-28 w-full rounded-xl border border-border bg-background p-2 text-sm font-semibold focus:border-primary focus:outline-none" value={forcedPlayers.map(String)} onChange={event => setForcedPlayers(Array.from(event.target.selectedOptions, option => Number(option.value)).filter(id => !excludedPlayers.includes(id)))}>{data.participants.map(item => <option key={item.attendanceId} value={item.attendanceId}>{participantLabel(item.attendanceId)} · {item.games}경기 · 휴식 {item.consecutiveRestCount}회</option>)}</select></label><label><span className={s.label}>이번 자동 매칭에서 제외</span><select multiple className="h-28 w-full rounded-xl border border-border bg-background p-2 text-sm font-semibold focus:border-primary focus:outline-none" value={excludedPlayers.map(String)} onChange={event => setExcludedPlayers(Array.from(event.target.selectedOptions, option => Number(option.value)).filter(id => !forcedPlayers.includes(id)))}>{data.participants.map(item => <option key={item.attendanceId} value={item.attendanceId}>{participantLabel(item.attendanceId)} · {playLabels[item.playStatus] ?? item.playStatus}</option>)}</select></label></div><p className="mt-3 text-sm font-bold text-muted-foreground">경기 중이거나 다음 경기 예정인 참가자도 후속 후보에 포함할 수 있어요. 실제 호출할 때 겹치면 다음 가능한 후보를 먼저 올립니다.</p></section>
+      {data.queues.length < data.courtCount && <div className={s.alert}><AlertTriangle className={s.icon} />코트 수보다 경기 후보가 적어요. 후보를 추가해 주세요.</div>}
+      {data.queues.length ? data.queues.map(queue => <section key={queue.queueId} className={s.card}><div className={s.between}><div className={s.row}><span className="rounded-full bg-primary px-3 py-1 text-sm font-black text-primary-foreground">후보 {queue.queueOrder}</span><button aria-label="순서 올리기" onClick={() => void reorder(queue, -1)}><ChevronUp className={s.iconSm} /></button><button aria-label="순서 내리기" onClick={() => void reorder(queue, 1)}><ChevronDown className={s.iconSm} /></button><strong>{typeLabels[queue.matchType] ?? queue.matchType}</strong><span className="text-sm font-bold text-muted-foreground">품질 {queue.score ?? '-'}</span></div><div className={s.row}><Button variant="outline" className={s.outlineButton} onClick={() => openEdit(queue)}><Edit3 className={s.iconSm} />참가자 교체</Button><Button variant="outline" className={s.dangerButton} onClick={() => void cancel(queue.queueId)}><Trash2 className={s.iconSm} />취소</Button></div></div><div className="mt-4 grid grid-cols-[1fr_auto_1fr] items-center gap-4"><div className={s.teamBox}><p className={s.teamTitle}>A팀</p>{queue.teams[0]?.players.map(player => <div className={s.player} key={player.attendanceId}><span>{player.name}</span><small>{player.grade}급</small></div>)}</div><strong className="text-muted-foreground">VS</strong><div className={s.teamBox}><p className={s.teamTitle}>B팀</p>{queue.teams[1]?.players.map(player => <div className={s.player} key={player.attendanceId}><span>{player.name}</span><small>{player.grade}급</small></div>)}</div></div><div className="mt-4 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3"><strong>매칭 설명</strong>{queue.explanations?.map(text => <p className="mt-1 text-sm text-muted-foreground" key={text}>• {text}</p>)}</div></section>) : <div className={s.empty}>생성된 후보가 없어요.</div>}
+    </div>}
+    {manualOpen && data && <div className={s.modalBackdrop}><div className={s.modal}><div className={s.between}><div><h2 className={s.modalTitle}>수동 매칭 생성</h2><p className={s.sectionDescription}>직접 구성한 경기도 동일하게 후보 큐의 마지막 순서에 추가돼요.</p></div><button aria-label="닫기" onClick={() => setManualOpen(false)}><X /></button></div><div className="mt-5 grid grid-cols-2 gap-3">{manualPlayers.map((value, index) => <label key={index}><span className={s.label}>{index < 2 ? `A팀 ${index + 1}` : `B팀 ${index - 1}`}</span><OperationSelect value={value || undefined} placeholder="참가자 선택" options={participantOptions} onValueChange={next => setManualPlayers(current => current.map((item, itemIndex) => itemIndex === index ? next : item))} /></label>)}</div><div className="mt-4 grid grid-cols-2 gap-3"><label><span className={s.label}>경기 유형</span><OperationSelect value={manualType} options={typeOptions} onValueChange={setManualType} /></label><label><span className={s.label}>운영 방식</span><OperationSelect value={manualStyle} options={styleOptions} onValueChange={setManualStyle} /></label></div><Button className={`${s.primaryButton} mt-6 w-full`} onClick={() => void createManual()}>후보 큐에 추가</Button></div></div>}
+    {editing && data && <div className={s.modalBackdrop}><div className={s.modal}><div className={s.between}><div><h2 className={s.modalTitle}>후보 참가자 교체</h2><p className={s.sectionDescription}>위에서부터 A팀 2명, B팀 2명이에요.</p></div><button aria-label="닫기" onClick={() => setEditing(null)}><X /></button></div><div className="mt-5 grid grid-cols-2 gap-3">{[0, 1, 2, 3].map(index => <label key={index}><span className={s.label}>{index < 2 ? `A팀 ${index + 1}` : `B팀 ${index - 1}`}</span><OperationSelect value={String(selectedPlayers[index] ?? '') || undefined} placeholder="참가자 선택" options={participantOptions} onValueChange={next => setSelectedPlayers(current => current.map((value, itemIndex) => itemIndex === index ? Number(next) : value))} /></label>)}</div><Button className={`${s.primaryButton} mt-6 w-full`} onClick={() => void saveEdit()}>변경 저장</Button></div></div>}
+    <OperationToast message={notice} />
+  </SessionOperationShell>;
 }

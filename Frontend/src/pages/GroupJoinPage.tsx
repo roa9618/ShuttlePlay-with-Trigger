@@ -5,6 +5,7 @@ import { Button } from '../components/ui/button';
 import { useAuth } from '../contexts/AuthContext';
 import { ApiClientError } from '../utils/apiClient';
 import { groupDetailApi, type GroupJoinLinkResponse } from '../utils/groupDetailApi';
+import { decodePublicId, groupPath } from '../utils/publicId';
 import { styles } from './GroupJoinPage.styles';
 
 type JoinState =
@@ -44,7 +45,7 @@ export default function GroupJoinPage() {
   const { session } = useAuth();
   const [state, setState] = useState<JoinState>({ status: 'loading' });
   const requestedRef = useRef(false);
-  const numericGroupId = Number(groupId);
+  const numericGroupId = Number(decodePublicId(groupId));
 
   useEffect(() => {
     if (requestedRef.current) return;
@@ -99,7 +100,7 @@ export default function GroupJoinPage() {
   }, [result]);
 
   const Icon = content?.icon ?? UserCheck;
-  const detailPath = result ? `/groups/${result.groupId}` : '/groups';
+  const detailPath = result ? groupPath(result.groupId) : '/groups';
 
   return (
     <div className = {styles.page}>

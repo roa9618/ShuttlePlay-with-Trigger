@@ -9,4 +9,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface MmrHistoryRepository extends JpaRepository<MmrHistory, Long> {
     List<MmrHistory> findAllByUserIdAndMmrTypeAndChangedAtBetweenAndIsDeletedFalseOrderByChangedAtAsc(
             Long userId, MmrType mmrType, LocalDateTime from, LocalDateTime to);
+    List<MmrHistory> findAllByMatch_Session_Id(Long sessionId);
 }

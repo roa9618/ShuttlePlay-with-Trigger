@@ -39,8 +39,10 @@ export default function Layout() {
   const isSessionEntryFlow = location.pathname.startsWith('/session-entry') ||
     /^\/sessions\/[^/]+\/(join|guest-join|attendance|late|entry-result|status|next-match|match-call|current-match|match-result|guest-report|my-report)(\/|$)/.test(location.pathname);
 
+  const isSessionOperationFlow = /^\/sessions\/[^/]+\/(dashboard|participants|queue|current|result|report)(\/|$)/.test(location.pathname);
+
   // Session entry pages always use the centered, sidebar-free layout.
-  const showDesktopLayout = !isSessionEntryFlow && (desktopRoutes.some(route => location.pathname.startsWith(route)) ||
+  const showDesktopLayout = !isSessionEntryFlow && !isSessionOperationFlow && (desktopRoutes.some(route => location.pathname.startsWith(route)) ||
     location.pathname.includes('/dashboard') ||
     location.pathname.includes('/participants') ||
     location.pathname.includes('/queue') ||

@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import FooterModal from '../components/FooterModal';
 import Logo from '../components/Logo';
@@ -52,7 +52,7 @@ export default function SocialSignupPage() {
     grade: '',
   });
 
-  const getReturnPath = () => {
+  const getReturnPath = useCallback(() => {
     const redirectParam = searchParams.get('redirect');
 
     const normalizedRedirectParam = normalizeAuthRedirectPath(redirectParam);
@@ -62,9 +62,9 @@ export default function SocialSignupPage() {
     }
 
     return getAuthRedirectPath();
-  };
+  }, [searchParams]);
 
-  const moveToReturnPath = () => {
+  const moveToReturnPath = useCallback(() => {
     const returnPath = getReturnPath();
     consumeAuthRedirectPath();
 
@@ -75,7 +75,7 @@ export default function SocialSignupPage() {
     window.setTimeout(() => {
       window.location.replace(returnPath);
     }, 0);
-  };
+  }, [getReturnPath, navigate]);
 
   useEffect(() => {
     const redirectParam = searchParams.get('redirect');
@@ -144,7 +144,7 @@ export default function SocialSignupPage() {
     return () => {
       ignore = true;
     };
-  }, [refreshSession, setSessionFromStorage]);
+  }, [moveToReturnPath, refreshSession, setSessionFromStorage]);
 
   const showFieldFeedback = (field: FeedbackField, message: string, tone: 'error' | 'success' = 'error') => {
     setFieldFeedback({ field, message, tone });

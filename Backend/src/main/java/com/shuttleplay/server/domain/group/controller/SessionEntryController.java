@@ -40,14 +40,14 @@ public class SessionEntryController {
             @AuthenticationPrincipal CustomUserDetails user, @PathVariable Long sessionId,
             @RequestBody Map<String, Object> body, @RequestParam(required = false) String code, HttpServletRequest request) {
         boolean registered = Boolean.TRUE.equals(body.get("registered"));
-        return result(service.decide(sessionId, userId(user), registered, body, readGuestCookie(request, sessionId), code), request, sessionId);
+        return result(service.decide(sessionId, userId(user), registered, body, readGuestCookie(request, sessionId), code), request, sessionId, user != null);
     }
 
     @PostMapping("/sessions/{sessionId}/attendance")
     public ResponseEntity<ApiResponse<Map<String, Object>>> attendance(
             @AuthenticationPrincipal CustomUserDetails user, @PathVariable Long sessionId,
             @RequestBody Map<String, Object> body, HttpServletRequest request) {
-        return result(service.attendance(sessionId, userId(user), body, readGuestCookie(request, sessionId)), request, sessionId);
+        return result(service.attendance(sessionId, userId(user), body, readGuestCookie(request, sessionId)), request, sessionId, user != null);
     }
 
     @GetMapping("/sessions/{sessionId}/status")
@@ -60,6 +60,12 @@ public class SessionEntryController {
     public ResponseEntity<ApiResponse<Map<String, Object>>> rest(
             @AuthenticationPrincipal CustomUserDetails user, @PathVariable Long sessionId, HttpServletRequest request) {
         return ok(service.toggleRest(sessionId, userId(user), readGuestCookie(request, sessionId)));
+    }
+
+    @PostMapping("/sessions/{sessionId}/leave")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> leave(
+            @AuthenticationPrincipal CustomUserDetails user, @PathVariable Long sessionId, HttpServletRequest request) {
+        return ok(service.leaveEarly(sessionId, userId(user), readGuestCookie(request, sessionId)));
     }
 
     @GetMapping("/sessions/{sessionId}/next-match")
@@ -100,10 +106,12 @@ public class SessionEntryController {
         return ok(service.myReport(sessionId, userId(user), readGuestCookie(request, sessionId)));
     }
 
-    private ResponseEntity<ApiResponse<Map<String, Object>>> result(SessionEntryService.EntryResult result, HttpServletRequest request, Long sessionId) {
+    private ResponseEntity<ApiResponse<Map<String, Object>>> result(SessionEntryService.EntryResult result, HttpServletRequest request, Long sessionId, boolean authenticated) {
         ResponseEntity.BodyBuilder response = ResponseEntity.ok();
         if (result.guestToken() != null && !result.guestToken().isBlank()) {
             response.header(HttpHeaders.SET_COOKIE, guestCookie(request, sessionId, result.guestToken()).toString());
+        } else if (authenticated && readGuestCookie(request, sessionId) != null) {
+            response.header(HttpHeaders.SET_COOKIE, guestCookie(request, sessionId, "").mutate().maxAge(0).build().toString());
         }
         return response.body(ApiResponse.success("Request completed.", result.data()));
     }

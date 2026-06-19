@@ -20,6 +20,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.beans.factory.annotation.Value;
 
 @Configuration
 @EnableWebSecurity
@@ -32,6 +33,8 @@ public class SecurityConfig {
     private final CustomOidcUserService customOidcUserService;
     private final OAuth2SuccessHandler oauth2SuccessHandler;
     private final OAuth2FailureHandler oauth2FailureHandler;
+    @Value("${app.allowed-origins:http://localhost:3000,http://localhost:5173}")
+    private String[] allowedOrigins;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -53,7 +56,9 @@ public class SecurityConfig {
                                 "/swagger-ui.html",
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
-                                "/v3/api-docs",
+                                "/v3/api-docs"
+                        ).hasRole("ADMIN")
+                        .requestMatchers(
                                 "/error",
                                 "/uploads/**",
                                 "/ws/**"
@@ -92,10 +97,7 @@ public class SecurityConfig {
     public UrlBasedCorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        configuration.setAllowedOrigins(List.of(
-                "http://localhost:3000",
-                "http://localhost:5173"
-        ));
+        configuration.setAllowedOriginPatterns(List.of(allowedOrigins));
         configuration.setAllowedMethods(List.of(
                 "GET",
                 "POST",

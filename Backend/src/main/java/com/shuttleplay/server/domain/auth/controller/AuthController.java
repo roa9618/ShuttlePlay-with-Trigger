@@ -20,11 +20,14 @@ import com.shuttleplay.server.domain.auth.service.AuthService;
 import com.shuttleplay.server.domain.auth.service.RefreshTokenCookieService;
 import com.shuttleplay.server.global.common.ApiResponse;
 import com.shuttleplay.server.global.security.CustomUserDetails;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.util.StringUtils;
@@ -132,8 +135,20 @@ public class AuthController {
         LogoutResponse response = authService.logout(userDetails.getId(), accessToken);
 
         refreshTokenCookieService.clearRefreshTokenCookie(servletResponse);
+        clearGuestSessionCookies(request, servletResponse);
 
         return ResponseEntity.ok(ApiResponse.success("로그아웃되었습니다.", response));
+    }
+
+    private void clearGuestSessionCookies(HttpServletRequest request, HttpServletResponse response) {
+        Cookie[] cookies = request.getCookies();
+        if (cookies == null) return;
+        boolean secure = request.isSecure() || "https".equalsIgnoreCase(request.getHeader("X-Forwarded-Proto"));
+        for (Cookie cookie : cookies) {
+            if (!cookie.getName().startsWith("sp_guest_session_")) continue;
+            response.addHeader(HttpHeaders.SET_COOKIE, ResponseCookie.from(cookie.getName(), "")
+                    .httpOnly(true).secure(secure).sameSite("Lax").path("/").maxAge(0).build().toString());
+        }
     }
 
     @PostMapping("/password-reset/send")

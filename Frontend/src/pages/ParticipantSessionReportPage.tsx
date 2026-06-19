@@ -5,6 +5,7 @@ import { Button } from '../components/ui/button';
 import { ApiClientError } from '../utils/apiClient';
 import { setAuthRedirectPath } from '../utils/authSession';
 import { sessionEntryApi, type SessionParticipantReport, type SessionParticipantReportMatch } from '../utils/sessionEntryApi';
+import { sessionPath } from '../utils/publicId';
 
 const matchTypeLabel: Record<string, string> = { MENS_DOUBLES: '남복', WOMENS_DOUBLES: '여복', MIXED_DOUBLES: '혼복', ANY: '자유 매칭' };
 const resultLabel: Record<string, string> = { WIN: '승', LOSS: '패', DRAW: '무', UNKNOWN: '-' };
@@ -68,20 +69,20 @@ export default function ParticipantSessionReportPage() {
   const { sessionId } = useParams();
   const location = useLocation();
   const isDemo = sessionId === 'demo' || location.pathname === '/sessions/demo/my-report';
-  const id = Number(sessionId);
+  const id = sessionId ?? '';
   const navigate = useNavigate();
   const [report, setReport] = useState<SessionParticipantReport | null>(null);
   const [error, setError] = useState('');
 
   const load = useCallback(async () => {
     if (isDemo) { setReport(demoReport()); return; }
-    if (!Number.isFinite(id)) return;
+    if (!id) return;
     try {
       setReport(await sessionEntryApi.myReport(id));
       setError('');
     } catch (errorValue) {
       if (errorValue instanceof ApiClientError && errorValue.status === 401) {
-        const path = `/sessions/${id}/my-report`;
+        const path = sessionPath(id, '/my-report');
         setAuthRedirectPath(path);
         navigate(`/login?redirect=${encodeURIComponent(path)}`);
         return;
@@ -93,7 +94,7 @@ export default function ParticipantSessionReportPage() {
   useEffect(() => { void load(); }, [load]);
 
   if (error) {
-    return <div className="min-h-dvh bg-background"><main className="mx-auto flex min-h-dvh max-w-lg items-center px-4"><section className="w-full rounded-3xl border-2 border-destructive/20 bg-card p-6 text-center shadow-lg"><ShieldAlert className="mx-auto h-12 w-12 text-destructive" /><h1 className="mt-4 text-2xl font-bold">기록 확인이 필요해요</h1><p className="mt-2 text-sm leading-6 text-muted-foreground">{error}</p><Button className="mt-5 h-14 w-full rounded-2xl text-base font-bold" onClick={() => navigate(`/sessions/${sessionId ?? 'demo'}/status`)}>참가자 현황으로 돌아가기</Button></section></main></div>;
+    return <div className="min-h-dvh bg-background"><main className="mx-auto flex min-h-dvh max-w-lg items-center px-4"><section className="w-full rounded-3xl border-2 border-destructive/20 bg-card p-6 text-center shadow-lg"><ShieldAlert className="mx-auto h-12 w-12 text-destructive" /><h1 className="mt-4 text-2xl font-bold">기록 확인이 필요해요</h1><p className="mt-2 text-sm leading-6 text-muted-foreground">{error}</p><Button className="mt-5 h-14 w-full rounded-2xl text-base font-bold" onClick={() => navigate(sessionPath(sessionId ?? 'demo', '/status'))}>참가자 현황으로 돌아가기</Button></section></main></div>;
   }
 
   if (!report) {
@@ -106,7 +107,7 @@ export default function ParticipantSessionReportPage() {
     <div className="min-h-dvh bg-background">
       <main className="mx-auto flex min-h-dvh w-full max-w-lg items-center px-4 py-3">
         <section className="w-full rounded-3xl border-2 border-border bg-card p-4 shadow-lg">
-          <button type="button" className="mb-2 inline-flex items-center gap-1 text-sm font-semibold text-muted-foreground" onClick={() => navigate(`/sessions/${sessionId ?? 'demo'}/status`)}>
+          <button type="button" className="mb-2 inline-flex items-center gap-1 text-sm font-semibold text-muted-foreground" onClick={() => navigate(sessionPath(sessionId ?? 'demo', '/status'))}>
             <ArrowLeft className="h-4 w-4" /> 참가자 현황
           </button>
 

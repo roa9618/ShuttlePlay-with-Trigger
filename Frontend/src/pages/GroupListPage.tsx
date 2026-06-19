@@ -36,6 +36,7 @@ import {
   type GroupOverviewResponse,
   type GroupRole,
 } from '../utils/groupApi';
+import { groupPath } from '../utils/publicId';
 import { styles } from './GroupListPage.styles';
 
 type FilterType = 'ALL' | GroupRole;
@@ -311,7 +312,7 @@ export default function GroupListPage() {
           <section className = {styles.highlightPanel}>
             {nearestSchedule ? (
               <Link
-                to = {`/groups/${nearestSchedule.groupId}`}
+                to = {groupPath(nearestSchedule.groupId)}
                 className = {styles.highlightItem}
               >
                 <div className = {styles.highlightIconBox}>
@@ -360,7 +361,7 @@ export default function GroupListPage() {
 
             {frequentGroup ? (
               <Link
-                to = {`/groups/${frequentGroup.groupId}`}
+                to = {groupPath(frequentGroup.groupId)}
                 className = {styles.highlightItem}
               >
               <div className = {styles.highlightIconBox}>
@@ -407,7 +408,7 @@ export default function GroupListPage() {
 
             {recentAccessGroup ? (
               <Link
-                to = {`/groups/${recentAccessGroup.groupId}`}
+                to = {groupPath(recentAccessGroup.groupId)}
                 className = {styles.highlightItem}
               >
               <div className = {styles.highlightIconBox}>
@@ -608,7 +609,7 @@ export default function GroupListPage() {
                     className = {styles.groupRow}
                   >
                     <Link
-                      to = {isCreateSessionSelection ? `/groups/${group.id}/schedule?createSession=true` : `/groups/${group.id}`}
+                      to = {isCreateSessionSelection ? `${groupPath(group.id, '/schedule')}?createSession=true` : groupPath(group.id)}
                       className = {styles.groupMain}
                     >
                       <img
@@ -676,7 +677,7 @@ export default function GroupListPage() {
                         size = "sm"
                         className = {styles.enterButton}
                       >
-                        <Link to = {isCreateSessionSelection ? `/groups/${group.id}/schedule?createSession=true` : `/groups/${group.id}`}>
+                        <Link to = {isCreateSessionSelection ? `${groupPath(group.id, '/schedule')}?createSession=true` : groupPath(group.id)}>
                           입장
                           <ChevronRight className = {styles.chevronIcon} />
                         </Link>
@@ -908,7 +909,7 @@ export default function GroupListPage() {
                 asChild
                 className = {styles.modalMainButton}
               >
-                <Link to = {`/groups/${selectedGroup.groupId}`}>
+                <Link to = {groupPath(selectedGroup.groupId)}>
                   모임 입장
                 </Link>
               </Button>

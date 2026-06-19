@@ -6,13 +6,79 @@ import { Button } from '../components/ui/button';
 import { sessionEntryApi, type SessionEntryPreview } from '../utils/sessionEntryApi';
 import { ApiClientError } from '../utils/apiClient';
 import { setAuthRedirectPath } from '../utils/authSession';
+import { sessionPath } from '../utils/publicId';
 
 export default function AttendancePage() {
-  const { sessionId } = useParams(); const id = Number(sessionId); const navigate = useNavigate(); const location = useLocation();
+  const { sessionId } = useParams();
+  const id = sessionId ?? '';
+  const navigate = useNavigate();
+  const location = useLocation();
   const [entry, setEntry] = useState<SessionEntryPreview | null>((location.state as { entry?: SessionEntryPreview } | null)?.entry ?? null);
-  const [error, setError] = useState(''); const [busy, setBusy] = useState(false);
-  useEffect(() => { if (!entry && Number.isFinite(id)) void sessionEntryApi.bySession(id).then(setEntry).catch(errorValue => { if (errorValue instanceof ApiClientError && errorValue.status === 401) { const path = `/sessions/${id}/attendance`; setAuthRedirectPath(path); navigate(`/login?redirect=${encodeURIComponent(path)}`); } else if (errorValue instanceof ApiClientError && errorValue.status === 403) setError('참가자 정보를 찾지 못했어요. 일정 입장 화면에서 다시 확인해 주세요.'); else setError('일정 정보를 불러오지 못했어요.'); }); }, [entry, id, navigate]);
-  const send = async (status: 'ARRIVED' | 'ABSENT') => { setBusy(true); setError(''); try { const next = await sessionEntryApi.attendance(id, { status }); if (next.restrictionReason) { navigate(`/sessions/${id}/entry-result/${next.restrictionReason.toLowerCase().replaceAll('_', '-')}`, { state: { entry: next } }); return; } navigate(`/sessions/${id}/entry-result/${status === 'ARRIVED' ? 'arrival-complete' : 'absence-complete'}`, { state: { entry: next } }); } catch (errorValue) { if (errorValue instanceof ApiClientError && errorValue.status === 401) { const path = `/sessions/${id}/attendance`; setAuthRedirectPath(path); navigate(`/login?redirect=${encodeURIComponent(path)}`); } else if (errorValue instanceof ApiClientError && errorValue.status === 403) setError('참가자 정보를 찾지 못했어요. 일정 입장 화면에서 다시 확인해 주세요.'); else setError('출석 상태를 저장하지 못했어요. 다시 시도해 주세요.'); } finally { setBusy(false); } };
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
 
-  return <SessionFlowPage tone="success"><div className="text-center"><SessionFlowIcon tone="success"><Check className="h-9 w-9" /></SessionFlowIcon><h1 className="mt-4 text-[1.65rem] font-bold leading-tight tracking-[-0.02em] md:text-4xl">오늘 출석은 어떻게 할까요?</h1><p className="mt-2 text-sm text-muted-foreground">{entry ? `${entry.groupName} · ${entry.title}` : '일정 확인 중…'}</p></div><div className="mt-4 space-y-2.5"><Button disabled={busy || !entry} className="h-16 w-full justify-start rounded-2xl bg-emerald-600 px-4 text-left hover:bg-emerald-700" onClick={() => void send('ARRIVED')}><span className="mr-3 flex h-10 w-10 items-center justify-center rounded-xl bg-white/20"><Check /></span><span><strong className="block text-lg">도착했어요</strong><small>바로 경기 가능 상태로 바뀌어요</small></span></Button><Button disabled={busy || !entry} variant="outline" className="h-16 w-full justify-start rounded-2xl border-amber-200 bg-amber-50/50 px-4 text-left text-amber-950 hover:bg-amber-100 hover:text-amber-950" onClick={() => navigate(`/sessions/${id}/late`, { state: { entry } })}><span className="mr-3 flex h-10 w-10 items-center justify-center rounded-xl bg-amber-100"><Clock className="text-amber-700" /></span><span><strong className="block text-lg">조금 늦어요</strong><small className="text-amber-800/70">도착 예정 시간을 알려주세요</small></span></Button><Button disabled={busy || !entry} variant="outline" className="h-16 w-full justify-start rounded-2xl border-rose-200 bg-rose-50/50 px-4 text-left text-rose-800 hover:bg-rose-100 hover:text-rose-900" onClick={() => void send('ABSENT')}><span className="mr-3 flex h-10 w-10 items-center justify-center rounded-xl bg-rose-100"><X /></span><span><strong className="block text-lg">오늘 못 가요</strong><small>불참 상태로 저장해요</small></span></Button><p className="min-h-5 text-center text-sm text-destructive">{error}</p>{error && !entry && <Button type="button" variant="outline" className="h-14 w-full rounded-2xl hover:bg-secondary hover:text-foreground" onClick={() => navigate('/session-entry')}>일정 입장으로 이동</Button>}</div></SessionFlowPage>;
+  useEffect(() => {
+    if (!entry && id) void sessionEntryApi.bySession(id)
+      .then(setEntry)
+      .catch(errorValue => {
+        if (errorValue instanceof ApiClientError && errorValue.status === 401) {
+          const path = sessionPath(id, '/attendance');
+          setAuthRedirectPath(path);
+          navigate(`/login?redirect=${encodeURIComponent(path)}`);
+        } else if (errorValue instanceof ApiClientError && errorValue.status === 403) {
+          setError('참가자 정보를 찾지 못했어요. 일정 입장 화면에서 다시 확인해 주세요.');
+        } else {
+          setError('일정 정보를 불러오지 못했어요.');
+        }
+      });
+  }, [entry, id, navigate]);
+
+  const send = async (status: 'ARRIVED' | 'ABSENT') => {
+    setBusy(true);
+    setError('');
+    try {
+      const next = await sessionEntryApi.attendance(id, { status });
+      if (next.restrictionReason) {
+        navigate(sessionPath(id, `/entry-result/${next.restrictionReason.toLowerCase().replaceAll('_', '-')}`), { state: { entry: next } });
+        return;
+      }
+      navigate(sessionPath(id, `/entry-result/${status === 'ARRIVED' ? 'arrival-complete' : 'absence-complete'}`), { state: { entry: next } });
+    } catch (errorValue) {
+      if (errorValue instanceof ApiClientError && errorValue.status === 401) {
+        const path = sessionPath(id, '/attendance');
+        setAuthRedirectPath(path);
+        navigate(`/login?redirect=${encodeURIComponent(path)}`);
+      } else if (errorValue instanceof ApiClientError && errorValue.status === 403) {
+        setError('참가자 정보를 찾지 못했어요. 일정 입장 화면에서 다시 확인해 주세요.');
+      } else {
+        setError('출석 상태를 저장하지 못했어요. 다시 시도해 주세요.');
+      }
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return <SessionFlowPage tone="success">
+    <div className="text-center">
+      <SessionFlowIcon tone="success"><Check className="h-9 w-9" /></SessionFlowIcon>
+      <h1 className="mt-4 text-[1.65rem] font-bold leading-tight tracking-[-0.02em] md:text-4xl">오늘 출석은 어떻게 할까요?</h1>
+      <p className="mt-2 text-sm text-muted-foreground">{entry ? `${entry.groupName} · ${entry.title}` : '일정 확인 중…'}</p>
+    </div>
+    <div className="mt-4 space-y-2.5">
+      <Button disabled={busy || !entry} className="h-16 w-full justify-start rounded-2xl bg-emerald-600 px-4 text-left hover:bg-emerald-700" onClick={() => void send('ARRIVED')}>
+        <span className="mr-3 flex h-10 w-10 items-center justify-center rounded-xl bg-white/20"><Check /></span>
+        <span><strong className="block text-lg">도착했어요</strong><small>바로 경기 가능 상태로 바뀌어요</small></span>
+      </Button>
+      <Button disabled={busy || !entry} variant="outline" className="h-16 w-full justify-start rounded-2xl border-amber-200 bg-amber-50/50 px-4 text-left text-amber-950 hover:bg-amber-100 hover:text-amber-950" onClick={() => navigate(sessionPath(id, '/late'), { state: { entry } })}>
+        <span className="mr-3 flex h-10 w-10 items-center justify-center rounded-xl bg-amber-100"><Clock className="text-amber-700" /></span>
+        <span><strong className="block text-lg">조금 늦어요</strong><small className="text-amber-800/70">도착 예정 시간을 알려주세요</small></span>
+      </Button>
+      <Button disabled={busy || !entry} variant="outline" className="h-16 w-full justify-start rounded-2xl border-rose-200 bg-rose-50/50 px-4 text-left text-rose-800 hover:bg-rose-100 hover:text-rose-900" onClick={() => void send('ABSENT')}>
+        <span className="mr-3 flex h-10 w-10 items-center justify-center rounded-xl bg-rose-100"><X /></span>
+        <span><strong className="block text-lg">오늘 못 가요</strong><small>불참 상태로 저장해요</small></span>
+      </Button>
+      <p className="min-h-5 text-center text-sm text-destructive">{error}</p>
+      {error && !entry && <Button type="button" variant="outline" className="h-14 w-full rounded-2xl hover:bg-secondary hover:text-foreground" onClick={() => navigate('/session-entry')}>일정 입장으로 이동</Button>}
+    </div>
+  </SessionFlowPage>;
 }

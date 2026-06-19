@@ -6,10 +6,13 @@ import com.shuttleplay.server.domain.group.repository.*;
 import com.shuttleplay.server.domain.notification.enums.NotificationType;
 import com.shuttleplay.server.domain.notification.enums.NotificationPreferenceType;
 import com.shuttleplay.server.domain.notification.service.NotificationService;
+import com.shuttleplay.server.domain.record.enums.MatchOperationStatus;
+import com.shuttleplay.server.domain.record.repository.MatchRecordRepository;
 import com.shuttleplay.server.domain.user.entity.User;
 import com.shuttleplay.server.domain.user.enums.*;
 import com.shuttleplay.server.domain.user.repository.UserRepository;
 import com.shuttleplay.server.global.error.*;
+import com.shuttleplay.server.global.util.PublicIdCodec;
 import java.time.*;
 import java.util.*;
 import java.util.function.Function;
@@ -39,6 +42,7 @@ public class GroupDetailService {
     private final GroupNotificationDispatchService notificationDispatch;
     private final GroupEventService events;
     private final SessionEntryCodeService entryCodes;
+    private final MatchRecordRepository matchRecords;
 
     public Map<String, Object> group(Long userId, Long groupId) {
         Optional<GroupMember> membership = access.viewerMembership(groupId, userId);
@@ -72,7 +76,9 @@ public class GroupDetailService {
             trend.add(Map.of("week", 4 - week, "attendance", sessions.findAllByGroupIdAndStartsAtBetweenAndStatusAndIsDeletedFalse(groupId, from, to, GroupSessionStatus.CLOSED).stream().mapToInt(GroupSession::getAttendanceCount).sum()));
         }
         Map<String, Object> result = map();
-        result.put("upcomingSession", sessions.findAllByGroupIdAndStartsAtBetweenAndStatusInAndIsDeletedFalse(groupId, now, now.plusYears(1), List.of(GroupSessionStatus.CREATED, GroupSessionStatus.ATTENDANCE_OPEN)).stream().min(Comparator.comparing(GroupSession::getStartsAt)).map(session -> membership.map(member -> sessionMapWithVote(session, member)).orElseGet(() -> sessionMap(session))).orElse(null));
+        Optional<GroupSession> currentSession = sessions.findCurrentSessions(groupId, now, List.of(GroupSessionStatus.CREATED, GroupSessionStatus.ATTENDANCE_OPEN, GroupSessionStatus.IN_PROGRESS)).stream().max(Comparator.comparing(GroupSession::getStartsAt));
+        Optional<GroupSession> upcomingSession = currentSession.or(() -> sessions.findAllByGroupIdAndStartsAtBetweenAndStatusInAndIsDeletedFalse(groupId, now, now.plusYears(1), List.of(GroupSessionStatus.CREATED, GroupSessionStatus.ATTENDANCE_OPEN, GroupSessionStatus.IN_PROGRESS)).stream().min(Comparator.comparing(GroupSession::getStartsAt)));
+        result.put("upcomingSession", upcomingSession.map(session -> membership.map(member -> sessionMapWithVote(session, member)).orElseGet(() -> sessionMap(session))).orElse(null));
         result.put("recentSessions", sessions.findTop3ByGroupIdAndStatusAndIsDeletedFalseOrderByStartsAtDesc(groupId, GroupSessionStatus.CLOSED).stream().map(this::sessionMap).toList());
         result.put("recentFourWeekSessionCount", recent.size());
         result.put("averageAttendance", recent.isEmpty() ? 0 : Math.round(recent.stream().mapToInt(GroupSession::getAttendanceCount).average().orElse(0)));
@@ -172,7 +178,7 @@ public class GroupDetailService {
             existing.reactivate();
             return existing;
         }).orElseGet(() -> members.save(GroupMember.createMember(group, user)));
-        notifications.send(user, NotificationType.GROUP, group.getName(), "모임 가입이 완료되었습니다.", "/groups/" + groupId);
+        notifications.send(user, NotificationType.GROUP, group.getName(), "모임 가입이 완료되었습니다.", groupPath(groupId));
         log(member, "JOIN_APPROVED", user.getName());
         events.members(groupId, "MEMBER_JOINED");
         return joinResult(group, "JOINED");
@@ -237,11 +243,19 @@ public class GroupDetailService {
     }
     public void updateSession(Long userId, Long groupId, Long sessionId, Map<String, Object> body) {
         GroupMember actor = access.scheduleManager(groupId, userId); GroupSession session = access.session(groupId, sessionId);
+        if (body.containsKey("courtCount")) {
+            int courtCount = integer(body, "courtCount");
+            if (matchRecords.findAllBySessionIdAndOperationStatusInAndIsDeletedFalseOrderByCourtNumberAsc(sessionId,
+                    List.of(MatchOperationStatus.CALLING, MatchOperationStatus.PLAYING)).stream()
+                    .anyMatch(match -> match.getCourtNumber() != null && match.getCourtNumber() > courtCount)) throw new BusinessException(ErrorCode.CONFLICT);
+            try { session.updateCourtCount(courtCount); }
+            catch (IllegalArgumentException exception) { throw new BusinessException(ErrorCode.INVALID_REQUEST); }
+        }
         session.update(text(body, "title"), dateTime(body, "startsAt"), dateTime(body, "endsAt"), text(body, "place"), dateTime(body, "voteDeadline"));
         log(actor, "SESSION_UPDATED", session.getTitle()); notifyAll(actor.getGroup(), "운동 일정이 변경되었습니다.", sessionPath(groupId, sessionId)); events.sessions(groupId, "SESSION_UPDATED");
     }
     public void cancelSession(Long userId, Long groupId, Long sessionId) { GroupMember actor = access.scheduleManager(groupId, userId); access.session(groupId, sessionId).cancel(); log(actor, "SESSION_CANCELLED", String.valueOf(sessionId)); notifyAll(actor.getGroup(), "운동 일정이 취소되었습니다.", sessionPath(groupId, sessionId)); events.sessions(groupId, "SESSION_CANCELLED"); }
-    public void deleteSession(Long userId, Long groupId, Long sessionId) { GroupMember actor = access.scheduleManager(groupId, userId); access.session(groupId, sessionId).deleteSession(); log(actor, "SESSION_DELETED", String.valueOf(sessionId)); notifyAll(actor.getGroup(), "운동 일정이 삭제되었습니다.", "/groups/" + groupId + "/schedule"); events.sessions(groupId, "SESSION_DELETED"); }
+    public void deleteSession(Long userId, Long groupId, Long sessionId) { GroupMember actor = access.scheduleManager(groupId, userId); access.session(groupId, sessionId).deleteSession(); log(actor, "SESSION_DELETED", String.valueOf(sessionId)); notifyAll(actor.getGroup(), "운동 일정이 삭제되었습니다.", groupPath(groupId) + "/schedule"); events.sessions(groupId, "SESSION_DELETED"); }
     public void vote(Long userId, Long groupId, Long sessionId, SessionVoteStatus status) {
         GroupMember member = access.member(groupId, userId); GroupSession session = access.session(groupId, sessionId);
         if (!session.isVotingAllowed()) throw new BusinessException(ErrorCode.FORBIDDEN);
@@ -315,7 +329,7 @@ public class GroupDetailService {
         return page(result, p -> postMap(p, comments.countByPostIdAndIsDeletedFalse(p.getId())));
     }
     public Map<String, Object> post(Long userId, Long groupId, Long postId) { access.viewGroup(groupId, userId); GroupPost post = access.post(groupId, postId); post.increaseViewCount(); return postMap(post, comments.countByPostIdAndIsDeletedFalse(postId)); }
-    public Map<String, Object> createPost(Long userId, Long groupId, Map<String, Object> body) { GroupMember author = access.member(groupId, userId); GroupPostType type = GroupPostType.valueOf(text(body, "type")); if (type == GroupPostType.NOTICE || bool(body, "pinned")) access.postManager(groupId, userId); else if (!author.getGroup().isMemberPostAllowed() && author.getRole() == GroupMemberRole.MEMBER) throw new BusinessException(ErrorCode.FORBIDDEN); if (textOrNull(body, "attachmentNames") != null && !author.getGroup().isPostAttachmentAllowed()) throw new BusinessException(ErrorCode.FORBIDDEN); GroupPost post = posts.save(GroupPost.create(author.getGroup(), author, type, text(body, "title"), text(body, "content"), bool(body, "pinned"), textOrNull(body, "attachmentNames"))); if (post.getType() == GroupPostType.NOTICE) notifyAll(author.getGroup(), "새 공지사항이 등록되었습니다.", "/groups/" + groupId + "/board?postId=" + post.getId()); log(author, "POST_CREATED", post.getTitle()); events.posts(groupId, "POST_CREATED"); return postMap(post, 0); }
+    public Map<String, Object> createPost(Long userId, Long groupId, Map<String, Object> body) { GroupMember author = access.member(groupId, userId); GroupPostType type = GroupPostType.valueOf(text(body, "type")); if (type == GroupPostType.NOTICE || bool(body, "pinned")) access.postManager(groupId, userId); else if (!author.getGroup().isMemberPostAllowed() && author.getRole() == GroupMemberRole.MEMBER) throw new BusinessException(ErrorCode.FORBIDDEN); if (textOrNull(body, "attachmentNames") != null && !author.getGroup().isPostAttachmentAllowed()) throw new BusinessException(ErrorCode.FORBIDDEN); GroupPost post = posts.save(GroupPost.create(author.getGroup(), author, type, text(body, "title"), text(body, "content"), bool(body, "pinned"), textOrNull(body, "attachmentNames"))); if (post.getType() == GroupPostType.NOTICE) notifyAll(author.getGroup(), "새 공지사항이 등록되었습니다.", groupPath(groupId) + "/board?postId=" + post.getId()); log(author, "POST_CREATED", post.getTitle()); events.posts(groupId, "POST_CREATED"); return postMap(post, 0); }
     @Transactional(readOnly = true)
     public void assertPostAttachmentAllowed(Long userId, Long groupId) { if (!access.member(groupId, userId).getGroup().isPostAttachmentAllowed()) throw new BusinessException(ErrorCode.FORBIDDEN); }
     public void updatePost(Long userId, Long groupId, Long postId, Map<String, Object> body) { GroupMember actor = access.member(groupId, userId); GroupPost post = access.post(groupId, postId); requireAuthorOrPostManager(groupId, userId, actor, post.getAuthor()); if (post.isPinned() != bool(body, "pinned") || GroupPostType.valueOf(text(body, "type")) == GroupPostType.NOTICE) access.postManager(groupId, userId); String attachmentNames = body.containsKey("attachmentNames") ? textOrNull(body, "attachmentNames") : post.getAttachmentNames(); post.update(GroupPostType.valueOf(text(body, "type")), text(body, "title"), text(body, "content"), bool(body, "pinned"), attachmentNames); log(actor, "POST_UPDATED", post.getTitle()); events.posts(groupId, "POST_UPDATED"); }
@@ -357,7 +371,7 @@ public class GroupDetailService {
             request.approve();
             members.findByGroupIdAndUserId(groupId, request.getRequester().getId())
                     .ifPresentOrElse(GroupMember::reactivate, () -> members.save(GroupMember.createMember(actor.getGroup(), request.getRequester())));
-            notifications.send(request.getRequester(), NotificationType.GROUP, actor.getGroup().getName(), "가입 요청이 승인되었습니다.", "/groups/" + groupId);
+            notifications.send(request.getRequester(), NotificationType.GROUP, actor.getGroup().getName(), "가입 요청이 승인되었습니다.", groupPath(groupId));
         } else {
             request.reject();
         }
@@ -474,11 +488,12 @@ public class GroupDetailService {
     private long undecidedCount(GroupSession session) { long activeMembers = members.countByGroupIdAndStatus(session.getGroup().getId(), GroupMemberStatus.ACTIVE); long votedMembers = votes.countBySessionId(session.getId()); return Math.max(0, activeMembers - votedMembers) + voteCount(session, SessionVoteStatus.UNDECIDED); }
     private int recentParticipationCount(GroupMember member) { return (int) votes.countByMemberIdAndStatusAndSession_StartsAtBetweenAndSession_Status(member.getId(), SessionVoteStatus.ATTENDING, LocalDateTime.now().minusDays(28), LocalDateTime.now(), GroupSessionStatus.CLOSED); }
     private void log(GroupMember actor, String action, String detail) { logs.save(GroupOperationLog.create(actor.getGroup(), actor, action, detail)); }
-    private void notifyAll(Group group, String message) { notifyAll(group, message, "/groups/" + group.getId()); }
+    private void notifyAll(Group group, String message) { notifyAll(group, message, groupPath(group.getId())); }
     private void notifyAll(Group group, String message, String targetPath) { members.findAllByGroupIdAndStatus(group.getId(), GroupMemberStatus.ACTIVE).forEach(m -> notifications.sendIfEnabled(m.getUser(), NotificationType.GROUP, group.getName(), message, targetPath, NotificationPreferenceType.SCHEDULE_CHANGE)); }
-    private void notifyCommentTarget(GroupPost post, GroupComment parent, GroupMember author) { GroupMember target = parent == null ? post.getAuthor() : parent.getAuthor(); if (!Objects.equals(target.getId(), author.getId())) notifications.send(target.getUser(), NotificationType.GROUP, "새 댓글 알림", post.getTitle(), "/groups/" + post.getGroup().getId() + "/board?postId=" + post.getId()); }
-    private String sessionPath(Long groupId, Long sessionId) { return "/groups/" + groupId + "/schedule?sessionId=" + sessionId; }
-    private String membersPath(Long groupId) { return "/groups/" + groupId + "/members"; }
+    private void notifyCommentTarget(GroupPost post, GroupComment parent, GroupMember author) { GroupMember target = parent == null ? post.getAuthor() : parent.getAuthor(); if (!Objects.equals(target.getId(), author.getId())) notifications.send(target.getUser(), NotificationType.GROUP, "새 댓글 알림", post.getTitle(), groupPath(post.getGroup().getId()) + "/board?postId=" + post.getId()); }
+    private String groupPath(Long groupId) { return "/groups/" + PublicIdCodec.encode(groupId); }
+    private String sessionPath(Long groupId, Long sessionId) { return groupPath(groupId) + "/schedule?sessionId=" + PublicIdCodec.encode(sessionId); }
+    private String membersPath(Long groupId) { return groupPath(groupId) + "/members"; }
     private static Map<String, Object> map() { return new LinkedHashMap<>(); }
     private static String text(Map<String, Object> b, String k) { Object v = b.get(k); if (v == null || String.valueOf(v).isBlank()) throw new BusinessException(ErrorCode.INVALID_REQUEST); return String.valueOf(v).trim(); }
     private static String textOrNull(Map<String, Object> b, String k) { Object v = b.get(k); return v == null ? null : String.valueOf(v); }

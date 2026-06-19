@@ -5,6 +5,7 @@ import com.shuttleplay.server.domain.group.enums.*;
 import com.shuttleplay.server.domain.group.repository.*;
 import com.shuttleplay.server.domain.notification.enums.NotificationType;
 import com.shuttleplay.server.domain.notification.service.NotificationService;
+import com.shuttleplay.server.global.util.PublicIdCodec;
 import com.shuttleplay.server.domain.user.entity.User;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -37,7 +38,7 @@ public class GroupNotificationDispatchService {
     public void notifyManagers(Group group, String event, String message) {
         members.findAllByGroupIdAndStatus(group.getId(), GroupMemberStatus.ACTIVE).stream()
                 .filter(member -> member.getRole() != GroupMemberRole.MEMBER)
-                .forEach(member -> send(group, member.getUser(), event, message, "/groups/" + group.getId() + "/requests"));
+                .forEach(member -> send(group, member.getUser(), event, message, "/groups/" + PublicIdCodec.encode(group.getId()) + "/requests"));
     }
 
     private void notifyUnvoted(GroupSession session, String event, String message) {
@@ -59,16 +60,16 @@ public class GroupNotificationDispatchService {
                 .filter(member -> member.getRole() != GroupMemberRole.MEMBER)
                 .forEach(member -> {
                     managerUserIds.add(member.getUser().getId());
-                    send(session.getGroup(), member.getUser(), event + ":" + session.getId(), message, "/sessions/" + session.getId() + "/dashboard");
+                    send(session.getGroup(), member.getUser(), event + ":" + session.getId(), message, "/sessions/" + PublicIdCodec.encode(session.getId()) + "/dashboard");
                 });
         votes.findAllBySessionIdAndStatus(session.getId(), SessionVoteStatus.ATTENDING).stream()
                 .filter(vote -> !managerUserIds.contains(vote.getMember().getUser().getId()))
-                .forEach(vote -> send(session.getGroup(), vote.getMember().getUser(), event + ":" + session.getId(), message, "/sessions/" + session.getId() + "/status"));
+                .forEach(vote -> send(session.getGroup(), vote.getMember().getUser(), event + ":" + session.getId(), message, "/sessions/" + PublicIdCodec.encode(session.getId()) + "/status"));
     }
     private void send(Group group, User user, String eventKey, String message, String targetPath) {
         if (dispatches.existsByEventKeyAndUserId(eventKey, user.getId())) return;
         notifications.send(user, NotificationType.GROUP, group.getName(), message, targetPath);
         dispatches.save(GroupNotificationDispatch.create(eventKey, user));
     }
-    private String sessionPath(GroupSession session) { return "/groups/" + session.getGroup().getId() + "/schedule?sessionId=" + session.getId(); }
+    private String sessionPath(GroupSession session) { return "/groups/" + PublicIdCodec.encode(session.getGroup().getId()) + "/schedule?sessionId=" + PublicIdCodec.encode(session.getId()); }
 }

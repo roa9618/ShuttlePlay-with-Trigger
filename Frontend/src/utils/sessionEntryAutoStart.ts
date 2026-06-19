@@ -11,15 +11,7 @@ export function scheduleSessionAutoStart(
   onStart: () => void,
   onError?: () => void,
 ) {
-  if (target.currentMatch || target.playStatus === 'PLAYING') {
-    window.setTimeout(onStart, 0);
-    return () => undefined;
-  }
-
-  const active = target.alertType === 'NEXT_UP'
-    || target.alertType === 'CALLING'
-    || target.playStatus === 'NEXT_UP'
-    || target.playStatus === 'CALLING';
+  const active = target.alertType === 'CALLING' || target.playStatus === 'CALLING';
   if (!active) return () => undefined;
 
   const key = autoStartKey(target);

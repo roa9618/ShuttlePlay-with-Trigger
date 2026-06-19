@@ -12,6 +12,7 @@ import com.shuttleplay.server.domain.notification.enums.NotificationType;
 import com.shuttleplay.server.domain.notification.service.NotificationService;
 import com.shuttleplay.server.global.error.BusinessException;
 import com.shuttleplay.server.global.error.ErrorCode;
+import com.shuttleplay.server.global.util.PublicIdCodec;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -43,7 +44,7 @@ public class GroupCommandService {
                 NotificationType.GROUP,
                 "모임 생성이 완료되었습니다",
                 group.getName() + " 모임을 바로 운영할 수 있습니다.",
-                "/groups/" + group.getId()
+                "/groups/" + PublicIdCodec.encode(group.getId())
         );
 
         return CreateGroupResponse.from(group);

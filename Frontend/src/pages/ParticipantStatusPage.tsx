@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Activity, BarChart3, Clock3, Dumbbell, RefreshCw, ShieldAlert, UserRound, Users, Wifi, WifiOff } from 'lucide-react';
+import { Activity, BarChart3, Clock3, Dumbbell, LogOut, RefreshCw, ShieldAlert, UserRound, Users, Wifi, WifiOff } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { ApiClientError } from '../utils/apiClient';
 import { setAuthRedirectPath } from '../utils/authSession';
+import { sessionPath } from '../utils/publicId';
 import { sessionEntryApi, type SessionEntryParticipantStatus, type ParticipantPlayStatus } from '../utils/sessionEntryApi';
 import { scheduleSessionAutoStart } from '../utils/sessionEntryAutoStart';
 import { connectSessionEntrySocket } from '../utils/sessionEntrySocket';
@@ -87,11 +88,11 @@ function confirmedKey(status: SessionEntryParticipantStatus) {
 export default function ParticipantStatusPage() {
   const { sessionId } = useParams();
   const isDemo = sessionId === 'demo';
-  const id = Number(sessionId);
+  const id = sessionId ?? '';
   const navigate = useNavigate();
   const [status, setStatus] = useState<SessionEntryParticipantStatus | null>(null);
   const [error, setError] = useState('');
-  const [realtimeConnected, setRealtimeConnected] = useState(true);
+  const [realtimeConnected, setRealtimeConnected] = useState(isDemo);
   const [busy, setBusy] = useState(false);
 
   const loadStatus = useCallback(async () => {
@@ -100,14 +101,14 @@ export default function ParticipantStatusPage() {
       setRealtimeConnected(true);
       return;
     }
-    if (!Number.isFinite(id)) return;
+    if (!id) return;
     try {
       const next = await sessionEntryApi.status(id);
       setStatus(next);
       setError('');
     } catch (errorValue) {
       if (errorValue instanceof ApiClientError && errorValue.status === 401) {
-        const path = `/sessions/${id}/status`;
+        const path = sessionPath(id, '/status');
         setAuthRedirectPath(path);
         navigate(`/login?redirect=${encodeURIComponent(path)}`);
         return;
@@ -121,27 +122,54 @@ export default function ParticipantStatusPage() {
   useEffect(() => { void loadStatus(); }, [loadStatus]);
 
   useEffect(() => {
-    if (!status || isDemo) return undefined;
-    return connectSessionEntrySocket(status.groupId, status.sessionId, () => void loadStatus(), setRealtimeConnected);
-  }, [isDemo, loadStatus, status]);
+    if (!status?.groupId || !status.sessionId || isDemo) return undefined;
+    return connectSessionEntrySocket(status.groupId, status.sessionId, loadStatus, setRealtimeConnected);
+  }, [isDemo, loadStatus, status?.groupId, status?.sessionId]);
 
   useEffect(() => {
-    if (!status?.nextPrompt) return;
+    if (!status) return;
+    if (status.playStatus === 'PLAYING' && status.currentMatch) {
+      const matchId = status.currentMatch?.matchId ?? 'current';
+      const acknowledged = window.sessionStorage.getItem(`session-match-start-alert:${status.sessionId}:${matchId}`);
+      navigate(sessionPath(id, `/${acknowledged ? 'current-match' : 'match-call'}`), { replace: true });
+      return;
+    }
+    const promptType = status.nextPrompt?.type ?? (status.playStatus === 'CALLING' ? 'CALLING' : status.playStatus === 'NEXT_UP' ? 'NEXT_UP' : null);
+    if (!promptType) return;
+    if (promptType === 'CALLING' && !status.currentMatch && !status.nextMatch) return;
+    if (promptType === 'NEXT_UP' && !status.nextMatch) return;
     const key = confirmedKey(status);
-    if (key && window.sessionStorage.getItem(key) && status.nextPrompt.type !== 'CALLING') return;
-    navigate(`/sessions/${status.sessionId}/${status.nextPrompt.type === 'CALLING' ? 'match-call' : 'next-match'}`);
-  }, [navigate, status]);
+    if (key && window.sessionStorage.getItem(key) && promptType !== 'CALLING') return;
+    navigate(sessionPath(id, `/${promptType === 'CALLING' ? 'match-call' : 'next-match'}`), { replace: true });
+  }, [id, navigate, status]);
 
   useEffect(() => {
     if (!status || isDemo) return undefined;
-    return scheduleSessionAutoStart(status, () => navigate(`/sessions/${status.sessionId}/current-match`), () => void loadStatus());
-  }, [isDemo, loadStatus, navigate, status]);
+    return scheduleSessionAutoStart(status, () => navigate(sessionPath(id, '/current-match')), () => void loadStatus());
+  }, [id, isDemo, loadStatus, navigate, status]);
 
   const toggleRest = async () => {
     if (!status || isDemo) return;
     setBusy(true);
     try {
-      setStatus(await sessionEntryApi.toggleRest(status.sessionId));
+      setStatus(await sessionEntryApi.toggleRest(id));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const leaveEarly = async () => {
+    if (!status) return;
+    if (!window.confirm('조기 퇴장하면 오늘 경기 후보에서 제외돼요. 퇴장할까요?')) return;
+    if (isDemo) {
+      setStatus({ ...status, playStatus: 'LEFT', gameStatus: 'LEFT' });
+      return;
+    }
+    setBusy(true);
+    try {
+      setStatus(await sessionEntryApi.leaveEarly(id));
+    } catch {
+      setError('현재 경기 또는 입장 호출이 끝난 뒤 조기 퇴장할 수 있어요.');
     } finally {
       setBusy(false);
     }
@@ -158,8 +186,8 @@ export default function ParticipantStatusPage() {
   const current = playStatusLabel[status.playStatus] ?? playStatusLabel.WAITING;
   const nextMatch = status.nextMatch;
   const stats = status.todayStats;
-  const reportPath = isDemo ? '/sessions/demo/my-report' : `/sessions/${status.sessionId}/my-report`;
-  const currentMatchPath = isDemo ? '/sessions/demo/current-match' : `/sessions/${status.sessionId}/current-match`;
+  const reportPath = isDemo ? '/sessions/demo/my-report' : sessionPath(id, '/my-report');
+  const currentMatchPath = isDemo ? '/sessions/demo/current-match' : sessionPath(id, '/current-match');
   const participantInfo = [
     status.name ?? '참가자',
     status.participantType === 'GUEST' ? '게스트' : '회원',
@@ -243,7 +271,10 @@ export default function ParticipantStatusPage() {
           <Button variant="outline" className="h-14 w-full rounded-2xl hover:bg-secondary hover:text-foreground" onClick={() => void loadStatus()}>
             <RefreshCw className="mr-2 h-5 w-5" />새로고침
           </Button>
-          {(status.currentMatch || status.playStatus === 'PLAYING') && (
+          <Button variant="outline" disabled={busy || status.playStatus === 'PLAYING' || status.playStatus === 'CALLING' || status.playStatus === 'NEXT_UP' || status.playStatus === 'LEFT'} className="col-span-2 h-14 w-full rounded-2xl border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700" onClick={() => void leaveEarly()}>
+            <LogOut className="mr-2 h-5 w-5" />{status.playStatus === 'LEFT' ? '조기 퇴장 완료' : '조기 퇴장'}
+          </Button>
+          {status.currentMatch && (
             <Button className="col-span-2 h-14 w-full rounded-2xl text-base font-bold" onClick={() => navigate(currentMatchPath)}>
               <Activity className="mr-2 h-5 w-5" />현재 경기 보기
             </Button>

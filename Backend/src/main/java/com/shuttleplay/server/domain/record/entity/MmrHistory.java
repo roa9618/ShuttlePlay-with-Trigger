@@ -22,17 +22,47 @@ public class MmrHistory extends BaseEntity {
     @Enumerated(EnumType.STRING) @Column(name = "mmr_type", nullable = false, length = 20) private MmrType mmrType;
     @Column(name = "before_mmr", nullable = false) private int beforeMmr;
     @Column(name = "after_mmr", nullable = false) private int afterMmr;
+    @Column(name = "mmr_delta") private int mmrDelta;
+    @Column(name = "base_k") private Integer baseK;
+    @Column(name = "expected_win_rate") private Double expectedWinRate;
+    @Column(name = "score_multiplier") private Double scoreMultiplier;
+    @Column(name = "confidence_multiplier") private Double confidenceMultiplier;
+    @Column(name = "team_gap_multiplier") private Double teamGapMultiplier;
+    @Column(name = "responsibility_multiplier") private Double responsibilityMultiplier;
+    @Column(name = "floor_applied") private boolean floorApplied;
+    @Column(name = "soft_cap_applied") private boolean softCapApplied;
+    @Column(name = "change_reason", length = 40) private String changeReason;
     @Column(name = "changed_at", nullable = false) private LocalDateTime changedAt;
 
     public static MmrHistory create(User user, MatchRecord match, MmrType mmrType,
-                                    int beforeMmr, int afterMmr, LocalDateTime changedAt) {
+                                    int beforeMmr, int afterMmr, Integer baseK, Double expectedWinRate,
+                                    Double scoreMultiplier, Double confidenceMultiplier,
+                                    Double teamGapMultiplier, Double responsibilityMultiplier,
+                                    boolean floorApplied, boolean softCapApplied,
+                                    String changeReason, LocalDateTime changedAt) {
         MmrHistory history = new MmrHistory();
         history.user = user;
         history.match = match;
         history.mmrType = mmrType;
         history.beforeMmr = beforeMmr;
         history.afterMmr = afterMmr;
+        history.mmrDelta = afterMmr - beforeMmr;
+        history.baseK = baseK;
+        history.expectedWinRate = expectedWinRate;
+        history.scoreMultiplier = scoreMultiplier;
+        history.confidenceMultiplier = confidenceMultiplier;
+        history.teamGapMultiplier = teamGapMultiplier;
+        history.responsibilityMultiplier = responsibilityMultiplier;
+        history.floorApplied = floorApplied;
+        history.softCapApplied = softCapApplied;
+        history.changeReason = changeReason;
         history.changedAt = changedAt;
         return history;
+    }
+
+    public static MmrHistory correction(User user, MatchRecord match, MmrType mmrType,
+                                        int beforeMmr, int afterMmr, String reason) {
+        return create(user, match, mmrType, beforeMmr, afterMmr, null, null, null, null,
+                null, null, false, false, reason, LocalDateTime.now());
     }
 }

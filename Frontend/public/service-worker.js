@@ -1,4 +1,4 @@
-const CACHE_NAME = 'shuttleplay-shell-v1';
+const CACHE_NAME = 'shuttleplay-shell-v2';
 const APP_SHELL = ['/', '/index.html', '/site.webmanifest'];
 
 self.addEventListener('install', (event) => {
@@ -25,12 +25,23 @@ self.addEventListener('fetch', (event) => {
 
 self.addEventListener('push', (event) => {
   const data = event.data?.json() ?? {};
+  const priority = data.priority ?? (data.type === 'MATCH' ? 'HIGH' : 'NORMAL');
 
   event.waitUntil(self.registration.showNotification(data.title ?? '셔틀플레이 알림', {
     body: data.message ?? '',
     icon: '/shuttleplay-icon-192.png',
     badge: '/shuttleplay-icon-192.png',
+    tag: data.tag ?? `shuttleplay-${data.type ?? 'notification'}-${data.id ?? Date.now()}`,
+    renotify: priority === 'HIGH',
+    requireInteraction: priority === 'HIGH',
+    vibrate: priority === 'HIGH' ? [300, 120, 300, 120, 500] : [180, 80, 180],
+    actions: [
+      { action: 'open', title: '확인하기' },
+      { action: 'close', title: '닫기' },
+    ],
     data: {
+      id: data.id,
+      type: data.type,
       targetPath: data.targetPath ?? '/notifications',
     },
   }));
@@ -38,6 +49,7 @@ self.addEventListener('push', (event) => {
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
+  if (event.action === 'close') return;
 
   const targetUrl = new URL(event.notification.data?.targetPath ?? '/notifications', self.location.origin).href;
 

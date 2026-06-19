@@ -6,6 +6,7 @@ import { Badge } from '../components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { ArrowLeft, Search, Filter, Users, Trophy, Calendar } from 'lucide-react';
 import { useActionFeedback } from '../utils/useActionFeedback';
+import { groupPath } from '../utils/publicId';
 import { styles } from './GroupMembersPage.styles';
 
 export default function GroupMembersPage() {
@@ -35,7 +36,7 @@ export default function GroupMembersPage() {
       <div className = {styles.header}>
         <div className = {styles.headerInner}>
           <div className = {styles.row}>
-            <Link to = {`/groups/${groupId}`} className = {styles.backLink}>
+            <Link to = {groupPath(groupId ?? '')} className = {styles.backLink}>
               <ArrowLeft className = {styles.arrowLeftIcon} />
               모임 상세
             </Link>

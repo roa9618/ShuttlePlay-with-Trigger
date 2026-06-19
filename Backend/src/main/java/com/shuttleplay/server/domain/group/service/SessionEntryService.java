@@ -15,6 +15,7 @@ import com.shuttleplay.server.domain.user.enums.*;
 import com.shuttleplay.server.domain.user.repository.UserRepository;
 import com.shuttleplay.server.global.error.*;
 import com.shuttleplay.server.global.security.JwtTokenProvider;
+import com.shuttleplay.server.global.util.PublicIdCodec;
 import java.time.*;
 import java.util.*;
 import lombok.RequiredArgsConstructor;
@@ -38,6 +39,7 @@ public class SessionEntryService {
     private final JwtTokenProvider tokenProvider;
     private final MatchPlayerRepository matchPlayers;
     private final MatchRecordRepository matchRecords;
+    private final SessionOperationService sessionOperations;
 
     public record EntryResult(Map<String, Object> data, String guestToken) {}
     private record Participant(GroupMember member, GroupSessionGuest guest, SessionVoteStatus voteStatus) {}
@@ -77,7 +79,7 @@ public class SessionEntryService {
         Participant created = register(session, userId, body);
         String token = guestToken(sessionId, userId, created);
         refreshAttendanceCount(session);
-        events.sessions(session.getGroup().getId(), "SESSION_ENTRY_REGISTERED");
+        events.session(session.getGroup().getId(), session.getId(), "SESSION_ENTRY_REGISTERED");
         notifyScheduleManagers(
                 session,
                 "새 참가자가 등록됐어요",
@@ -114,7 +116,8 @@ public class SessionEntryService {
             updateVote(session, participant, SessionVoteStatus.ABSENT); entry.absent();
         } else throw new BusinessException(ErrorCode.INVALID_REQUEST);
         refreshAttendanceCount(session);
-        events.sessions(session.getGroup().getId(), "ATTENDANCE_UPDATED");
+        sessionOperations.reconcileParticipantAvailability(sessionId);
+        events.session(session.getGroup().getId(), session.getId(), "ATTENDANCE_UPDATED");
         notifyScheduleManagers(
                 session,
                 "출석 상태가 변경됐어요",
@@ -142,7 +145,19 @@ public class SessionEntryService {
         if (participant == null || participant.voteStatus() == null) throw new BusinessException(ErrorCode.FORBIDDEN);
         GroupSessionAttendance entry = attendanceEntry(session, participant);
         entry.toggleRest();
-        events.sessions(session.getGroup().getId(), "PARTICIPANT_STATUS_UPDATED");
+        sessionOperations.reconcileParticipantAvailability(sessionId);
+        return participantStatus(session, participant);
+    }
+
+    @Transactional
+    public Map<String, Object> leaveEarly(Long sessionId, Long userId, String guestToken) {
+        GroupSession session = session(sessionId);
+        Participant participant = identify(session, userId, guestToken, Map.of());
+        if (participant == null || participant.voteStatus() == null) throw new BusinessException(ErrorCode.FORBIDDEN);
+        GroupSessionAttendance entry = attendanceEntry(session, participant);
+        try { entry.leaveEarly(); }
+        catch (IllegalStateException exception) { throw new BusinessException(ErrorCode.INVALID_REQUEST); }
+        sessionOperations.reconcileParticipantAvailability(sessionId);
         return participantStatus(session, participant);
     }
 
@@ -189,18 +204,10 @@ public class SessionEntryService {
         Participant participant = identify(session, userId, guestToken, Map.of());
         if (participant == null || participant.voteStatus() == null) throw new BusinessException(ErrorCode.FORBIDDEN);
         Long matchId = optionalLong(body, "matchId");
-        if (matchId != null) {
-            MatchRecord match = matchRecords.findByIdAndSessionId(matchId, sessionId)
-                    .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
-            match.getPlayers().forEach(player -> members.findByGroupIdAndUserIdAndStatus(session.getGroup().getId(), player.getUser().getId(), GroupMemberStatus.ACTIVE)
-                    .map(member -> attendanceEntries.findBySessionIdAndMemberId(sessionId, member.getId())
-                            .orElseGet(() -> attendanceEntries.save(GroupSessionAttendance.forMember(session, member))))
-                    .ifPresent(GroupSessionAttendance::startPlaying));
-        } else {
-            GroupSessionAttendance entry = attendanceEntry(session, participant);
-            entry.startPlaying();
-        }
-        events.sessions(session.getGroup().getId(), "PARTICIPANT_STATUS_UPDATED");
+        if (matchId == null) throw new BusinessException(ErrorCode.INVALID_REQUEST);
+        GroupSessionAttendance entry = attendanceEntry(session, participant);
+        sessionOperations.startParticipantMatch(sessionId, matchId, entry);
+        events.session(session.getGroup().getId(), session.getId(), "PARTICIPANT_STATUS_UPDATED");
         return currentMatch(sessionId, userId, guestToken);
     }
 
@@ -211,51 +218,21 @@ public class SessionEntryService {
         if (participant == null || participant.voteStatus() == null) throw new BusinessException(ErrorCode.FORBIDDEN);
 
         Long matchId = longValue(body, "matchId");
-        MatchRecord match = matchRecords.findByIdAndSessionId(matchId, sessionId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
-
-        if (match.getEndedAt() != null) {
-            Map<String, Object> response = currentMatch(sessionId, userId, guestToken);
-            response.put("submitted", false);
-            response.put("resultAlreadySubmitted", true);
-            response.put("submittedMatchId", match.getId());
-            return response;
-        }
-
-        Integer myTeamNumber = null;
-        if (participant.member() != null) {
-            Long participantUserId = participant.member().getUser().getId();
-            myTeamNumber = match.getPlayers().stream()
-                    .filter(player -> player.getUser().getId().equals(participantUserId))
-                    .map(MatchPlayer::getTeamNumber)
-                    .findFirst()
-                    .orElse(null);
-        }
-        if (myTeamNumber == null) throw new BusinessException(ErrorCode.FORBIDDEN);
-
+        GroupSessionAttendance entry = attendanceEntry(session, participant);
+        MatchRecord match = matchRecords.findByIdAndSessionId(matchId, sessionId).orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+        MatchPlayer me = match.getPlayers().stream().filter(player -> player.getAttendance() != null && player.getAttendance().getId().equals(entry.getId()))
+                .findFirst().orElseThrow(() -> new BusinessException(ErrorCode.FORBIDDEN));
         String result = text(body, "result");
         if (!result.equals("WIN") && !result.equals("LOSS")) throw new BusinessException(ErrorCode.INVALID_REQUEST);
         int myScore = optionalInteger(body, "myScore", result.equals("WIN") ? 1 : 0);
         int opponentScore = optionalInteger(body, "opponentScore", result.equals("WIN") ? 0 : 1);
-        if (myScore < 0 || opponentScore < 0 || myScore == opponentScore) throw new BusinessException(ErrorCode.INVALID_REQUEST);
-        if ((result.equals("WIN") && myScore <= opponentScore) || (result.equals("LOSS") && myScore >= opponentScore)) {
-            throw new BusinessException(ErrorCode.INVALID_REQUEST);
-        }
-
-        if (myTeamNumber == 1) match.confirmResult(myScore, opponentScore);
-        else match.confirmResult(opponentScore, myScore);
-
-        match.getPlayers().forEach(player -> members.findByGroupIdAndUserIdAndStatus(session.getGroup().getId(), player.getUser().getId(), GroupMemberStatus.ACTIVE)
-                .flatMap(member -> attendanceEntries.findBySessionIdAndMemberId(sessionId, member.getId()))
-                .ifPresent(GroupSessionAttendance::arrive));
-        events.sessions(session.getGroup().getId(), "MATCH_RESULT_SUBMITTED");
-
-        Map<String, Object> response = currentMatch(sessionId, userId, guestToken);
-        response.put("submitted", true);
-        response.put("resultAlreadySubmitted", false);
-        response.put("submittedMatchId", match.getId());
-        response.put("submittedResult", result);
-        response.put("submittedScore", Map.of("myScore", myScore, "opponentScore", opponentScore));
+        boolean scoreEntered = body.get("myScore") != null && body.get("opponentScore") != null;
+        Map<String, Object> operationBody = me.getTeamNumber() == 1
+                ? Map.of("teamAScore", myScore, "teamBScore", opponentScore, "scoreEntered", scoreEntered)
+                : Map.of("teamAScore", opponentScore, "teamBScore", myScore, "scoreEntered", scoreEntered);
+        Map<String, Object> response = sessionOperations.submitParticipantResult(sessionId, matchId, entry, operationBody);
+        response.put("submitted", !Boolean.TRUE.equals(response.get("resultAlreadySubmitted")));
+        response.put("submittedMatchId", matchId);
         return response;
     }
 
@@ -271,35 +248,10 @@ public class SessionEntryService {
         result.put("guestRecordLimited", guest);
         result.put("canOpenFullRecord", userId != null && isOperator(session, userId));
 
-        List<Map<String, Object>> records = new ArrayList<>();
-        int wins = 0;
-        int pointsFor = 0;
-        int pointsAgainst = 0;
-        if (!guest && participant.member() != null) {
-            Long userIdValue = participant.member().getUser().getId();
-            for (MatchPlayer player : matchPlayers.findUserSessionMatchRecords(userIdValue, sessionId)) {
-                MatchRecord match = player.getMatch();
-                int myScore = player.getTeamNumber() == 1 ? match.getTeamAScore() : match.getTeamBScore();
-                int opponentScore = player.getTeamNumber() == 1 ? match.getTeamBScore() : match.getTeamAScore();
-                boolean win = myScore > opponentScore;
-                if (win) wins++;
-                pointsFor += myScore;
-                pointsAgainst += opponentScore;
-                records.add(matchMap(player, myScore, opponentScore, win));
-            }
-        }
-        int games = records.size();
-        Map<String, Object> summary = new LinkedHashMap<>();
-        summary.put("games", games);
-        summary.put("wins", wins);
-        summary.put("losses", Math.max(0, games - wins));
-        summary.put("winRate", games == 0 ? null : Math.round(wins * 100.0 / games));
-        summary.put("pointsFor", pointsFor);
-        summary.put("pointsAgainst", pointsAgainst);
-        summary.put("doublesMmrDelta", 0);
-        summary.put("mixedMmrDelta", 0);
-        result.put("summary", summary);
-        result.put("matches", records);
+        GroupSessionAttendance attendance = attendanceEntry(session, participant);
+        Map<String, Object> report = sessionOperations.participantReport(sessionId, attendance);
+        result.put("summary", report.get("summary"));
+        result.put("matches", report.get("matches"));
         return result;
     }
 
@@ -462,11 +414,33 @@ public class SessionEntryService {
         todayStats.put("doublesMmrDelta", 0);
         todayStats.put("mixedMmrDelta", 0);
 
+        if (attendance != null) {
+            Map<String, Object> report = sessionOperations.participantReport(session.getId(), attendance);
+            Object summary = report.get("summary");
+            if (summary instanceof Map<?, ?> values) {
+                for (String key : List.of("games", "wins", "losses", "pointsFor", "pointsAgainst", "doublesMmrDelta", "mixedMmrDelta")) {
+                    if (values.containsKey(key)) todayStats.put(key, values.get(key));
+                }
+            }
+        }
+
         result.put("playStatus", playStatus);
         result.put("gameStatus", playStatus);
-        result.put("nextMatch", null);
-        result.put("currentMatch", null);
-        result.put("nextPrompt", null);
+        Map<String, Object> operation = attendance == null ? Map.of() : sessionOperations.participantMatch(session.getId(), attendance);
+        Object nextMatch = operation.get("nextMatch");
+        Object currentMatch = operation.get("currentMatch");
+        result.put("nextMatch", nextMatch);
+        result.put("currentMatch", currentMatch);
+        if (playStatus == SessionPlayStatus.CALLING || playStatus == SessionPlayStatus.NEXT_UP) {
+            Map<String, Object> prompt = new LinkedHashMap<>();
+            prompt.put("type", playStatus == SessionPlayStatus.CALLING ? "CALLING" : "NEXT_UP");
+            prompt.put("priority", playStatus == SessionPlayStatus.CALLING ? "HIGH" : "NORMAL");
+            if (nextMatch instanceof Map<?, ?> values) {
+                prompt.put("matchQueueId", values.get("matchQueueId"));
+                prompt.put("matchId", values.get("matchId"));
+            }
+            result.put("nextPrompt", prompt);
+        } else result.put("nextPrompt", null);
         result.put("todayStats", todayStats);
         result.put("lastUpdatedAt", LocalDateTime.now());
         result.put("realtimeConnected", true);
@@ -478,30 +452,30 @@ public class SessionEntryService {
         MatchRecord match = player.getMatch();
         List<String> opponents = match.getPlayers().stream()
                 .filter(item -> item.getTeamNumber() != player.getTeamNumber())
-                .map(item -> item.getUser().getName())
+                .map(MatchPlayer::displayName)
                 .toList();
         String partner = match.getPlayers().stream()
                 .filter(item -> item.getTeamNumber() == player.getTeamNumber())
-                .filter(item -> !item.getUser().getId().equals(player.getUser().getId()))
-                .map(item -> item.getUser().getName())
+                .filter(item -> item.getId() == null || !item.getId().equals(player.getId()))
+                .map(MatchPlayer::displayName)
                 .findFirst().orElse(null);
 
         Map<String, Object> map = new LinkedHashMap<>();
         map.put("matchId", match.getId());
-        map.put("court", null);
+        map.put("court", match.getCourtNumber());
         map.put("matchType", match.getMatchType().name());
         map.put("partner", partner);
         map.put("opponents", opponents);
         map.put("myScore", myScore);
         map.put("opponentScore", opponentScore);
         map.put("result", win ? "WIN" : "LOSS");
-        map.put("status", match.isInvalidated() ? "RESULT_UPDATED" : "RESULT_ENTERED");
-        map.put("mmrType", null);
-        map.put("mmrBefore", null);
-        map.put("mmrAfter", null);
-        map.put("mmrDelta", 0);
+        map.put("status", match.isResultUpdated() ? "RESULT_UPDATED" : "RESULT_ENTERED");
+        map.put("mmrType", match.getMatchType() == com.shuttleplay.server.domain.record.enums.MatchType.MIXED_DOUBLES ? "MIXED" : "DOUBLES");
+        map.put("mmrBefore", player.getMmrBefore());
+        map.put("mmrAfter", player.getMmrAfter());
+        map.put("mmrDelta", player.getMmrDelta() == null ? 0 : player.getMmrDelta());
         map.put("completedAt", match.getEndedAt());
-        map.put("resultUpdated", match.isInvalidated());
+        map.put("resultUpdated", match.isResultUpdated());
         return map;
     }
 
@@ -533,7 +507,7 @@ public class SessionEntryService {
     }
 
     private void notifyScheduleManagers(GroupSession session, String title, String message) {
-        String targetPath = "/groups/" + session.getGroup().getId() + "/schedule";
+        String targetPath = "/groups/" + PublicIdCodec.encode(session.getGroup().getId()) + "/schedule";
         members.findAllByGroupIdAndStatus(session.getGroup().getId(), GroupMemberStatus.ACTIVE).stream()
                 .filter(member -> member.getRole() == GroupMemberRole.OWNER
                         || (member.getRole() == GroupMemberRole.MANAGER && member.isSchedulePermission()))

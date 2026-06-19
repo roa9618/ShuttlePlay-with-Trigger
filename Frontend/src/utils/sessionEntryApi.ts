@@ -1,6 +1,8 @@
 import { apiClient } from './apiClient';
 
 export type SessionEntryStatus = 'REGISTERED' | 'ARRIVED' | 'LATE' | 'ABSENT';
+export type PublicSessionId = number | string;
+
 export type SessionEntryPreview = {
   sessionId: number; entryCode: string; groupId: number; groupName: string; title: string;
   startsAt: string; endsAt: string | null; place: string | null; status: string;
@@ -112,16 +114,17 @@ const options = { auth: true, credentials: 'include' as RequestCredentials };
 const withCode = (path: string, code?: string | null) => code ? `${path}?code=${encodeURIComponent(code)}` : path;
 export const sessionEntryApi = {
   byCode: (code: string) => apiClient.get<SessionEntryPreview>(`/session-entry/code/${encodeURIComponent(code)}`, options),
-  bySession: (sessionId: number, code?: string | null) => apiClient.get<SessionEntryPreview>(withCode(`/session-entry/sessions/${sessionId}`, code), options),
-  decide: (sessionId: number, body: Record<string, unknown>, code?: string | null) => apiClient.post<SessionEntryPreview>(withCode(`/session-entry/sessions/${sessionId}/decision`, code), body, options),
-  attendance: (sessionId: number, body: Record<string, unknown>) => apiClient.post<SessionEntryPreview>(`/session-entry/sessions/${sessionId}/attendance`, body, options),
-  status: (sessionId: number) => apiClient.get<SessionEntryParticipantStatus>(`/session-entry/sessions/${sessionId}/status`, options),
-  toggleRest: (sessionId: number) => apiClient.post<SessionEntryParticipantStatus>(`/session-entry/sessions/${sessionId}/rest`, {}, options),
-  nextMatch: (sessionId: number) => apiClient.get<SessionParticipantAlert>(`/session-entry/sessions/${sessionId}/next-match`, options),
-  matchCall: (sessionId: number) => apiClient.get<SessionParticipantAlert>(`/session-entry/sessions/${sessionId}/match-call`, options),
-  currentMatch: (sessionId: number) => apiClient.get<SessionParticipantCurrentMatch>(`/session-entry/sessions/${sessionId}/current-match`, options),
-  startCurrentMatch: (sessionId: number, matchId?: number | null) => apiClient.post<SessionParticipantCurrentMatch>(`/session-entry/sessions/${sessionId}/current-match/start`, matchId ? { matchId } : {}, options),
-  submitMatchResult: (sessionId: number, body: { matchId: number; result: 'WIN' | 'LOSS'; myScore?: number | null; opponentScore?: number | null }) =>
+  bySession: (sessionId: PublicSessionId, code?: string | null) => apiClient.get<SessionEntryPreview>(withCode(`/session-entry/sessions/${sessionId}`, code), options),
+  decide: (sessionId: PublicSessionId, body: Record<string, unknown>, code?: string | null) => apiClient.post<SessionEntryPreview>(withCode(`/session-entry/sessions/${sessionId}/decision`, code), body, options),
+  attendance: (sessionId: PublicSessionId, body: Record<string, unknown>) => apiClient.post<SessionEntryPreview>(`/session-entry/sessions/${sessionId}/attendance`, body, options),
+  status: (sessionId: PublicSessionId) => apiClient.get<SessionEntryParticipantStatus>(`/session-entry/sessions/${sessionId}/status`, options),
+  toggleRest: (sessionId: PublicSessionId) => apiClient.post<SessionEntryParticipantStatus>(`/session-entry/sessions/${sessionId}/rest`, {}, options),
+  leaveEarly: (sessionId: PublicSessionId) => apiClient.post<SessionEntryParticipantStatus>(`/session-entry/sessions/${sessionId}/leave`, {}, options),
+  nextMatch: (sessionId: PublicSessionId) => apiClient.get<SessionParticipantAlert>(`/session-entry/sessions/${sessionId}/next-match`, options),
+  matchCall: (sessionId: PublicSessionId) => apiClient.get<SessionParticipantAlert>(`/session-entry/sessions/${sessionId}/match-call`, options),
+  currentMatch: (sessionId: PublicSessionId) => apiClient.get<SessionParticipantCurrentMatch>(`/session-entry/sessions/${sessionId}/current-match`, options),
+  startCurrentMatch: (sessionId: PublicSessionId, matchId?: number | null) => apiClient.post<SessionParticipantCurrentMatch>(`/session-entry/sessions/${sessionId}/current-match/start`, matchId ? { matchId } : {}, options),
+  submitMatchResult: (sessionId: PublicSessionId, body: { matchId: number; result: 'WIN' | 'LOSS'; myScore?: number | null; opponentScore?: number | null }) =>
     apiClient.post<SessionParticipantCurrentMatch>(`/session-entry/sessions/${sessionId}/match-result`, body, options),
-  myReport: (sessionId: number) => apiClient.get<SessionParticipantReport>(`/session-entry/sessions/${sessionId}/my-report`, options),
+  myReport: (sessionId: PublicSessionId) => apiClient.get<SessionParticipantReport>(`/session-entry/sessions/${sessionId}/my-report`, options),
 };

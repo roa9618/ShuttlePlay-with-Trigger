@@ -16,6 +16,9 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.stream.Collectors;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -60,6 +63,9 @@ public class GroupSession extends BaseEntity {
 
     @Column(nullable = false)
     private int courtCount = 1;
+
+    @Column(name = "disabled_courts", length = 200)
+    private String disabledCourtsCsv;
 
     @Column(nullable = false)
     private boolean votingAllowed = true;
@@ -120,6 +126,25 @@ public class GroupSession extends BaseEntity {
 
     public void cancel() {
         this.status = GroupSessionStatus.CANCELLED;
+    }
+
+    public void startOperation() { this.status = GroupSessionStatus.IN_PROGRESS; }
+    public void closeOperation() { this.status = GroupSessionStatus.CLOSED; }
+
+    public Set<Integer> disabledCourtNumbers() {
+        if (disabledCourtsCsv == null || disabledCourtsCsv.isBlank()) return Set.of();
+        return java.util.Arrays.stream(disabledCourtsCsv.split(",")).map(Integer::valueOf).collect(Collectors.toCollection(TreeSet::new));
+    }
+
+    public void updateDisabledCourts(Set<Integer> courts) {
+        if (courts.stream().anyMatch(court -> court < 1 || court > courtCount)) throw new IllegalArgumentException("invalid court");
+        disabledCourtsCsv = courts.stream().sorted().map(String::valueOf).collect(Collectors.joining(","));
+    }
+
+    public void updateCourtCount(int courtCount) {
+        if (courtCount < 1) throw new IllegalArgumentException("invalid court count");
+        this.courtCount = courtCount;
+        updateDisabledCourts(disabledCourtNumbers().stream().filter(court -> court <= courtCount).collect(Collectors.toSet()));
     }
 
     public void deleteSession() {
