@@ -27,6 +27,14 @@ public interface GroupSessionRepository extends JpaRepository<GroupSession, Long
             GroupSessionStatus excludedStatus
     );
 
+    @EntityGraph(attributePaths = {"group"})
+    List<GroupSession> findAllByGroupIdInAndStartsAtBetweenAndStatusNotAndIsDeletedFalse(
+            Collection<Long> groupIds,
+            LocalDateTime startsAtFrom,
+            LocalDateTime startsAtTo,
+            GroupSessionStatus excludedStatus
+    );
+
     List<GroupSession> findAllByGroupIdAndStartsAtBetweenAndStatusNotAndIsDeletedFalse(
             Long groupId,
             LocalDateTime startsAtFrom,

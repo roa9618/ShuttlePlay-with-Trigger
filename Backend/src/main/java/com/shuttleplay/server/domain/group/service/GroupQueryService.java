@@ -9,8 +9,11 @@ import com.shuttleplay.server.domain.group.entity.GroupSession;
 import com.shuttleplay.server.domain.group.enums.GroupMemberRole;
 import com.shuttleplay.server.domain.group.enums.GroupMemberStatus;
 import com.shuttleplay.server.domain.group.enums.GroupSessionStatus;
+import com.shuttleplay.server.domain.group.enums.SessionAttendanceStatus;
 import com.shuttleplay.server.domain.group.repository.ActiveMemberCount;
+import com.shuttleplay.server.domain.group.repository.GroupLastParticipation;
 import com.shuttleplay.server.domain.group.repository.GroupMemberRepository;
+import com.shuttleplay.server.domain.group.repository.GroupSessionAttendanceRepository;
 import com.shuttleplay.server.domain.group.repository.GroupSessionRepository;
 import com.shuttleplay.server.global.error.BusinessException;
 import com.shuttleplay.server.global.error.ErrorCode;
@@ -22,6 +25,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -39,6 +43,7 @@ public class GroupQueryService {
 
     private final GroupMemberRepository groupMemberRepository;
     private final GroupSessionRepository groupSessionRepository;
+    private final GroupSessionAttendanceRepository attendanceRepository;
 
     public GroupOverviewResponse getOverview(Long userId) {
         List<GroupMember> memberships = groupMemberRepository.findAllByUserIdAndStatus(
@@ -64,10 +69,7 @@ public class GroupQueryService {
                 .max(Comparator.comparing(GroupMember::getLastAccessedAt))
                 .orElse(null);
 
-        GroupSession nearestSchedule = weeklySessions.stream()
-                .filter(session -> !session.getStartsAt().isBefore(now))
-                .min(Comparator.comparing(GroupSession::getStartsAt))
-                .orElse(null);
+        GroupSession nearestSchedule = nearestSchedule(weeklySessions, now).orElse(null);
 
         long ownerGroupCount = memberships.stream()
                 .filter(member -> member.getRole() == GroupMemberRole.OWNER)
@@ -114,12 +116,14 @@ public class GroupQueryService {
         List<Long> groupIds = getGroupIds(memberships.getContent());
         Map<Long, Long> activeMemberCounts = getActiveMemberCounts(groupIds);
         Map<Long, LocalDateTime> nextScheduleByGroupId = getNextScheduleByGroupId(groupIds);
+        Map<Long, LocalDateTime> lastParticipationByGroupId = getLastParticipationByGroupId(userId, groupIds);
 
         List<GroupListItemResponse> items = memberships.getContent().stream()
                 .map(member -> GroupListItemResponse.from(
                         member,
                         activeMemberCounts.getOrDefault(member.getGroup().getId(), 0L),
-                        nextScheduleByGroupId.get(member.getGroup().getId())
+                        nextScheduleByGroupId.get(member.getGroup().getId()),
+                        lastParticipationByGroupId.getOrDefault(member.getGroup().getId(), member.getLastParticipationAt())
                 ))
                 .toList();
 
@@ -148,11 +152,13 @@ public class GroupQueryService {
         List<Long> groupIds = getGroupIds(memberships.getContent());
         Map<Long, Long> activeMemberCounts = getActiveMemberCounts(groupIds);
         Map<Long, LocalDateTime> nextScheduleByGroupId = getNextScheduleByGroupId(groupIds);
+        Map<Long, LocalDateTime> lastParticipationByGroupId = getLastParticipationByGroupId(userId, groupIds);
         List<GroupListItemResponse> items = memberships.getContent().stream()
                 .map(member -> GroupListItemResponse.from(
                         member,
                         activeMemberCounts.getOrDefault(member.getGroup().getId(), 0L),
-                        nextScheduleByGroupId.get(member.getGroup().getId())
+                        nextScheduleByGroupId.get(member.getGroup().getId()),
+                        lastParticipationByGroupId.getOrDefault(member.getGroup().getId(), member.getLastParticipationAt())
                 ))
                 .toList();
 
@@ -236,7 +242,7 @@ public class GroupQueryService {
                 .with(TemporalAdjusters.nextOrSame(DayOfWeek.SUNDAY))
                 .with(LocalTime.MAX);
 
-        return groupSessionRepository.findAllByGroupIdInAndStartsAtBetweenAndStatusNot(
+        return groupSessionRepository.findAllByGroupIdInAndStartsAtBetweenAndStatusNotAndIsDeletedFalse(
                 groupIds,
                 startOfWeek,
                 endOfWeek,
@@ -252,12 +258,66 @@ public class GroupQueryService {
         LocalDateTime now = LocalDateTime.now();
 
         return getWeeklySessions(groupIds, now).stream()
-                .filter(session -> !session.getStartsAt().isBefore(now))
+                .filter(session -> isOperableSchedule(session, now))
                 .collect(Collectors.toMap(
                         session -> session.getGroup().getId(),
                         GroupSession::getStartsAt,
-                        (first, second) -> first.isBefore(second) ? first : second
+                        (first, second) -> betterScheduleAt(first, second, now)
                 ));
+    }
+
+    private Map<Long, LocalDateTime> getLastParticipationByGroupId(Long userId, List<Long> groupIds) {
+        if (groupIds.isEmpty()) {
+            return Map.of();
+        }
+        return attendanceRepository.findLastParticipationsByUserAndGroups(
+                        userId,
+                        groupIds,
+                        List.of(SessionAttendanceStatus.ARRIVED, SessionAttendanceStatus.LATE),
+                        GroupSessionStatus.CLOSED
+                ).stream()
+                .collect(Collectors.toMap(
+                        GroupLastParticipation::getGroupId,
+                        GroupLastParticipation::getLastParticipationAt
+                ));
+    }
+
+    private Optional<GroupSession> nearestSchedule(List<GroupSession> sessions, LocalDateTime now) {
+        Optional<GroupSession> current = sessions.stream()
+                .filter(session -> isCurrentSchedule(session, now))
+                .max(Comparator.comparing(GroupSession::getStartsAt));
+        if (current.isPresent()) {
+            return current;
+        }
+        return sessions.stream()
+                .filter(session -> isFutureSchedule(session, now))
+                .min(Comparator.comparing(GroupSession::getStartsAt));
+    }
+
+    private boolean isOperableSchedule(GroupSession session, LocalDateTime now) {
+        return isCurrentSchedule(session, now) || isFutureSchedule(session, now);
+    }
+
+    private boolean isCurrentSchedule(GroupSession session, LocalDateTime now) {
+        return session.getStatus() != GroupSessionStatus.CANCELLED
+                && session.getStatus() != GroupSessionStatus.CLOSED
+                && !session.getStartsAt().isAfter(now)
+                && (session.getEndsAt() == null || !session.getEndsAt().isBefore(now));
+    }
+
+    private boolean isFutureSchedule(GroupSession session, LocalDateTime now) {
+        return session.getStatus() != GroupSessionStatus.CANCELLED
+                && session.getStatus() != GroupSessionStatus.CLOSED
+                && !session.getStartsAt().isBefore(now);
+    }
+
+    private LocalDateTime betterScheduleAt(LocalDateTime first, LocalDateTime second, LocalDateTime now) {
+        boolean firstCurrent = !first.isAfter(now);
+        boolean secondCurrent = !second.isAfter(now);
+        if (firstCurrent && !secondCurrent) return first;
+        if (!firstCurrent && secondCurrent) return second;
+        if (firstCurrent) return first.isAfter(second) ? first : second;
+        return first.isBefore(second) ? first : second;
     }
 
     private GroupOverviewResponse.HighlightGroup toScheduleHighlight(GroupSession session) {

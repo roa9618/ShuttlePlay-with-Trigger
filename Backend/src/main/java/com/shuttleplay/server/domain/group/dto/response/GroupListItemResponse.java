@@ -46,13 +46,22 @@ public class GroupListItemResponse {
             long activeMembers,
             LocalDateTime nextScheduleAt
     ) {
+        return from(member, activeMembers, nextScheduleAt, member.getLastParticipationAt());
+    }
+
+    public static GroupListItemResponse from(
+            GroupMember member,
+            long activeMembers,
+            LocalDateTime nextScheduleAt,
+            LocalDateTime lastParticipationAt
+    ) {
         return GroupListItemResponse.builder()
                 .id(member.getGroup().getId())
                 .name(member.getGroup().getName())
                 .profileImageUrl(member.getGroup().getProfileImageUrl())
                 .role(member.getRole())
                 .activeMembers(activeMembers)
-                .lastParticipationAt(member.getLastParticipationAt())
+                .lastParticipationAt(lastParticipationAt)
                 .nextScheduleAt(nextScheduleAt)
                 .activityRegion(member.getGroup().getActivityRegion())
                 .description(member.getGroup().getDescription())
