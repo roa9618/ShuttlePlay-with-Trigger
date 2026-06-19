@@ -10,6 +10,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { ApiClientError } from '../utils/apiClient';
 import { getAuthAccessToken, getAuthSession, setAuthRedirectPath } from '../utils/authSession';
 import { sessionGuestApi, type GuestJoinPreviewResponse, type GuestJoinVoteStatus } from '../utils/sessionGuestApi';
+import { sessionPath } from '../utils/publicId';
 import { styles } from './GuestJoinPage.styles';
 
 const genderOptions = [
@@ -35,7 +36,7 @@ const voteOptions: Array<{ value: GuestJoinVoteStatus; label: string; descriptio
 
 export default function GuestJoinPage() {
   const { sessionId } = useParams();
-  const numericSessionId = Number(sessionId);
+  const currentSessionId = sessionId ?? '';
   const navigate = useNavigate();
   const { isAuthenticated, session } = useAuth();
   const isLoggedIn = isAuthenticated || Boolean(session) || Boolean(getAuthAccessToken() && getAuthSession());
@@ -47,10 +48,10 @@ export default function GuestJoinPage() {
   const [completedVoteStatus, setCompletedVoteStatus] = useState<GuestJoinVoteStatus | null>(null);
   const [errorMessage, setErrorMessage] = useState('');
 
-  const redirectPath = `/sessions/${sessionId}/guest-join`;
+  const redirectPath = sessionPath(sessionId ?? '', '/guest-join');
 
   useEffect(() => {
-    if (!Number.isFinite(numericSessionId)) {
+    if (!currentSessionId) {
       setErrorMessage('운동 일정 링크가 올바르지 않습니다.');
       setIsLoading(false);
       return;
@@ -58,7 +59,7 @@ export default function GuestJoinPage() {
 
     let mounted = true;
 
-    sessionGuestApi.getPreview(numericSessionId)
+    sessionGuestApi.getPreview(currentSessionId)
       .then(data => {
         if (!mounted) return;
 
@@ -83,7 +84,7 @@ export default function GuestJoinPage() {
     return () => {
       mounted = false;
     };
-  }, [isLoggedIn, navigate, numericSessionId, redirectPath]);
+  }, [currentSessionId, isLoggedIn, navigate, redirectPath]);
 
   const isGuestFormVisible = preview?.participantType === 'GUEST';
   const profileSummary = useMemo(() => {
@@ -98,13 +99,13 @@ export default function GuestJoinPage() {
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!preview || !Number.isFinite(numericSessionId)) return;
+    if (!preview || !currentSessionId) return;
 
     try {
       setIsSubmitting(true);
       setErrorMessage('');
 
-      const result = await sessionGuestApi.submit(numericSessionId, {
+      const result = await sessionGuestApi.submit(currentSessionId, {
         status: selectedVote,
         ...(isGuestFormVisible ? formData : {}),
       });

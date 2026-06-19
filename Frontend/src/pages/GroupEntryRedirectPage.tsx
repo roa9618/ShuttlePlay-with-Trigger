@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getManageableGroups } from '../utils/groupApi';
+import { groupPath } from '../utils/publicId';
 
 export default function GroupEntryRedirectPage({ createSession = false }: { createSession?: boolean }) {
   const navigate = useNavigate();
@@ -23,8 +24,8 @@ export default function GroupEntryRedirectPage({ createSession = false }: { crea
       if (response.totalElements === 1 && response.items[0]) {
         navigate(
           createSession
-            ? `/groups/${response.items[0].id}/schedule?createSession=true`
-            : `/groups/${response.items[0].id}`,
+            ? `${groupPath(response.items[0].id, '/schedule')}?createSession=true`
+            : groupPath(response.items[0].id),
           { replace: true },
         );
         return;

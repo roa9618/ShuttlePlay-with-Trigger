@@ -4,6 +4,7 @@ import { CalendarDays, ChevronLeft, ChevronRight, Filter, Swords } from 'lucide-
 import { Input } from '../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { recordApi, type MatchRecordItem, type MatchRecordPageResponse, type MyRecordSummary, type RecordMatchType } from '../utils/recordApi';
+import { sessionPath } from '../utils/publicId';
 import { styles } from './RecordDetailPage.styles';
 
 const typeLabels: Record<string, string> = { MENS_DOUBLES: '남자 복식', WOMENS_DOUBLES: '여자 복식', MIXED_DOUBLES: '혼합 복식', ANY: '자유 복식' };
@@ -46,5 +47,5 @@ export default function MatchHistoryPage() {
   </main></div>;
 }
 
-function MatchRow({ match }: { match: MatchRecordItem }) { return <Link to={`/sessions/${match.sessionId}/my-report`} className={styles.matchRow}><span className={styles.result(match.win)}>{match.win ? '승' : '패'}</span><div><strong>{match.groupName} · {match.sessionTitle}</strong><small><CalendarDays /> {new Date(match.playedAt).toLocaleDateString('ko-KR')} · {typeLabels[match.matchType]}</small><p>파트너 {match.partner} · 상대 {match.opponents.join(', ') || '-'}</p></div><b>{match.myScore} : {match.opponentScore}</b><ChevronRight /></Link>; }
+function MatchRow({ match }: { match: MatchRecordItem }) { return <Link to={sessionPath(match.sessionId, '/my-report')} className={styles.matchRow}><span className={styles.result(match.win)}>{match.win ? '승' : '패'}</span><div><strong>{match.groupName} · {match.sessionTitle}</strong><small><CalendarDays /> {new Date(match.playedAt).toLocaleDateString('ko-KR')} · {typeLabels[match.matchType]}</small><p>파트너 {match.partner} · 상대 {match.opponents.join(', ') || '-'}</p></div><b>{match.myScore} : {match.opponentScore}</b><ChevronRight /></Link>; }
 function Empty({ text }: { text: string }) { return <div className={styles.empty}><Swords /><strong>{text}</strong></div>; }

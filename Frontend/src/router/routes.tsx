@@ -76,8 +76,6 @@ export const router = createBrowserRouter([
       { path: "sessions/:sessionId/my-report", Component: ParticipantSessionReportPage, handle: { title: "오늘 내 운동 기록" } },
       { path: "sessions/demo/my-report", Component: ParticipantSessionReportPage, handle: { title: "오늘 내 운동 기록" } },
 
-      { path: "sessions/:sessionId/display", Component: DisplayBoardPage, handle: { title: "경기 현황판" } },
-
       {
         Component: RequireAuth,
         children: [
@@ -104,6 +102,7 @@ export const router = createBrowserRouter([
           { path: "my-record/mmr", Component: MmrHistoryPage, handle: { title: "MMR 변동" } },
           { path: "my-record/matches", Component: MatchHistoryPage, handle: { title: "전체 경기 기록" } },
           { path: "sessions/:sessionId/report", Component: SessionReportPage, handle: { title: "일정 리포트" } },
+          { path: "sessions/:sessionId/display", Component: DisplayBoardPage, handle: { title: "경기 현황판" } },
           { path: "settings", Component: SettingsPage, handle: { title: "설정" } },
           { path: "notifications", Component: NotificationsPage, handle: { title: "전체 알림" } },
           { path: "notices", Component: NoticePage, handle: { title: "공지사항" } },

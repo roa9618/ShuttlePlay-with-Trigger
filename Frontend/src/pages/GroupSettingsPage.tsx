@@ -9,6 +9,7 @@ import { Switch } from '../components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { ArrowLeft, Settings, Trash2, Users, SlidersHorizontal } from 'lucide-react';
 import { useActionFeedback } from '../utils/useActionFeedback';
+import { groupPath } from '../utils/publicId';
 import { styles } from './GroupSettingsPage.styles';
 
 export default function GroupSettingsPage() {
@@ -36,7 +37,7 @@ export default function GroupSettingsPage() {
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     showMessage('모임 설정을 저장했습니다.');
-    window.setTimeout(() => navigate(`/groups/${groupId}`), 500);
+    window.setTimeout(() => navigate(groupPath(groupId ?? '')), 500);
   };
 
   const handleDeleteGroup = () => {
@@ -54,7 +55,7 @@ export default function GroupSettingsPage() {
       <div className = {styles.header}>
         <div className = {styles.headerInner}>
           <div className = {styles.row}>
-            <Link to = {`/groups/${groupId}`} className = {styles.backLink}>
+            <Link to = {groupPath(groupId ?? '')} className = {styles.backLink}>
               <ArrowLeft className = {styles.arrowLeftIcon} />
               모임 상세
             </Link>
@@ -240,7 +241,7 @@ export default function GroupSettingsPage() {
 
           {/* Action Buttons */}
           <div className = {styles.row5}>
-            <Link to = {`/groups/${groupId}`} className = {styles.row4}>
+            <Link to = {groupPath(groupId ?? '')} className = {styles.row4}>
               <Button variant = "outline" className = {styles.fullWidthButton} size = "lg" type = "button"
               >
                 취소
