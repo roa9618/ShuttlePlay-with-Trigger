@@ -6,7 +6,7 @@ import { ApiClientError } from '../utils/apiClient';
 import { setAuthRedirectPath } from '../utils/authSession';
 import { sessionEntryApi, type SessionParticipantReport, type SessionParticipantReportMatch } from '../utils/sessionEntryApi';
 
-const matchTypeLabel: Record<string, string> = { MENS_DOUBLES: '남복', WOMOMENS_DOUBLES: '여복', WOMENS_DOUBLES: '여복', MIXED_DOUBLES: '혼복', ANY: '자유 매칭' };
+const matchTypeLabel: Record<string, string> = { MENS_DOUBLES: '남복', WOMENS_DOUBLES: '여복', MIXED_DOUBLES: '혼복', ANY: '자유 매칭' };
 const resultLabel: Record<string, string> = { WIN: '승', LOSS: '패', DRAW: '무', UNKNOWN: '-' };
 const statusLabel: Record<string, string> = {
   RESULT_PENDING: '결과 입력 대기',

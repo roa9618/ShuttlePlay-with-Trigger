@@ -101,7 +101,7 @@ export const router = createBrowserRouter([
           { path: "sessions/:sessionId/result/new", Component: MatchResultInputPage, handle: { title: "경기 결과 입력" } },
           { path: "sessions/:sessionId/result/:matchId/edit", Component: MatchResultEditPage, handle: { title: "경기 결과 수정" } },
           { path: "my-record", Component: MyRecordPage, handle: { title: "내 기록" } },
-          { path: "my-record/mmr", Component: MmrHistoryPage, handle: { title: "MMR 변화" } },
+          { path: "my-record/mmr", Component: MmrHistoryPage, handle: { title: "MMR 변동" } },
           { path: "my-record/matches", Component: MatchHistoryPage, handle: { title: "전체 경기 기록" } },
           { path: "sessions/:sessionId/report", Component: SessionReportPage, handle: { title: "일정 리포트" } },
           { path: "settings", Component: SettingsPage, handle: { title: "설정" } },
