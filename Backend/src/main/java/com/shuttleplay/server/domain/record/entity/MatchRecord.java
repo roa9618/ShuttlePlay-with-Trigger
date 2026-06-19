@@ -54,4 +54,15 @@ public class MatchRecord extends BaseEntity {
         this.invalidationReason = reason;
         this.invalidatedAt = LocalDateTime.now();
     }
+
+    public void confirmResult(int teamAScore, int teamBScore) {
+        if (teamAScore < 0 || teamBScore < 0) throw new IllegalArgumentException("score must be zero or positive");
+        this.teamAScore = teamAScore;
+        this.teamBScore = teamBScore;
+        this.endedAt = LocalDateTime.now();
+        this.resultConfirmedAt = LocalDateTime.now();
+        this.invalidated = false;
+        this.invalidationReason = null;
+        this.invalidatedAt = null;
+    }
 }
