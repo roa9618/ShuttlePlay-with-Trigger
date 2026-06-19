@@ -1,427 +1,47 @@
-import { Link, useParams } from 'react-router-dom';
-import { useState } from 'react';
-import Logo from '../components/Logo';
+import { useCallback, useEffect, useState } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { AlertTriangle, QrCode, RefreshCw, Sparkles, X } from 'lucide-react';
+import SessionOperationShell from '../components/SessionOperationShell';
 import { Button } from '../components/ui/button';
-import { Badge } from '../components/ui/badge';
-import { Users, Play, CheckCircle, Clock, QrCode, Monitor, Sparkles, AlertCircle, UserCheck, UserX } from 'lucide-react';
-import { useActionFeedback } from '../utils/useActionFeedback';
-import { styles } from './OrganizerDashboardPage.styles';
+import { sessionOperationApi, type DashboardResponse, isDemoSession } from '../utils/sessionOperationApi';
+import { connectSessionEntrySocket } from '../utils/sessionEntrySocket';
+import { operationStyles as s } from './SessionOperation.styles';
+import { createSessionEntryUrl, generateSessionEntryQrDataUrl } from '../utils/sessionEntryQr';
+import { sessionPath } from '../utils/publicId';
+
+const statusLabels: Record<string, string> = { WAITING: '경기 대기', AVAILABLE: '경기 가능', NEXT_UP: '다음 경기 예정', CALLING: '입장 호출', PLAYING: '경기 중', RESTING: '휴식 중', LEFT: '조기 퇴장', ABSENT: '불참' };
+const genderLabels: Record<string, string> = { MALE: '남성', FEMALE: '여성' };
+const ageLabels: Record<string, string> = { TEENS: '10대', TWENTIES: '20대', THIRTIES: '30대', FORTIES: '40대', FIFTIES: '50대', SIXTIES_AND_ABOVE: '60대 이상' };
+const statItems = [['attendanceCount', '출석'], ['availableCount', '경기 가능'], ['nextUpCount', '다음 경기'], ['playingCount', '경기 중'], ['restingCount', '휴식'], ['queueCount', '후보 큐']] as const;
 
 export default function OrganizerDashboardPage() {
-  const { sessionId } = useParams();
-  const { message, showMessage } = useActionFeedback();
-  const [lateParticipants, setLateParticipants] = useState([
-    { name: '정민재', eta: '19:40', reason: '퇴근 지연', status: '지각 예정' },
-    { name: '문별이', eta: '19:50', reason: '대중교통 지연', status: '지각 예정' },
-  ]);
-
-  const currentMatches = [
-    { court: 1, teamA: ['김민수', '박지영'], teamB: ['이준호', '최서연'] },
-    { court: 2, teamA: ['정민재', '강수진'], teamB: ['오유진', '한지우'] },
-    { court: 3, teamA: ['송민호', '윤서아'], teamB: ['장현우', '김나영'] },
-    { court: 4, teamA: ['최지훈', '서예린'], teamB: ['박준영', '이수민'] },
-  ];
-
-  const matchQueue = [
-    { teamA: ['강태양', '문별이'], teamB: ['임나윤', '조유진'], mmr: 12 },
-    { teamA: ['백승호', '신지원'], teamB: ['홍예슬', '안준서'], mmr: 8 },
-  ];
-
-  const pendingResults = [
-    { court: 1, players: '김민수/박지영 vs 이준호/최서연' },
-    { court: 3, players: '송민호/윤서아 vs 장현우/김나영' },
-  ];
-
-  return (
-    <div className = {styles.page}>
-      {/* Sticky Header */}
-      <div className = {styles.header}>
-        <div className = {styles.betweenRow}>
-          <div className = {styles.row}>
-            <Logo size = "sm" />
-            <div className = {styles.verticalDivider} />
-            <div>
-              <h1 className = {styles.pageTitle}>6월 3일 (화) 저녁 운동</h1>
-              <p className = {styles.descriptionText}>19:00 - 22:00</p>
-            </div>
-          </div>
-          <div className = {styles.row2}>
-            <Link to = {`/sessions/${sessionId}/display`}>
-              <Button variant = "outline" size = "sm" className = {styles.roundButton}>
-                <Monitor className = {styles.monitorIcon} />
-                큰 화면
-              </Button>
-            </Link>
-          <Button variant = "outline" size = "sm" className = {styles.roundButton} onClick = {() => showMessage('초대 QR을 준비했습니다.')}
-          >
-              <QrCode className = {styles.monitorIcon} />
-              초대 QR
-            </Button>
-            <Button variant = "destructive" size = "sm" className = {styles.roundButton2} onClick = {() => showMessage('세션 종료 전 확인이 필요합니다.')}>
-              종료
-            </Button>
-          </div>
-        </div>
-
-        <div className = {styles.statsGrid}>
-          {[
-            ['미출석', '1명'],
-            ['불참', '1명'],
-            ['경기 가능', '6명'],
-            ['일시 휴식', '2명'],
-            ['퇴장', '0명'],
-            ['결과 미입력', '2경기'],
-          ].map(([label, value]) => (
-            <div key = {label} className = {styles.header2}>
-              <p className = {styles.descriptionText2}>{label}</p>
-              <p className = {styles.summaryText}>{value}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className = {styles.contentBox}>
-        <div className = {styles.panel}>
-          <div className = {styles.betweenRow2}>
-            <div>
-              <h2 className = {styles.sectionTitle}>오늘 운영</h2>
-              <p className = {styles.descriptionText3}>왼쪽부터 차례대로 진행합니다.</p>
-            </div>
-            <Badge className = {styles.badge}>진행 중</Badge>
-          </div>
-          <div className = {styles.statsGrid2}>
-            <Link to = {`/sessions/${sessionId}/participants`}>
-              <div className = {styles.summaryBox}>
-                <div className = {styles.row3}>1</div>
-                <h3 className = {styles.cardTitle}>출석 확인</h3>
-                <p className = {styles.descriptionText}>도착, 지각, 휴식 상태를 정리합니다.</p>
-              </div>
-            </Link>
-            <Link to = {`/sessions/${sessionId}/queue`}>
-              <div className = {styles.summaryBox}>
-                <div className = {styles.row3}>2</div>
-                <h3 className = {styles.cardTitle}>경기 만들기</h3>
-                <p className = {styles.descriptionText}>후보를 확인하고 코트에 배정합니다.</p>
-              </div>
-            </Link>
-            <Link to = {`/sessions/${sessionId}/result/new`}>
-              <div className = {styles.summaryBox}>
-                <div className = {styles.row3}>3</div>
-                <h3 className = {styles.cardTitle}>결과 입력</h3>
-                <p className = {styles.descriptionText}>끝난 경기의 승패와 점수를 저장합니다.</p>
-              </div>
-            </Link>
-          </div>
-        </div>
-
-        {/* 1. 세션 상태 요약 - 가장 먼저 */}
-        <div className = {styles.grid}>
-          <div className = {styles.card}>
-            <div className = {styles.row4}>
-              <UserCheck className = {styles.userCheckIcon} />
-              <p className = {styles.summaryText2}>출석</p>
-            </div>
-            <p className = {styles.summaryText3}>14명</p>
-            <p className = {styles.descriptionText4}>전체 16명</p>
-          </div>
-
-          <div className = {styles.header3}>
-            <div className = {styles.row4}>
-              <Play className = {styles.userCheckIcon} />
-              <p className = {styles.summaryText2}>경기 중</p>
-            </div>
-            <p className = {styles.summaryText3}>8명</p>
-            <p className = {styles.descriptionText4}>4개 코트</p>
-          </div>
-
-          <div className = {styles.header3}>
-            <div className = {styles.row4}>
-              <Clock className = {styles.clockIcon} />
-              <p className = {styles.summaryText2}>대기 중</p>
-            </div>
-            <p className = {styles.summaryText3}>6명</p>
-            <p className = {styles.descriptionText4}>다음 순서</p>
-          </div>
-
-          <div className = {styles.header3}>
-            <div className = {styles.row4}>
-              <UserX className = {styles.userXIcon} />
-              <p className = {styles.summaryText2}>지각</p>
-            </div>
-            <p className = {styles.summaryText3}>2명</p>
-            <p className = {styles.descriptionText4}>10분 내 도착</p>
-          </div>
-
-          <div className = {styles.header3}>
-            <div className = {styles.row4}>
-              <CheckCircle className = {styles.userCheckIcon} />
-              <p className = {styles.summaryText2}>완료 경기</p>
-            </div>
-            <p className = {styles.summaryText3}>12개</p>
-            <p className = {styles.descriptionText4}>평균 3회/명</p>
-          </div>
-        </div>
-
-        {/* 2. 빠른 액션 바 */}
-        <div className = {styles.row5}>
-          <p className = {styles.summaryText4}>빠른 작업:</p>
-          <Link to = {`/sessions/${sessionId}/queue`}>
-            <Button className = {styles.roundButton}>
-              <Sparkles className = {styles.monitorIcon} />
-              자동 매칭 생성
-            </Button>
-          </Link>
-          <Link to = {`/sessions/${sessionId}/participants`}>
-            <Button variant = "outline" className = {styles.roundButton2}>
-              출석 처리
-            </Button>
-          </Link>
-          <Link to = {`/sessions/${sessionId}/participants`}>
-            <Button variant = "outline" className = {styles.roundButton2}>
-              지각자 확인
-            </Button>
-          </Link>
-          <Link to = {`/sessions/${sessionId}/queue`}>
-            <Button variant = "outline" className = {styles.roundButton2}>
-              후보 수정
-            </Button>
-          </Link>
-          <Link to = {`/sessions/${sessionId}/report`}>
-            <Button variant = "outline" className = {styles.roundButton2}>
-              세션 리포트
-            </Button>
-          </Link>
-          <Link to = {`/sessions/${sessionId}/participants`}>
-            <Button variant = "outline" className = {styles.roundButton}>
-              <Users className = {styles.monitorIcon} />
-              참가자 관리
-            </Button>
-          </Link>
-        </div>
-
-        <div className = {styles.statsGrid3}>
-          {/* Left: 현재 경기 + 다음 큐 */}
-          <div className = {styles.stack}>
-            {/* 3. 현재 진행 중 경기 */}
-            <div>
-              <div className = {styles.betweenRow3}>
-                <h2 className = {styles.sectionTitle2}>현재 경기</h2>
-                <Link to = {`/sessions/${sessionId}/current`}>
-                  <Button variant = "ghost" size = "sm" className = {styles.actionButton}>
-                    상세보기
-                  </Button>
-                </Link>
-              </div>
-
-              <div className = {styles.cardGrid}>
-                {currentMatches.map((match) => (
-                  <div key = {match.court} className = {styles.header3}>
-                    <div className = {styles.betweenRow3}>
-                      <Badge className = {styles.badge}>
-                        {match.court}번 코트
-                      </Badge>
-                      <Badge variant = "outline" className = {styles.badge2}>복식</Badge>
-                    </div>
-
-                    <div className = {styles.stack2}>
-                      <div className = {styles.smallText}>
-                        <p className = {styles.summaryText5}>{match.teamA.join(' · ')}</p>
-                      </div>
-                      <p className = {styles.descriptionText5}>vs</p>
-                      <div className = {styles.smallText}>
-                        <p className = {styles.summaryText5}>{match.teamB.join(' · ')}</p>
-                      </div>
-                    </div>
-
-                    <div className = {styles.cardGrid2}>
-                      <Link to = {`/sessions/${sessionId}/result/new`}>
-                        <Button size = "sm" variant = "outline" className = {styles.fullWidthButton}>
-                          결과 입력
-                        </Button>
-                      </Link>
-                      <Link to = {`/sessions/${sessionId}/result/${match.court}/edit`}>
-                        <Button size = "sm" variant = "ghost" className = {styles.fullWidthButton}>
-                          수정
-                        </Button>
-                      </Link>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* 4. 다음 경기 후보 큐 */}
-            <div>
-              <div className = {styles.betweenRow3}>
-                <h2 className = {styles.sectionTitle2}>다음 경기 후보</h2>
-                <div className = {styles.row6}>
-                  <Link to = {`/sessions/${sessionId}/queue`}>
-                    <Button variant = "ghost" size = "sm" className = {styles.actionButton}>
-                      전체보기
-                    </Button>
-                  </Link>
-                  <Link to = {`/sessions/${sessionId}/queue`}>
-                    <Button size = "sm" className = {styles.roundButton}>
-                    <Sparkles className = {styles.monitorIcon} />
-                    자동 생성
-                    </Button>
-                  </Link>
-                </div>
-              </div>
-
-              <div className = {styles.stack3}>
-                {matchQueue.map((match, idx) => (
-                  <div key = {idx} className = {styles.header4}>
-                    <div className = {styles.betweenRow4}>
-                      <div className = {styles.row7}>
-                        <Badge variant = "outline">후보 {idx + 1}</Badge>
-                        <div className = {styles.smallText}>
-                          <span className = {styles.summaryText5}>{match.teamA.join(' · ')}</span>
-                          <span className = {styles.mutedText}>vs</span>
-                          <span className = {styles.summaryText5}>{match.teamB.join(' · ')}</span>
-                        </div>
-                        <Badge variant = "outline" className = {styles.badge2}>MMR +{match.mmr}</Badge>
-                      </div>
-                      <Link to = {`/sessions/${sessionId}/current`}>
-                        <Button size = "sm" className = {styles.roundButton2}>
-                          시작
-                        </Button>
-                      </Link>
-                      <Link to = {`/sessions/${sessionId}/queue`}>
-                        <Button size = "sm" variant = "outline" className = {styles.roundButton2}>
-                          교체
-                        </Button>
-                      </Link>
-                    </div>
-                  </div>
-                ))}
-
-                {matchQueue.length === 0 && (
-                  <div className = {styles.summaryBox2}>
-                    <p className = {styles.descriptionText6}>경기 후보가 없습니다</p>
-                    <Link to = {`/sessions/${sessionId}/queue`}>
-                      <Button size = "sm" className = {styles.roundButton}>
-                      <Sparkles className = {styles.monitorIcon} />
-                      자동 매칭 생성
-                      </Button>
-                    </Link>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Right: 결과 입력 대기 + 참가자 */}
-          <div className = {styles.stack4}>
-            {/* 5. 결과 입력 대기 (눈에 띄게) */}
-            {pendingResults.length > 0 && (
-              <div className = {styles.contentBox2}>
-                <div className = {styles.row8}>
-                  <AlertCircle className = {styles.alertCircleIcon} />
-                  <div>
-                    <h3 className = {styles.cardTitle2}>결과 입력 대기</h3>
-                    <p className = {styles.paragraphText}>{pendingResults.length}개 경기</p>
-                  </div>
-                </div>
-
-                <div className = {styles.stack2}>
-                  {pendingResults.map((result, idx) => (
-                    <div key = {idx} className = {styles.contentBox3}>
-                      <Badge variant = "outline" className = {styles.badge3}>{result.court}번 코트</Badge>
-                      <p className = {styles.descriptionText2}>{result.players}</p>
-                    </div>
-                  ))}
-                </div>
-
-                <Link to = {`/sessions/${sessionId}/result/new`}>
-                  <Button className = {styles.fullWidthButton2}>
-                    지금 입력하기
-                  </Button>
-                </Link>
-              </div>
-            )}
-
-            {/* 6. 참가자 간단 목록 */}
-            <div className = {styles.header3}>
-              <div className = {styles.betweenRow3}>
-                <h3 className = {styles.summaryText5}>참가자</h3>
-                <Link to = {`/sessions/${sessionId}/participants`}>
-                  <Button variant = "ghost" size = "sm" className = {styles.actionButton2}>
-                    관리
-                  </Button>
-                </Link>
-              </div>
-
-              <div className = {styles.stack5}>
-                {[
-                  { name: '김민수', status: 'playing', court: 1 },
-                  { name: '박지영', status: 'playing', court: 1 },
-                  { name: '이준호', status: 'waiting' },
-                  { name: '최서연', status: 'waiting' },
-                  { name: '정민재', status: 'late' },
-                  { name: '강수진', status: 'waiting' },
-                ].map((p, idx) => (
-                  <div key = {idx} className = {styles.betweenRow5}>
-                    <div className = {styles.row2}>
-                      <div className = {styles.row9}>
-                        <span className = {styles.labelText}>{p.name[0]}</span>
-                      </div>
-                      <span className = {styles.smallText}>{p.name}</span>
-                    </div>
-                    {p.status === 'playing' && (
-                      <Badge className = {styles.badge4}>
-                        {p.court}번
-                      </Badge>
-                    )}
-                    {p.status === 'waiting' && (
-                      <Badge variant = "outline" className = {styles.badge2}>대기</Badge>
-                    )}
-                    {p.status === 'late' && (
-                      <Badge variant = "outline" className = {styles.badge5}>지각</Badge>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className = {styles.header3}>
-              <h3 className = {styles.cardTitle3}>지각 예정</h3>
-              <div className = {styles.stack3}>
-                {lateParticipants.map((late) => (
-                  <div key = {late.name} className = {styles.summaryBox3}>
-                    <div className = {styles.betweenRow6}>
-                      <p className = {styles.summaryText5}>{late.name}</p>
-                      <Badge variant = "outline">{late.status === '지각 예정' ? `${late.eta} 도착` : late.status}</Badge>
-                    </div>
-                    <p className = {styles.descriptionText7}>{late.reason}</p>
-                    <div className = {styles.row6}>
-                      <Button size = "sm" variant = "outline" className = {styles.roundButton2} onClick = {() => {
-                          setLateParticipants((prev) => prev.map((item) => item.name === late.name ? { ...item, status: '도착 완료' } : item));
-                          showMessage(`${late.name} 도착 처리했습니다.`);
-                        }}
-                      >
-                        도착 처리
-                      </Button>
-                      <Button size = "sm" className = {styles.roundButton2} onClick = {() => {
-                          setLateParticipants((prev) => prev.map((item) => item.name === late.name ? { ...item, status: '경기 가능' } : item));
-                          showMessage(`${late.name}님을 경기 가능 상태로 변경했습니다.`);
-                        }}
-                      >
-                        경기 가능
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-      {message && (
-        <div className = {styles.floatingNotice}>
-          {message}
-        </div>
-      )}
-    </div>
-  );
+  const { sessionId = 'demo' } = useParams();
+  const navigate = useNavigate();
+  const [data, setData] = useState<DashboardResponse | null>(null);
+  const [error, setError] = useState('');
+  const [qrUrl, setQrUrl] = useState('');
+  const [qrOpen, setQrOpen] = useState(false);
+  const [connected, setConnected] = useState(isDemoSession(sessionId));
+  const socketGroupId = data?.groupId;
+  const socketSessionId = data?.sessionId;
+  const load = useCallback(async () => { try { setData(await sessionOperationApi.dashboard(sessionId)); setError(''); } catch { setError('운영 현황을 불러오지 못했어요.'); } }, [sessionId]);
+  useEffect(() => { void load(); }, [load]);
+  useEffect(() => { if (!data?.entryCode) return; void generateSessionEntryQrDataUrl(createSessionEntryUrl(data.sessionId, data.entryCode)).then(setQrUrl); }, [data?.entryCode, data?.sessionId]);
+  useEffect(() => { if (!socketGroupId || !socketSessionId || isDemoSession(sessionId)) return; return connectSessionEntrySocket(socketGroupId, socketSessionId, load, setConnected); }, [load, sessionId, socketGroupId, socketSessionId]);
+  const actions = <><Button variant="outline" className={s.outlineButton} onClick={() => void load()}><RefreshCw className={s.iconSm} />새로고침</Button><Link to={sessionPath(sessionId, '/queue')}><Button className={s.primaryButton}><Sparkles className={s.iconSm} />자동 매칭</Button></Link></>;
+  const closeSession = async () => { if (!window.confirm('진행 중인 경기가 없을 때만 일정을 종료할 수 있어요. 종료할까요?')) return; try { await sessionOperationApi.close(sessionId); navigate(sessionPath(sessionId, '/report')); } catch { setError('진행 중이거나 입장 호출 중인 경기를 먼저 정리해 주세요.'); } };
+  return <SessionOperationShell title="운영자 대시보드" description="현재 필요한 조작만 한 화면에서 확인하세요." actions={actions}>
+    {error && <div className={s.alert}><AlertTriangle className={s.icon} />{error}</div>}
+    {!data ? <div className={s.empty}>운영 현황을 불러오고 있어요.</div> : <div className={s.stack}>
+      <section className={s.card}><div className={s.between}><div><h2 className={s.sectionTitle}>{data.groupName} · {data.title}</h2><p className={s.sectionDescription}>{new Date(data.startsAt).toLocaleString('ko-KR')} · {data.place} · {data.courtCount}코트</p></div><div className={s.row}><Button variant="outline" className={s.outlineButton} onClick={() => setQrOpen(true)}><QrCode className={s.iconSm} />QR·참여 코드</Button><Button variant="outline" className={s.dangerButton} onClick={() => void closeSession()}>일정 종료</Button><span className={`text-sm font-bold ${connected ? 'text-emerald-600' : 'text-red-600'}`}>● {connected ? '실시간 연결 중' : '연결 불안정 · 새로고침 필요'}</span></div></div></section>
+      <section className={s.stats}>{statItems.map(([key, label]) => <div className={s.stat} key={key}><p className={s.statLabel}>{label}</p><strong className={s.statValue}>{data.summary[key] ?? 0}</strong></div>)}</section>
+      {data.alerts.map(alert => <div key={alert} className={s.alert}><AlertTriangle className={s.icon} />{alert}</div>)}
+      <section className={s.grid2}>
+        <div className={s.card}><div className={s.between}><h2 className={s.sectionTitle}>현재 경기</h2><Link className="font-bold text-primary" to={sessionPath(sessionId, '/current')}>전체 보기</Link></div><div className="mt-4 space-y-3">{data.currentMatches.length ? data.currentMatches.map(match => <div key={match.matchId} className="rounded-xl border border-border p-4"><div className={s.between}><strong>{match.courtNumber}번 코트</strong><span className="font-bold text-primary">{statusLabels[match.status] ?? match.status}</span></div><p className="mt-2 text-sm font-bold">{match.teams[0]?.players.map(player => player.name).join(' · ')} <span className="mx-2 text-muted-foreground">VS</span> {match.teams[1]?.players.map(player => player.name).join(' · ')}</p></div>) : <div className={s.empty}>현재 진행 중인 경기가 없어요.</div>}</div></div>
+        <div className={s.card}><div className={s.between}><h2 className={s.sectionTitle}>다음 경기 후보</h2><Link className="font-bold text-primary" to={sessionPath(sessionId, '/queue')}>후보 관리</Link></div><div className="mt-4 space-y-3">{data.queues.length ? data.queues.map(queue => <div key={queue.queueId} className="rounded-xl bg-secondary/60 p-4"><div className={s.between}><strong>후보 {queue.queueOrder}</strong><span className="text-sm font-bold">품질 {queue.score ?? '-'}</span></div><p className="mt-2 text-sm font-bold">{queue.teams[0]?.players.map(player => player.name).join(' · ')} <span className="mx-2 text-muted-foreground">VS</span> {queue.teams[1]?.players.map(player => player.name).join(' · ')}</p></div>) : <div className={s.empty}>후보가 없어요. 자동 매칭을 생성해 주세요.</div>}</div></div>
+      </section>
+      <section className={s.card}><div className={s.between}><h2 className={s.sectionTitle}>참가자 현황</h2><Link className="font-bold text-primary" to={sessionPath(sessionId, '/participants')}>참가자 관리</Link></div><div className="mt-4 grid grid-cols-5 gap-2">{data.participants.map(item => <div key={item.attendanceId} className="rounded-xl border border-border px-3 py-3"><div className={s.between}><strong>{item.name}</strong><span className="text-xs font-bold text-primary">{statusLabels[item.playStatus] ?? item.playStatus}</span></div><p className="mt-1 text-sm text-muted-foreground">{genderLabels[item.gender] ?? item.gender} · {ageLabels[item.ageGroup] ?? item.ageGroup} · {item.grade}급</p><p className="mt-1 text-sm text-muted-foreground">{item.games}경기 · 휴식 {item.consecutiveRestCount}회</p></div>)}</div></section>
+    </div>}
+    {data && qrOpen && <div className={s.modalBackdrop}><div className={`${s.modal} max-w-md text-center`}><div className={s.between}><h2 className={s.modalTitle}>QR·참여 코드</h2><button aria-label="닫기" onClick={() => setQrOpen(false)}><X /></button></div>{qrUrl && <img className="mx-auto mt-5 h-56 w-56 rounded-2xl" src={qrUrl} alt="일정 참여 QR 코드" />}<p className="mt-4 text-3xl font-black tracking-[0.2em] text-primary">{data.entryCode ?? '-'}</p></div></div>}
+  </SessionOperationShell>;
 }

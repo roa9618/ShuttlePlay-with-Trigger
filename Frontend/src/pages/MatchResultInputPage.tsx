@@ -1,125 +1,27 @@
-import { Link, useParams } from 'react-router-dom';
-import { useState } from 'react';
-import Logo from '../components/Logo';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { CheckCircle2 } from 'lucide-react';
+import SessionOperationShell from '../components/SessionOperationShell';
+import { OperationSelect } from '../components/OperationControls';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
-import { Label } from '../components/ui/label';
-import { Badge } from '../components/ui/badge';
-import { ArrowLeft, Info } from 'lucide-react';
-import { useActionFeedback } from '../utils/useActionFeedback';
-import { styles } from './MatchResultInputPage.styles';
+import { sessionOperationApi, type MatchResponse, type OperationMatch } from '../utils/sessionOperationApi';
+import { decodePublicId, sessionPath } from '../utils/publicId';
+import { operationStyles as s } from './SessionOperation.styles';
+import { useSessionOperationRealtime } from '../utils/useSessionOperationRealtime';
 
 export default function MatchResultInputPage() {
-  const { sessionId } = useParams();
-  const [winner, setWinner] = useState<'A' | 'B' | null>(null);
-  const { message, showMessage } = useActionFeedback();
-
-  return (
-    <div className = {styles.page}>
-      <div className = {styles.emptyState}>
-        <Logo size = "sm" className = {styles.logoWrapper} />
-      </div>
-
-      <div className = {styles.content}>
-        <Link to = {`/sessions/${sessionId}/current`} className = {styles.backLink}>
-          <ArrowLeft className = {styles.arrowLeftIcon} />
-          현재 경기로 돌아가기
-        </Link>
-
-        <div className = {styles.stack}>
-          <h1 className = {styles.pageTitle}>경기 결과 입력</h1>
-          <p className = {styles.descriptionText}>
-            방금 종료된 경기의 결과를 입력하세요
-          </p>
-        </div>
-
-        <div className = {styles.header}>
-          <div className = {styles.stack2}>
-            <div className = {styles.row}>
-              <Badge className = {styles.badge}>
-                2번 코트
-              </Badge>
-              <span className = {styles.mutedText}>복식 · 경쟁 모드</span>
-            </div>
-
-            <div className = {styles.cardGrid}>
-              <div className = {styles.summaryBox}>
-                <p className = {styles.descriptionText2}>A팀</p>
-                <div className = {styles.stack3}>
-                  <p className = {styles.summaryText}>김민수</p>
-                  <p className = {styles.summaryText}>박지영</p>
-                </div>
-              </div>
-
-              <div className = {styles.summaryBox}>
-                <p className = {styles.descriptionText2}>B팀</p>
-                <div className = {styles.stack3}>
-                  <p className = {styles.summaryText}>이준호</p>
-                  <p className = {styles.summaryText}>최서연</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className = {styles.footerActions}>
-            <div>
-              <Label className = {styles.labelIcon}>승리 팀 선택</Label>
-              <div className = {styles.cardGrid2}>
-                <Button variant = "outline" className = {styles.winnerButton(winner === 'A')} onClick = {() => setWinner('A')}
-                >
-                  A팀 승리
-                </Button>
-                <Button variant = "outline" className = {styles.winnerButton(winner === 'B')} onClick = {() => setWinner('B')}
-                >
-                  B팀 승리
-                </Button>
-              </div>
-            </div>
-
-            <div className = {styles.stack4}>
-              <div className = {styles.mediaRow}>
-                <Info className = {styles.infoIcon} />
-                <div className = {styles.stack5}>
-                  <p className = {styles.summaryText}>점수 입력 (선택)</p>
-                  <p className = {styles.descriptionText}>
-                    점수를 입력하면 MMR이 더 세밀하게 계산됩니다
-                  </p>
-                </div>
-              </div>
-
-              <div className = {styles.cardGrid3}>
-                <div className = {styles.stack3}>
-                  <Label htmlFor = "score-a">A팀 점수</Label>
-                  <Input id = "score-a" type = "number" placeholder = "21" className = {styles.input}
-                  />
-                </div>
-                <div className = {styles.stack3}>
-                  <Label htmlFor = "score-b">B팀 점수</Label>
-                  <Input id = "score-b" type = "number" placeholder = "19" className = {styles.input}
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className = {styles.stack6}>
-              {message && (
-                <div className = {styles.contentBox}>
-                  {message}
-                </div>
-              )}
-              <Button className = {styles.fullWidthButton} size = "lg" disabled = {!winner} onClick = {() => showMessage(`${winner}팀 승리로 저장했습니다.`)}
-              >
-                결과 저장
-              </Button>
-              <Link to = {`/sessions/${sessionId}/current`}>
-                <Button variant = "outline" className = {styles.fullWidthButton} size = "lg">
-                  취소
-                </Button>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </div>
+  const { sessionId = 'demo' } = useParams(); const [search] = useSearchParams(); const navigate = useNavigate();
+  const [matches, setMatches] = useState<OperationMatch[]>([]); const [matchId, setMatchId] = useState(search.get('matchId') ?? ''); const [winner, setWinner] = useState<1 | 2>(1); const [teamAScore, setTeamAScore] = useState(''); const [teamBScore, setTeamBScore] = useState(''); const [error, setError] = useState(''); const [saving, setSaving] = useState(false);
+  const [session, setSession] = useState<MatchResponse | null>(null);
+  const load = useCallback(async () => { const data = await sessionOperationApi.matches(sessionId); setSession(data); setMatches(data.matches); if (!matchId && data.matches[0]) setMatchId(String(data.matches[0].matchId)); if (matchId && !data.matches.some(item => item.matchId === Number(decodePublicId(matchId)))) navigate(sessionPath(sessionId, '/current'), { replace: true }); }, [matchId, navigate, sessionId]);
+  useEffect(() => { void load(); }, [load]);
+  useSessionOperationRealtime(sessionId, session?.groupId, session?.sessionId, load);
+  const match = useMemo(() => matches.find(item => item.matchId === Number(decodePublicId(matchId))), [matchId, matches]);
+  const submit = async () => { if (!match) return; const oneScoreMissing = (teamAScore === '') !== (teamBScore === ''); const scoreEntered = teamAScore !== '' && teamBScore !== ''; const a = scoreEntered ? Number(teamAScore) : (winner === 1 ? 1 : 0); const b = scoreEntered ? Number(teamBScore) : (winner === 2 ? 1 : 0); if (oneScoreMissing || !Number.isInteger(a) || !Number.isInteger(b) || a < 0 || b < 0 || a === b || (winner === 1 ? a <= b : b <= a)) { setError('승리 팀과 점수를 다시 확인해 주세요. 점수는 양 팀 모두 입력하거나 비워 주세요.'); return; } setSaving(true); try { await sessionOperationApi.submitResult(sessionId, match.matchId, { teamAScore: a, teamBScore: b, scoreEntered }); navigate(sessionPath(sessionId, '/current'), { replace: true }); } catch { setError('이미 입력된 결과이거나 저장할 수 없는 경기예요.'); setSaving(false); } };
+  return <SessionOperationShell title="경기 결과 입력" description="승리 팀을 선택하고, 점수를 아는 경우에만 입력하세요.">
+    <div className="mx-auto max-w-4xl space-y-5"><section className={s.card}><label><span className={s.label}>결과를 입력할 경기</span><OperationSelect value={matchId || undefined} placeholder="경기 선택" onValueChange={setMatchId} options={matches.map(item => ({ value: String(item.matchId), label: `${item.courtNumber}번 코트 · ${item.teams[0]?.players.map(player => player.name).join(' / ')} VS ${item.teams[1]?.players.map(player => player.name).join(' / ')}` }))} /></label></section>
+      {match ? <section className={s.card}><div className="grid grid-cols-[1fr_auto_1fr] items-stretch gap-5"><button className={`rounded-2xl border-2 p-5 text-left ${winner === 1 ? 'border-primary bg-primary/5' : 'border-border'}`} onClick={() => setWinner(1)}><p className={s.teamTitle}>A팀</p>{match.teams[0]?.players.map(player => <strong key={player.attendanceId} className="block py-2 text-xl">{player.name}</strong>)}<span className="mt-3 block font-bold text-primary">A팀 승리 선택</span></button><strong className="self-center text-xl text-muted-foreground">VS</strong><button className={`rounded-2xl border-2 p-5 text-left ${winner === 2 ? 'border-primary bg-primary/5' : 'border-border'}`} onClick={() => setWinner(2)}><p className={s.teamTitle}>B팀</p>{match.teams[1]?.players.map(player => <strong key={player.attendanceId} className="block py-2 text-xl">{player.name}</strong>)}<span className="mt-3 block font-bold text-primary">B팀 승리 선택</span></button></div><div className={s.divider} /><div><h2 className={s.sectionTitle}>점수 입력 <span className="text-sm font-bold text-muted-foreground">선택</span></h2><div className="mt-4 grid grid-cols-2 gap-4"><label><span className={s.label}>A팀 점수</span><Input className={s.input} inputMode="numeric" value={teamAScore} onChange={event => setTeamAScore(event.target.value.replace(/\D/g, ''))} placeholder="예: 25" /></label><label><span className={s.label}>B팀 점수</span><Input className={s.input} inputMode="numeric" value={teamBScore} onChange={event => setTeamBScore(event.target.value.replace(/\D/g, ''))} placeholder="예: 18" /></label></div><p className="mt-3 text-sm font-bold text-muted-foreground">점수를 비워두면 승패만 저장돼요. 결과 입력과 동시에 경기가 종료되고 다음 후보가 호출됩니다.</p></div>{error && <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 font-bold text-red-600">{error}</p>}<Button className={`${s.primaryButton} mt-6 w-full`} disabled={saving} onClick={() => void submit()}><CheckCircle2 className={s.icon} />{saving ? '저장 중...' : '결과 저장 및 경기 종료'}</Button></section> : <div className={s.empty}>결과를 입력할 경기를 선택해 주세요.</div>}
     </div>
-  );
+  </SessionOperationShell>;
 }

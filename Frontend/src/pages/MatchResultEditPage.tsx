@@ -1,162 +1,36 @@
-import { Link, useParams } from 'react-router-dom';
-import { useState } from 'react';
-import Logo from '../components/Logo';
+import { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { AlertTriangle, Save } from 'lucide-react';
+import SessionOperationShell from '../components/SessionOperationShell';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
-import { Label } from '../components/ui/label';
-import { Textarea } from '../components/ui/textarea';
-import { Badge } from '../components/ui/badge';
-import { ArrowLeft, AlertCircle, History, RotateCcw } from 'lucide-react';
-import { useActionFeedback } from '../utils/useActionFeedback';
-import { styles } from './MatchResultEditPage.styles';
+import { sessionOperationApi, type OperationMatch } from '../utils/sessionOperationApi';
+import { decodePublicId, sessionPath } from '../utils/publicId';
+import { operationStyles as s } from './SessionOperation.styles';
 
 export default function MatchResultEditPage() {
-  const { sessionId } = useParams();
-  const [winner, setWinner] = useState<'A' | 'B'>('A');
-  const { message, showMessage } = useActionFeedback();
+  const { sessionId = 'demo', matchId = '' } = useParams();
+  const navigate = useNavigate();
+  const [match, setMatch] = useState<OperationMatch | null>(null);
+  const [a, setA] = useState(''); const [b, setB] = useState(''); const [reason, setReason] = useState(''); const [error, setError] = useState('');
+  const [scoreEntered, setScoreEntered] = useState(true);
+  useEffect(() => { void sessionOperationApi.report(sessionId).then(data => { const item = data.matches.find(candidate => candidate.matchId === Number(decodePublicId(matchId))) ?? data.matches[0] ?? null; setMatch(item); if (item) { setA(String(item.teamAScore)); setB(String(item.teamBScore)); setScoreEntered(item.scoreEntered !== false); } }); }, [matchId, sessionId]);
+  const save = async () => { if (!match || !reason.trim() || Number(a) === Number(b)) { setError('서로 다른 점수와 수정 사유를 입력해 주세요.'); return; } const winnerA = Number(a) > Number(b); await sessionOperationApi.updateResult(sessionId, match.matchId, { teamAScore: scoreEntered ? Number(a) : winnerA ? 1 : 0, teamBScore: scoreEntered ? Number(b) : winnerA ? 0 : 1, scoreEntered, reason: reason.trim() }); navigate(sessionPath(sessionId, '/report'), { replace: true }); };
 
-  return (
-    <div className = {styles.page}>
-      <div className = {styles.emptyState}>
-        <Logo size = "sm" className = {styles.logoWrapper} />
-      </div>
-
-      <div className = {styles.content}>
-        <Link to = {`/sessions/${sessionId}/dashboard`} className = {styles.backLink}>
-          <ArrowLeft className = {styles.arrowLeftIcon} />
-          대시보드로 돌아가기
-        </Link>
-
-        <div className = {styles.stack}>
-          <h1 className = {styles.pageTitle}>경기 결과 수정</h1>
-          <p className = {styles.descriptionText}>
-            저장된 경기 결과를 수정할 수 있습니다
-          </p>
-        </div>
-
-        <div className = {styles.header}>
-          <div className = {styles.stack2}>
-            <div className = {styles.row}>
-              <Badge className = {styles.badge}>
-                2번 코트
-              </Badge>
-              <span className = {styles.mutedText}>복식 · 경쟁 모드</span>
-            </div>
-
-            <div className = {styles.cardGrid}>
-              <div className = {styles.summaryBox}>
-                <p className = {styles.descriptionText2}>A팀</p>
-                <div className = {styles.stack3}>
-                  <p className = {styles.summaryText}>김민수</p>
-                  <p className = {styles.summaryText}>박지영</p>
-                </div>
-              </div>
-
-              <div className = {styles.summaryBox}>
-                <p className = {styles.descriptionText2}>B팀</p>
-                <div className = {styles.stack3}>
-                  <p className = {styles.summaryText}>이준호</p>
-                  <p className = {styles.summaryText}>최서연</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className = {styles.footerActions}>
-            <div className = {styles.contentBox}>
-              <div className = {styles.mediaRow}>
-                <AlertCircle className = {styles.alertCircleIcon} />
-                <div className = {styles.smallText}>
-                  <p className = {styles.summaryText2}>기존 결과</p>
-                  <p className = {styles.paragraphText}>
-                    A팀 승리 (21-19)
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <Label className = {styles.labelIcon}>수정할 승리 팀 선택</Label>
-              <div className = {styles.cardGrid2}>
-                <Button variant = "outline" className = {styles.winnerButton(winner === 'A')} onClick = {() => setWinner('A')}
-                >
-                  A팀 승리
-                </Button>
-                <Button variant = "outline" className = {styles.winnerButton(winner === 'B')} onClick = {() => setWinner('B')}
-                >
-                  B팀 승리
-                </Button>
-              </div>
-            </div>
-
-            <div className = {styles.cardGrid}>
-              <div className = {styles.stack3}>
-                <Label htmlFor = "score-a">A팀 점수</Label>
-                <Input id = "score-a" type = "number" defaultValue = "21" className = {styles.input}
-                />
-              </div>
-              <div className = {styles.stack3}>
-                <Label htmlFor = "score-b">B팀 점수</Label>
-                <Input id = "score-b" type = "number" defaultValue = "19" className = {styles.input}
-                />
-              </div>
-            </div>
-
-            <div className = {styles.stack3}>
-              <Label htmlFor = "reason">수정 사유</Label>
-              <Textarea id = "reason" placeholder = "결과를 수정하는 이유를 간단히 입력해주세요" className = {styles.textareaIcon} rows = {3}
-              />
-              <p className = {styles.mutedText}>
-                수정 사유는 참가자들에게 공유됩니다
-              </p>
-            </div>
-
-            <div className = {styles.stack4}>
-              <div className = {styles.row2}>
-                <RotateCcw className = {styles.rotateCcwIcon} />
-                <p className = {styles.summaryText}>기록 재계산</p>
-              </div>
-              <p className = {styles.mutedText}>
-                승패, 점수, 복식·혼복 MMR, 개인 일일 기록, 월별 기록이 수정된 결과 기준으로 다시 반영됩니다.
-              </p>
-            </div>
-
-            <div className = {styles.stack5}>
-              <div className = {styles.row2}>
-                <History className = {styles.rotateCcwIcon} />
-                <p className = {styles.summaryText}>수정 이력</p>
-              </div>
-              {[
-                '21:18 김민수 입력 · A팀 승리 21-19',
-                '21:24 운영자 확인 · 점수 확인 완료',
-              ].map((history) => (
-                <div key = {history} className = {styles.summaryBox2}>
-                  {history}
-                </div>
-              ))}
-            </div>
-
-            <div className = {styles.stack6}>
-              {message && (
-                <div className = {styles.contentBox2}>
-                  {message}
-                </div>
-              )}
-              <Button className = {styles.fullWidthButton} size = "lg" onClick = {() => showMessage(`${winner}팀 승리로 수정 저장했습니다.`)}>
-                수정 저장
-              </Button>
-              <Button variant = "destructive" className = {styles.fullWidthButton} size = "lg" onClick = {() => showMessage('결과 입력을 취소했습니다.')}>
-                결과 입력 취소
-              </Button>
-              <Link to = {`/sessions/${sessionId}/dashboard`}>
-                <Button variant = "outline" className = {styles.fullWidthButton} size = "lg">
-                  취소
-                </Button>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+  return <SessionOperationShell title="경기 결과 수정" description="수정 전 기록은 보존되고 MMR과 오늘 기록이 다시 계산됩니다.">
+    <div className="mx-auto max-w-4xl space-y-5">{!match ? <div className={s.empty}>경기 결과를 불러오고 있어요.</div> : <>
+      <div className={s.alert}><AlertTriangle className={s.icon} />결과 수정은 참가자 4명의 승패, 득실점, MMR과 일정 리포트에 모두 반영돼요.</div>
+      <section className={s.card}>
+        <h2 className={s.sectionTitle}>{match.courtNumber}번 코트 기존 결과</h2>
+        <div className="mt-4 grid grid-cols-2 gap-4"><div className={s.teamBox}><p className={s.teamTitle}>A팀 · 기존 {match.teamAScore}점</p>{match.teams[0]?.players.map(player => <strong className="block py-1" key={player.attendanceId}>{player.name}</strong>)}</div><div className={s.teamBox}><p className={s.teamTitle}>B팀 · 기존 {match.teamBScore}점</p>{match.teams[1]?.players.map(player => <strong className="block py-1" key={player.attendanceId}>{player.name}</strong>)}</div></div>
+        <div className={s.divider} />
+        <div className="grid grid-cols-2 gap-4"><label><span className={s.label}>변경할 A팀 점수</span><Input className={s.input} value={a} onChange={event => setA(event.target.value.replace(/\D/g, ''))} /></label><label><span className={s.label}>변경할 B팀 점수</span><Input className={s.input} value={b} onChange={event => setB(event.target.value.replace(/\D/g, ''))} /></label></div>
+        <label className="mt-4 flex items-center gap-3 rounded-xl bg-secondary/60 px-4 py-3 font-bold"><input type="checkbox" checked={scoreEntered} onChange={event => setScoreEntered(event.target.checked)} />점수까지 기록하기</label>
+        <label className="mt-4 block"><span className={s.label}>수정 사유</span><Input className={s.input} value={reason} onChange={event => setReason(event.target.value)} placeholder="예: 점수 오입력 수정" /></label>
+        {error && <p className="mt-4 font-bold text-red-600">{error}</p>}
+        <Button className={`${s.primaryButton} mt-6 w-full`} onClick={() => void save()}><Save className={s.icon} />수정 저장 및 기록 재계산</Button>
+        {match.resultHistory && match.resultHistory.length > 0 && <div className="mt-6 border-t border-border pt-5"><h3 className={s.sectionTitle}>수정 이력</h3>{match.resultHistory.map((item, index) => <p key={`${item.modifiedAt}-${index}`} className="mt-2 rounded-xl bg-secondary/60 px-4 py-3 text-sm"><strong>{item.previousScore} → {item.newScore}</strong> · {item.reason} · {item.modifiedBy}</p>)}</div>}
+      </section>
+    </>}</div>
+  </SessionOperationShell>;
 }

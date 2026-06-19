@@ -1,169 +1,55 @@
+import { useCallback, useEffect, useState } from 'react';
+import { useParams } from 'react-router-dom';
+import { Ban, Clock3, Wifi } from 'lucide-react';
 import Logo from '../components/Logo';
-import { Badge } from '../components/ui/badge';
-import { QrCode } from 'lucide-react';
-import { styles } from './DisplayBoardPage.styles';
+import { connectSessionEntrySocket } from '../utils/sessionEntrySocket';
+import { isDemoSession, sessionOperationApi, type OperationMatch, type OperationQueue, type OperationSession } from '../utils/sessionOperationApi';
+import { createSessionEntryUrl, generateSessionEntryQrDataUrl } from '../utils/sessionEntryQr';
+
+type DisplayData = OperationSession & { currentMatches: OperationMatch[]; nextMatches: OperationQueue[]; lastUpdatedAt: string };
 
 export default function DisplayBoardPage() {
-  const currentMatches = [
-    {
-      court: 1,
-      teamA: ['김민수', '박지영'],
-      teamB: ['이준호', '최서연'],
-    },
-    {
-      court: 2,
-      teamA: ['정민재', '강수진'],
-      teamB: ['오유진', '한지우'],
-    },
-    {
-      court: 3,
-      teamA: ['송민호', '윤서아'],
-      teamB: ['장현우', '김나영'],
-    },
-    {
-      court: 4,
-      teamA: ['최지훈', '서예린'],
-      teamB: ['박준영', '이수민'],
-    },
-  ];
+  const { sessionId = 'demo' } = useParams();
+  const [data, setData] = useState<DisplayData | null>(null);
+  const [connected, setConnected] = useState(isDemoSession(sessionId));
+  const [qrUrl, setQrUrl] = useState('');
+  const [now, setNow] = useState(() => new Date());
+  const load = useCallback(async () => setData(await sessionOperationApi.display(sessionId)), [sessionId]);
 
-  const nextMatches = [
-    {
-      teamA: ['강태양', '문별이'],
-      teamB: ['임나윤', '조유진'],
-    },
-    {
-      teamA: ['백승호', '신지원'],
-      teamB: ['홍예슬', '안준서'],
-    },
-  ];
+  useEffect(() => { void load(); }, [load]);
+  useEffect(() => { const timer = window.setInterval(() => setNow(new Date()), 1_000); return () => window.clearInterval(timer); }, []);
+  useEffect(() => { if (!data?.entryCode) return; void generateSessionEntryQrDataUrl(createSessionEntryUrl(data.sessionId, data.entryCode)).then(setQrUrl); }, [data?.entryCode, data?.sessionId]);
+  useEffect(() => {
+    if (!data?.groupId || !data.sessionId || isDemoSession(sessionId)) return;
+    return connectSessionEntrySocket(data.groupId, data.sessionId, load, setConnected);
+  }, [data?.groupId, data?.sessionId, load, sessionId]);
 
-  return (
-    <div className = {styles.page}>
-      <div className = {styles.content}>
-        <div className = {styles.betweenRow}>
-          <div className = {styles.row}>
-            <Logo size = "lg" />
-            <div>
-              <h1 className = {styles.pageTitle}>6월 3일 (화) 운동</h1>
-              <p className = {styles.descriptionText}>19:00 - 22:00</p>
-            </div>
-          </div>
-          <div className = {styles.rightAlignedBlock}>
-            <p className = {styles.summaryText}>21:24</p>
-            <p className = {styles.descriptionText2}>현재 시간</p>
-          </div>
-        </div>
+  if (!data) return <div className="flex min-h-screen items-center justify-center bg-[#120b1f] text-2xl font-bold text-white">경기판을 불러오고 있어요.</div>;
 
-        <div>
-          <div className = {styles.row2}>
-            <h2 className = {styles.sectionTitle}>현재 경기</h2>
-            <Badge className = {styles.badge}>
-              진행 중
-            </Badge>
-          </div>
-
-          <div className = {styles.cardGrid}>
-            {currentMatches.map((match) => (
-              <div key = {match.court} className = {styles.header}
-              >
-                <div className = {styles.row3}>
-                  <div className = {styles.row4}>
-                    <span className = {styles.labelText}>
-                      {match.court}
-                    </span>
-                  </div>
-                  <p className = {styles.summaryText2}>번 코트</p>
-                </div>
-
-                <div className = {styles.stack}>
-                  <div className = {styles.summaryBox}>
-                    <p className = {styles.descriptionText3}>A팀</p>
-                    <div className = {styles.stack2}>
-                      {match.teamA.map((player, idx) => (
-                        <p key = {idx} className = {styles.summaryText2}>
-                          {player}
-                        </p>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className = {styles.centeredBlock}>
-                    <span className = {styles.mutedText}>vs</span>
-                  </div>
-
-                  <div className = {styles.summaryBox}>
-                    <p className = {styles.descriptionText3}>B팀</p>
-                    <div className = {styles.stack2}>
-                      {match.teamB.map((player, idx) => (
-                        <p key = {idx} className = {styles.summaryText2}>
-                          {player}
-                        </p>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div>
-          <h2 className = {styles.sectionTitle2}>다음 경기</h2>
-
-          <div className = {styles.cardGrid}>
-            {nextMatches.map((match, idx) => (
-              <div key = {idx} className = {styles.header2}
-              >
-                <div className = {styles.statsGrid}>
-                  <div className = {styles.summaryBox2}>
-                    <div className = {styles.stack3}>
-                      {match.teamA.map((player, pIdx) => (
-                        <p key = {pIdx} className = {styles.summaryText3}>
-                          {player}
-                        </p>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className = {styles.centeredBlock2}>
-                    <span className = {styles.mutedText2}>vs</span>
-                  </div>
-
-                  <div className = {styles.summaryBox2}>
-                    <div className = {styles.stack3}>
-                      {match.teamB.map((player, pIdx) => (
-                        <p key = {pIdx} className = {styles.summaryText3}>
-                          {player}
-                        </p>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className = {styles.contentBox}>
-          <div className = {styles.betweenRow}>
-            <div className = {styles.row}>
-              <QrCode className = {styles.qrCodeIcon} />
-              <div>
-                <h3 className = {styles.cardTitle}>
-                  참여하기
-                </h3>
-                <p className = {styles.paragraphText}>
-                  QR 코드를 스캔하여 오늘 운동에 참여하세요
-                </p>
-              </div>
-            </div>
-            <div className = {styles.row5}>
-              <QrCode className = {styles.qrCodeIcon2} />
-            </div>
-          </div>
-        </div>
+  return <div className="min-h-screen min-w-[1180px] bg-[#120b1f] px-10 py-8 text-white">
+    <header className="grid grid-cols-[1fr_auto_1fr] items-center border-b border-white/15 pb-6">
+      <Logo size="md" />
+      <div className="text-center"><h1 className="text-4xl font-black">{data.groupName}</h1><p className="mt-2 text-xl text-white/70">{data.title}</p></div>
+      <div className="justify-self-end text-right"><p className="flex items-center justify-end gap-2 text-xl font-bold"><Clock3 className="h-5 w-5" />{now.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</p><p className={`mt-2 flex items-center gap-2 font-bold ${connected ? 'text-emerald-400' : 'text-red-400'}`}><Wifi className="h-5 w-5" />{connected ? '실시간 연결 중' : '연결이 불안정해요'}</p></div>
+    </header>
+    <main className="mt-8">
+      <h2 className="text-3xl font-black">현재 경기</h2>
+      <div className={`mt-5 grid gap-5 ${data.courtCount <= 3 ? 'grid-cols-3' : 'grid-cols-4'}`}>
+        {Array.from({ length: data.courtCount }, (_, index) => {
+          const court = index + 1;
+          const disabled = data.disabledCourtNumbers.includes(court);
+          const match = data.currentMatches.find(item => item.courtNumber === court);
+          return <section key={court} className={`min-h-64 rounded-3xl border-2 p-6 ${disabled ? 'border-red-400/50 bg-red-400/5' : match?.status === 'CALLING' ? 'border-amber-400 bg-amber-400/10' : 'border-[#a855f7] bg-white/5'}`}>
+            <div className="flex items-center justify-between"><h3 className="text-3xl font-black">{court}코트</h3>{disabled ? <span className="rounded-full bg-red-400 px-4 py-2 font-black text-black">사용 중지</span> : match && <span className={`rounded-full px-4 py-2 font-black ${match.status === 'CALLING' ? 'bg-amber-400 text-black' : 'bg-[#a855f7]'}`}>{match.status === 'CALLING' ? '지금 입장' : '경기 중'}</span>}</div>
+            {disabled ? <div className="mt-16 text-center text-red-300"><Ban className="mx-auto h-10 w-10" /><p className="mt-3 text-2xl font-bold">사용하지 않는 코트</p></div> : match ? <div className="mt-7 text-center"><p className="text-2xl font-black">{match.teams[0]?.players.map(player => player.name).join(' · ')}</p><p className="my-4 text-lg font-black text-white/50">VS</p><p className="text-2xl font-black">{match.teams[1]?.players.map(player => player.name).join(' · ')}</p></div> : <p className="mt-20 text-center text-2xl font-bold text-white/40">비어 있음</p>}
+          </section>;
+        })}
       </div>
-    </div>
-  );
+      <section className="mt-8 grid grid-cols-[minmax(0,1fr)_190px] items-center gap-6 rounded-3xl border border-white/15 bg-white/5 p-6">
+        <div><h2 className="text-3xl font-black text-amber-300">다음 경기</h2><div className="mt-5 grid grid-cols-3 gap-4">{data.nextMatches.slice(0, data.courtCount).map(queue => <div key={queue.queueId} className="rounded-2xl bg-white/10 p-5"><p className="text-lg font-black text-amber-300">다음 {queue.queueOrder}번째</p><p className="mt-3 text-xl font-black">{queue.teams[0]?.players.map(player => player.name).join(' · ')}</p><p className="my-2 font-bold text-white/40">VS</p><p className="text-xl font-black">{queue.teams[1]?.players.map(player => player.name).join(' · ')}</p></div>)}</div></div>
+        <div className="flex w-[190px] flex-col items-center justify-center self-center justify-self-center text-center">{qrUrl && <img src={qrUrl} alt="일정 참여 QR 코드" className="block h-40 w-40 rounded-xl bg-white p-1" />}<p className="mt-3 w-40 text-center text-xl font-black tracking-[0.08em]">{data.entryCode ?? '-'}</p></div>
+      </section>
+    </main>
+    <footer className="mt-7 flex items-center justify-between text-lg font-bold text-white/60"><span>QR로 접속해 내 경기 순서를 확인하세요.</span><span>개인 화면에서 내 경기 순서를 확인해 주세요.</span><span>{new Date(data.lastUpdatedAt).toLocaleTimeString('ko-KR')} 갱신</span></footer>
+  </div>;
 }

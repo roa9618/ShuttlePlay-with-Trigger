@@ -3,8 +3,10 @@ import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import { Monitor, Smartphone, Tv, ChevronRight, Grid3x3, QrCode } from 'lucide-react';
 import { styles } from './GalleryPage.styles';
+import { encodePublicId } from '../utils/publicId';
 
 export default function GalleryPage() {
+  const previewGroupId = encodePublicId(1);
   const sessionEntryPages = [
     { group: '진입', name: '코드·QR 입력', path: '/session-entry/previews/code-input', description: 'QR 촬영 또는 8자리 코드 입력' },
     { group: '진입', name: 'QR 카메라', path: '/session-entry/previews/camera', description: '실시간 카메라 QR 인식' },
@@ -29,16 +31,22 @@ export default function GalleryPage() {
     { name: '소셜 기본 정보 입력', path: '/social-signup', description: '소셜 계정 최초 로그인 후 추가 정보 입력' },
     { name: '비밀번호 찾기', path: '/password-reset', description: '이메일 인증을 통한 비밀번호 재설정' },
     { name: '새 비밀번호 설정', path: '/password-reset/confirm', description: '재설정 링크 진입 후 새 비밀번호 입력' },
+    { name: '소셜 로그인 콜백', path: '/oauth/callback', description: '소셜 로그인 처리 중 안내 화면' },
+    { name: '일정 입장', path: '/session-entry', description: '코드 입력과 QR 촬영으로 일정에 입장' },
     { name: '모임 목록', path: '/groups?preview=true', description: '참여 중인 모임 목록' },
-    { name: '모임 상세 홈', path: '/groups/1?preview=true', description: '모임 요약, 다가오는 일정, 최근 기록 및 활동 통계' },
-    { name: '모임 일정', path: '/groups/1/schedule?preview=true', description: '캘린더와 날짜별 운동 일정 관리' },
-    { name: '모임 게시판', path: '/groups/1/board?preview=true', description: '공지사항과 자유 게시판 관리' },
-    { name: '모임 멤버', path: '/groups/1/members?preview=true', description: '멤버 통계와 권한 관리' },
-    { name: '모임 가입 요청', path: '/groups/1/requests?preview=true', description: '신규 회원 가입 요청 승인 및 거절' },
-    { name: '모임 운영 기록', path: '/groups/1/history?preview=true', description: '모임 운영 변경 이력 확인' },
-    { name: '모임 설정', path: '/groups/1/settings?preview=true', description: '기본 정보, 가입, 권한 및 삭제 설정' },
+    { name: '모임 상세 홈', path: `/groups/${previewGroupId}?preview=true`, description: '모임 요약, 다가오는 일정, 최근 기록 및 활동 통계' },
+    { name: '모임 일정', path: `/groups/${previewGroupId}/schedule?preview=true`, description: '캘린더와 날짜별 운동 일정 관리' },
+    { name: '모임 게시판', path: `/groups/${previewGroupId}/board?preview=true`, description: '공지사항과 자유 게시판 관리' },
+    { name: '모임 멤버', path: `/groups/${previewGroupId}/members?preview=true`, description: '멤버 통계와 권한 관리' },
+    { name: '모임 게스트 관리', path: `/groups/${previewGroupId}/guests?preview=true`, description: '게스트 프로필과 메모 관리' },
+    { name: '모임 가입 요청', path: `/groups/${previewGroupId}/requests?preview=true`, description: '신규 회원 가입 요청 승인 및 거절' },
+    { name: '모임 운영 기록', path: `/groups/${previewGroupId}/history?preview=true`, description: '모임 운영 변경 이력 확인' },
+    { name: '모임 설정', path: `/groups/${previewGroupId}/settings?preview=true`, description: '기본 정보, 가입, 권한 및 삭제 설정' },
     { name: '모임 만들기', path: '/groups/new?preview=true', description: '새로운 모임 생성' },
-    { name: '운동 일정 만들기', path: '/groups/1/schedule?createSession=true&preview=true', description: '오늘 진행할 운동 일정을 등록합니다' },
+    { name: '모임 가입 링크', path: `/groups/${previewGroupId}/join?preview=true`, description: '공유 링크로 모임 가입 상태 확인' },
+    { name: '모임 운영 진입', path: '/groups/entry/manage', description: '운영 가능한 모임 선택 후 상세로 이동' },
+    { name: '일정 생성 진입', path: '/groups/entry/create-session', description: '운영 가능한 모임 선택 후 일정 생성으로 이동' },
+    { name: '운동 일정 만들기', path: `/groups/${previewGroupId}/schedule?createSession=true&preview=true`, description: '오늘 진행할 운동 일정을 등록합니다' },
     { name: '운영자 대시보드', path: '/sessions/demo/dashboard', description: '세션 운영 및 현황 관리' },
     { name: '참가자 관리', path: '/sessions/demo/participants', description: '참가자 상태 및 메모 관리' },
     { name: '경기 후보 큐', path: '/sessions/demo/queue', description: '자동 매칭 및 경기 생성' },
