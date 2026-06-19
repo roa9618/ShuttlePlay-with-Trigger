@@ -16,6 +16,7 @@ import com.shuttleplay.server.domain.record.dto.MyRecordSummaryResponse;
 import com.shuttleplay.server.domain.record.entity.MatchPlayer;
 import com.shuttleplay.server.domain.record.entity.MatchRecord;
 import com.shuttleplay.server.domain.record.enums.MatchType;
+import com.shuttleplay.server.domain.record.repository.DailyRecordRepository;
 import com.shuttleplay.server.domain.record.repository.MatchPlayerRepository;
 import com.shuttleplay.server.domain.record.repository.MmrHistoryRepository;
 import com.shuttleplay.server.domain.user.entity.User;
@@ -43,13 +44,14 @@ class MyRecordServiceTest {
     @Mock private MatchPlayerRepository matchPlayers;
     @Mock private GroupSessionAttendanceRepository attendances;
     @Mock private MmrHistoryRepository mmrHistories;
+    @Mock private DailyRecordRepository dailyRecords;
 
     private MyRecordService service;
     private User user;
 
     @BeforeEach
     void setUp() {
-        service = new MyRecordService(users, matchPlayers, attendances, mmrHistories);
+        service = new MyRecordService(users, matchPlayers, attendances, mmrHistories, dailyRecords);
         user = mock(User.class);
         when(users.findById(1L)).thenReturn(Optional.of(user));
     }
@@ -66,6 +68,7 @@ class MyRecordServiceTest {
         when(matchPlayers.findUserMatchRecords(1L)).thenReturn(List.of());
         when(attendances.findUserRecordAttendances(
                 eq(1L), any(LocalDateTime.class), any(LocalDateTime.class), any())).thenReturn(List.of());
+        when(dailyRecords.findAllByUserIdAndRecordDateBetweenOrderByRecordDateAsc(eq(1L), any(), any())).thenReturn(List.of());
         when(mmrHistories.findAllByUserIdAndMmrTypeAndChangedAtBetweenAndIsDeletedFalseOrderByChangedAtAsc(
                 eq(1L), any(), any(LocalDateTime.class), any(LocalDateTime.class))).thenReturn(List.of());
 

@@ -6,6 +6,7 @@ import com.shuttleplay.server.domain.group.repository.GroupSessionAttendanceRepo
 import com.shuttleplay.server.domain.record.dto.MatchRecordPageResponse;
 import com.shuttleplay.server.domain.record.dto.MmrHistoryResponse;
 import com.shuttleplay.server.domain.record.dto.MyRecordSummaryResponse;
+import com.shuttleplay.server.domain.record.entity.DailyRecord;
 import com.shuttleplay.server.domain.record.entity.MatchPlayer;
 import com.shuttleplay.server.domain.record.entity.MatchRecord;
 import com.shuttleplay.server.domain.record.entity.MmrHistory;
@@ -13,6 +14,7 @@ import com.shuttleplay.server.domain.record.enums.MatchType;
 import com.shuttleplay.server.domain.record.enums.MatchOperationStatus;
 import com.shuttleplay.server.domain.record.enums.MmrType;
 import com.shuttleplay.server.domain.record.enums.PlayStyle;
+import com.shuttleplay.server.domain.record.repository.DailyRecordRepository;
 import com.shuttleplay.server.domain.record.repository.MatchPlayerRepository;
 import com.shuttleplay.server.domain.record.repository.MmrHistoryRepository;
 import com.shuttleplay.server.domain.user.entity.User;
@@ -42,6 +44,7 @@ public class MyRecordService {
     private final MatchPlayerRepository matchPlayers;
     private final GroupSessionAttendanceRepository attendances;
     private final MmrHistoryRepository mmrHistories;
+    private final DailyRecordRepository dailyRecords;
 
     public MyRecordSummaryResponse summary(Long userId, YearMonth month) {
         User user = findUser(userId);
@@ -68,13 +71,15 @@ public class MyRecordService {
         int mixedCurrentMonthChange = mmrChange(userId, MmrType.MIXED, currentMonthStart, currentMonthEnd);
         int doublesSelectedMonthChange = mmrChange(userId, MmrType.DOUBLES, monthStart, monthEnd);
         int mixedSelectedMonthChange = mmrChange(userId, MmrType.MIXED, monthStart, monthEnd);
+        LocalDate activityFrom = today.minusYears(1).plusDays(1);
+        List<DailyRecord> activityRecords = dailyRecords.findAllByUserIdAndRecordDateBetweenOrderByRecordDateAsc(userId, activityFrom, today);
 
         return new MyRecordSummaryResponse(
                 new MyRecordSummaryResponse.Profile(user.getName(), user.getProfileImageUrl(), value(user.getGender()), value(user.getAgeGroup()), value(user.getGrade())),
                 new MyRecordSummaryResponse.MmrOverview(user.getDoublesMmr(), user.getMixedMmr(), doublesCurrentMonthChange, mixedCurrentMonthChange),
                 stats(todayMatches, todayAttendance, mmrChange(userId, MmrType.DOUBLES, today.atStartOfDay(), today.plusDays(1).atStartOfDay()), mmrChange(userId, MmrType.MIXED, today.atStartOfDay(), today.plusDays(1).atStartOfDay())),
                 stats(monthMatches, monthAttendance, doublesSelectedMonthChange, mixedSelectedMonthChange),
-                activity(allAttendance, today.minusYears(1).plusDays(1), today),
+                activity(allAttendance, activityRecords, activityFrom, today),
                 allMatches.stream().limit(RECENT_MATCH_COUNT).map(this::matchItem).toList(),
                 people(allMatches),
                 habit(user, allAttendance),
@@ -159,13 +164,25 @@ public class MyRecordService {
                 attendance.stream().mapToLong(this::exerciseMinutes).sum(), attendance.size(), doublesChange, mixedChange);
     }
 
-    private List<MyRecordSummaryResponse.ActivityDay> activity(List<GroupSessionAttendance> source, LocalDate from, LocalDate to) {
-        return source.stream().filter(item -> !participationAt(item).toLocalDate().isBefore(from) && !participationAt(item).toLocalDate().isAfter(to))
-                .collect(Collectors.groupingBy(item -> participationAt(item).toLocalDate(), TreeMap::new, Collectors.toList()))
-                .entrySet().stream().map(entry -> new MyRecordSummaryResponse.ActivityDay(entry.getKey(), entry.getValue().size(),
-                        entry.getValue().stream().mapToLong(this::exerciseMinutes).sum(), entry.getValue().stream().map(item ->
-                        new MyRecordSummaryResponse.ActivityItem(item.getSession().getGroup().getName(), item.getSession().getTitle(),
-                                item.getSession().getStartsAt(), item.getSession().getEndsAt())).toList())).toList();
+    private List<MyRecordSummaryResponse.ActivityDay> activity(List<GroupSessionAttendance> source, List<DailyRecord> records, LocalDate from, LocalDate to) {
+        Map<LocalDate, List<GroupSessionAttendance>> attendanceByDate = source.stream()
+                .filter(item -> !participationAt(item).toLocalDate().isBefore(from) && !participationAt(item).toLocalDate().isAfter(to))
+                .collect(Collectors.groupingBy(item -> participationAt(item).toLocalDate(), TreeMap::new, Collectors.toList()));
+        Map<LocalDate, DailyRecord> recordByDate = records.stream()
+                .filter(record -> !record.getRecordDate().isBefore(from) && !record.getRecordDate().isAfter(to))
+                .collect(Collectors.toMap(DailyRecord::getRecordDate, java.util.function.Function.identity(), (left, right) -> left, TreeMap::new));
+        TreeSet<LocalDate> dates = new TreeSet<>();
+        dates.addAll(attendanceByDate.keySet());
+        dates.addAll(recordByDate.keySet());
+        return dates.stream().map(date -> {
+            List<GroupSessionAttendance> items = attendanceByDate.getOrDefault(date, List.of());
+            DailyRecord record = recordByDate.get(date);
+            int count = Math.max(items.size(), record != null && record.getGames() > 0 ? 1 : 0);
+            return new MyRecordSummaryResponse.ActivityDay(date, count,
+                    items.stream().mapToLong(this::exerciseMinutes).sum(), items.stream().map(item ->
+                    new MyRecordSummaryResponse.ActivityItem(item.getSession().getGroup().getName(), item.getSession().getTitle(),
+                            item.getSession().getStartsAt(), item.getSession().getEndsAt())).toList());
+        }).filter(item -> item.count() > 0).toList();
     }
 
     private MyRecordSummaryResponse.People people(List<MatchPlayer> matches) {

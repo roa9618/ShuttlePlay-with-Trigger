@@ -10,7 +10,7 @@ export const styles = {
   change: (value: number) => value > 0 ? 'bg-emerald-50 text-emerald-700' : value < 0 ? 'bg-destructive/10 text-destructive' : 'bg-secondary text-muted-foreground',
   chartWrap: 'relative mt-8 rounded-2xl border border-primary/10 bg-primary/[0.02] px-12 pb-5 pt-6',
   chartAxis: 'absolute inset-y-6 left-3 flex flex-col justify-between text-[10px] text-muted-foreground',
-  lineChart: 'h-[340px] w-full overflow-visible border-b border-l border-primary/10 [&_polyline]:stroke-primary [&_polyline]:stroke-[2] [&_circle]:fill-primary [&_circle]:stroke-card [&_circle]:stroke-[0.6]',
+  lineChart: 'h-[340px] w-full overflow-visible border-b border-l border-primary/10 [&_polyline]:stroke-primary [&_polyline]:stroke-[2.4] [&_polyline]:drop-shadow-sm',
   chartDates: 'mt-3 flex justify-between text-xs text-muted-foreground',
   panelHeading: 'flex items-center gap-3 border-b border-primary/10 pb-5 [&>svg]:h-5 [&>svg]:w-5 [&>svg]:text-primary [&_h2]:text-lg [&_h2]:font-medium [&_p]:mt-1 [&_p]:text-xs [&_p]:text-muted-foreground',
   historyList: 'divide-y divide-primary/10 [&>div]:grid [&>div]:grid-cols-[160px_minmax(0,1fr)_80px] [&>div]:items-center [&>div]:py-4 [&_time]:text-sm [&_time]:text-muted-foreground [&_span]:text-sm [&_strong]:justify-self-end [&_strong]:rounded-full [&_strong]:px-3 [&_strong]:py-1.5 [&_strong]:text-xs',
