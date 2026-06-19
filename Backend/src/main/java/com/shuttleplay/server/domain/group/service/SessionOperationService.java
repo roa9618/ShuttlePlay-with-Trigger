@@ -452,6 +452,20 @@ public class SessionOperationService {
     }
 
     @Transactional
+    public Map<String, Object> updateAutoFill(Long userId, Long sessionId, Map<String, Object> body) {
+        GroupSession session = operatorOperationSession(userId, sessionId);
+        if (!session.isMatchAssignmentStarted()) throw new BusinessException(ErrorCode.INVALID_REQUEST);
+        boolean enabled = Boolean.TRUE.equals(body.get("enabled"));
+        session.setAutoCourtAssignmentEnabled(enabled);
+        if (enabled) autoAssignEmptyCourts(session);
+        publish(session, "MATCH_QUEUE_UPDATED");
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("autoCourtAssignmentEnabled", session.isAutoCourtAssignmentEnabled());
+        result.put("message", enabled ? "빈 코트 자동 채우기를 켰어요." : "빈 코트 자동 채우기를 껐어요.");
+        return result;
+    }
+
+    @Transactional
     public Map<String, Object> createManualQueue(Long userId, Long sessionId, Map<String, Object> body) {
         GroupSession session = operatorOperationSession(userId, sessionId);
         session.startOperation();
@@ -609,6 +623,7 @@ public class SessionOperationService {
         matches.flush();
         queues.deleteAll(queues.findAllBySessionIdOrderByQueueOrderAsc(sessionId));
         queues.flush();
+        session.resetMatchAssignment();
 
         List<MatchRecord> remainingAffectedMatches = affectedMatches.stream()
                 .filter(match -> !sessionMatchIds.contains(match.getId())).toList();
@@ -896,13 +911,13 @@ public class SessionOperationService {
     }
 
     private void autoCallNext(GroupSession session, Integer court, Set<Long> excludedAttendanceIds) {
-        if (!session.isMatchAssignmentStarted()) return;
+        if (!session.isMatchAssignmentStarted() || !session.isAutoCourtAssignmentEnabled()) return;
         List<MatchRecord> assigned = assignToEmptyCourts(session, excludedAttendanceIds);
         if (assigned.isEmpty() && currentMatches(session.getId()).isEmpty()) assignToEmptyCourts(session, Set.of());
     }
 
     private void autoAssignEmptyCourts(GroupSession session) {
-        if (!session.isMatchAssignmentStarted()) return;
+        if (!session.isMatchAssignmentStarted() || !session.isAutoCourtAssignmentEnabled()) return;
         assignToEmptyCourts(session, Set.of());
     }
 
@@ -1331,7 +1346,7 @@ public class SessionOperationService {
         Map<String, Object> map = new LinkedHashMap<>();
         map.put("sessionId", session.getId()); map.put("groupId", session.getGroup().getId()); map.put("groupName", session.getGroup().getName());
         map.put("title", session.getTitle()); map.put("startsAt", session.getStartsAt()); map.put("endsAt", session.getEndsAt());
-        map.put("place", session.getPlace()); map.put("sessionType", session.getSessionType()); map.put("courtCount", session.getCourtCount()); map.put("disabledCourtNumbers", session.disabledCourtNumbers()); map.put("status", session.getStatus()); map.put("entryCode", session.getEntryCode()); map.put("matchAssignmentStarted", session.isMatchAssignmentStarted());
+        map.put("place", session.getPlace()); map.put("sessionType", session.getSessionType()); map.put("courtCount", session.getCourtCount()); map.put("disabledCourtNumbers", session.disabledCourtNumbers()); map.put("status", session.getStatus()); map.put("entryCode", session.getEntryCode()); map.put("matchAssignmentStarted", session.isMatchAssignmentStarted()); map.put("autoCourtAssignmentEnabled", session.isAutoCourtAssignmentEnabled());
         return map;
     }
 

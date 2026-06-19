@@ -85,6 +85,9 @@ public class GroupSession extends BaseEntity {
     @Column(name = "match_assignment_started", nullable = false)
     private boolean matchAssignmentStarted;
 
+    @Column(name = "auto_court_assignment_enabled", nullable = false)
+    private boolean autoCourtAssignmentEnabled;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private GroupSessionStatus status;
@@ -116,6 +119,7 @@ public class GroupSession extends BaseEntity {
         session.guestAllowed = guestAllowed;
         session.attendanceCount = 0;
         session.matchAssignmentStarted = false;
+        session.autoCourtAssignmentEnabled = false;
         session.status = votingAllowed ? GroupSessionStatus.ATTENDANCE_OPEN : GroupSessionStatus.CREATED;
         return session;
     }
@@ -133,7 +137,9 @@ public class GroupSession extends BaseEntity {
     }
 
     public void startOperation() { this.status = GroupSessionStatus.IN_PROGRESS; }
-    public void startMatchAssignment() { this.matchAssignmentStarted = true; }
+    public void startMatchAssignment() { this.matchAssignmentStarted = true; this.autoCourtAssignmentEnabled = true; }
+    public void setAutoCourtAssignmentEnabled(boolean enabled) { this.autoCourtAssignmentEnabled = enabled; }
+    public void resetMatchAssignment() { this.matchAssignmentStarted = false; this.autoCourtAssignmentEnabled = false; }
     public void closeOperation() { this.status = GroupSessionStatus.CLOSED; }
 
     public Set<Integer> disabledCourtNumbers() {
