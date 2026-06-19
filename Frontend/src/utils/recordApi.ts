@@ -1,7 +1,7 @@
 import { apiClient } from './apiClient';
 import { isGalleryPreviewMode, previewNow } from './galleryPreview';
 
-export type RecordMatchType = 'MENS_DOUBLES' | 'WOMENS_DOUBLES' | 'MIXED_DOUBLES' | 'ANY';
+export type RecordMatchType = 'MENS_DOUBLES' | 'WOMENS_DOUBLES' | 'SAME_GENDER_DOUBLES' | 'MIXED_DOUBLES' | 'ANY';
 export type MmrType = 'DOUBLES' | 'MIXED';
 
 export type MatchRecordItem = {

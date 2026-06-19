@@ -13,7 +13,7 @@ import { styles } from './MyRecordPage.styles';
 const ageLabels: Record<string, string> = { TEENS: '10대', TWENTIES: '20대', THIRTIES: '30대', FORTIES: '40대', FIFTIES: '50대', SIXTIES_AND_ABOVE: '60대 이상' };
 const genderLabels: Record<string, string> = { MALE: '남성', FEMALE: '여성' };
 const dayLabels: Record<string, string> = { MONDAY: '월요일', TUESDAY: '화요일', WEDNESDAY: '수요일', THURSDAY: '목요일', FRIDAY: '금요일', SATURDAY: '토요일', SUNDAY: '일요일' };
-const matchTypeLabels: Record<string, string> = { MENS_DOUBLES: '남자 복식', WOMENS_DOUBLES: '여자 복식', MIXED_DOUBLES: '혼합 복식', ANY: '자유 복식' };
+const matchTypeLabels: Record<string, string> = { MENS_DOUBLES: '남자 복식', WOMENS_DOUBLES: '여자 복식', SAME_GENDER_DOUBLES: '동일 성별 복식', MIXED_DOUBLES: '혼합 복식', ANY: '자유 복식' };
 
 function monthValue(date = new Date()) { return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`; }
 function formatMinutes(value: number) { const hours = Math.floor(value / 60); const minutes = value % 60; return hours ? `${hours}시간 ${minutes ? `${minutes}분` : ''}` : `${minutes}분`; }

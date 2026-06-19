@@ -12,7 +12,7 @@ import { connectSessionEntrySocket } from '../utils/sessionEntrySocket';
 
 type ResultValue = 'WIN' | 'LOSS';
 
-const matchTypeLabel: Record<string, string> = { MENS_DOUBLES: '남복', WOMENS_DOUBLES: '여복', MIXED_DOUBLES: '혼복', ANY: '자유 매칭' };
+const matchTypeLabel: Record<string, string> = { MENS_DOUBLES: '남복', WOMENS_DOUBLES: '여복', SAME_GENDER_DOUBLES: '동일 성별 복식', MIXED_DOUBLES: '혼복', ANY: '자유 매칭' };
 
 function demoCurrentMatch(): SessionParticipantCurrentMatch {
   const now = new Date().toISOString();
