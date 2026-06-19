@@ -18,4 +18,15 @@ public interface MatchPlayerRepository extends JpaRepository<MatchPlayer, Long>,
             order by player.match.playedAt desc
             """)
     List<MatchPlayer> findUserMatchRecords(@Param("userId") Long userId);
+
+    @EntityGraph(attributePaths = {"match", "match.session", "match.session.group", "match.players", "match.players.user", "user"})
+    @Query("""
+            select distinct player
+            from MatchPlayer player
+            where player.user.id = :userId
+              and player.match.session.id = :sessionId
+              and player.match.isDeleted = false
+            order by player.match.playedAt asc
+            """)
+    List<MatchPlayer> findUserSessionMatchRecords(@Param("userId") Long userId, @Param("sessionId") Long sessionId);
 }

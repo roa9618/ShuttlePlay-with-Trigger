@@ -56,6 +56,50 @@ public class SessionEntryController {
         return ok(service.status(sessionId, userId(user), readGuestCookie(request, sessionId)));
     }
 
+    @PostMapping("/sessions/{sessionId}/rest")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> rest(
+            @AuthenticationPrincipal CustomUserDetails user, @PathVariable Long sessionId, HttpServletRequest request) {
+        return ok(service.toggleRest(sessionId, userId(user), readGuestCookie(request, sessionId)));
+    }
+
+    @GetMapping("/sessions/{sessionId}/next-match")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> nextMatch(
+            @AuthenticationPrincipal CustomUserDetails user, @PathVariable Long sessionId, HttpServletRequest request) {
+        return ok(service.nextMatch(sessionId, userId(user), readGuestCookie(request, sessionId)));
+    }
+
+    @GetMapping("/sessions/{sessionId}/match-call")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> matchCall(
+            @AuthenticationPrincipal CustomUserDetails user, @PathVariable Long sessionId, HttpServletRequest request) {
+        return ok(service.matchCall(sessionId, userId(user), readGuestCookie(request, sessionId)));
+    }
+
+    @GetMapping("/sessions/{sessionId}/current-match")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> currentMatch(
+            @AuthenticationPrincipal CustomUserDetails user, @PathVariable Long sessionId, HttpServletRequest request) {
+        return ok(service.currentMatch(sessionId, userId(user), readGuestCookie(request, sessionId)));
+    }
+
+    @PostMapping("/sessions/{sessionId}/current-match/start")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> startCurrentMatch(
+            @AuthenticationPrincipal CustomUserDetails user, @PathVariable Long sessionId,
+            @RequestBody(required = false) Map<String, Object> body, HttpServletRequest request) {
+        return ok(service.startCurrentMatch(sessionId, userId(user), readGuestCookie(request, sessionId), body == null ? Map.of() : body));
+    }
+
+    @PostMapping("/sessions/{sessionId}/match-result")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> matchResult(
+            @AuthenticationPrincipal CustomUserDetails user, @PathVariable Long sessionId,
+            @RequestBody Map<String, Object> body, HttpServletRequest request) {
+        return ok(service.submitMatchResult(sessionId, userId(user), readGuestCookie(request, sessionId), body));
+    }
+
+    @GetMapping("/sessions/{sessionId}/my-report")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> myReport(
+            @AuthenticationPrincipal CustomUserDetails user, @PathVariable Long sessionId, HttpServletRequest request) {
+        return ok(service.myReport(sessionId, userId(user), readGuestCookie(request, sessionId)));
+    }
+
     private ResponseEntity<ApiResponse<Map<String, Object>>> result(SessionEntryService.EntryResult result, HttpServletRequest request, Long sessionId) {
         ResponseEntity.BodyBuilder response = ResponseEntity.ok();
         if (result.guestToken() != null && !result.guestToken().isBlank()) {

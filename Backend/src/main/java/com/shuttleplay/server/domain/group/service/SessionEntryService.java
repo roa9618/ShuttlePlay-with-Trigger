@@ -6,6 +6,10 @@ import com.shuttleplay.server.domain.group.repository.*;
 import com.shuttleplay.server.domain.notification.enums.NotificationPreferenceType;
 import com.shuttleplay.server.domain.notification.enums.NotificationType;
 import com.shuttleplay.server.domain.notification.service.NotificationService;
+import com.shuttleplay.server.domain.record.entity.MatchPlayer;
+import com.shuttleplay.server.domain.record.entity.MatchRecord;
+import com.shuttleplay.server.domain.record.repository.MatchPlayerRepository;
+import com.shuttleplay.server.domain.record.repository.MatchRecordRepository;
 import com.shuttleplay.server.domain.user.entity.User;
 import com.shuttleplay.server.domain.user.enums.*;
 import com.shuttleplay.server.domain.user.repository.UserRepository;
@@ -32,6 +36,8 @@ public class SessionEntryService {
     private final GroupEventService events;
     private final NotificationService notifications;
     private final JwtTokenProvider tokenProvider;
+    private final MatchPlayerRepository matchPlayers;
+    private final MatchRecordRepository matchRecords;
 
     public record EntryResult(Map<String, Object> data, String guestToken) {}
     private record Participant(GroupMember member, GroupSessionGuest guest, SessionVoteStatus voteStatus) {}
@@ -125,20 +131,184 @@ public class SessionEntryService {
         Participant participant = identify(session, userId, guestToken, Map.of());
         if (participant == null || participant.voteStatus() == null) throw new BusinessException(ErrorCode.FORBIDDEN);
 
+        Map<String, Object> result = participantStatus(session, participant);
+        return result;
+    }
+
+    @Transactional
+    public Map<String, Object> toggleRest(Long sessionId, Long userId, String guestToken) {
+        GroupSession session = session(sessionId);
+        Participant participant = identify(session, userId, guestToken, Map.of());
+        if (participant == null || participant.voteStatus() == null) throw new BusinessException(ErrorCode.FORBIDDEN);
+        GroupSessionAttendance entry = attendanceEntry(session, participant);
+        entry.toggleRest();
+        events.sessions(session.getGroup().getId(), "PARTICIPANT_STATUS_UPDATED");
+        return participantStatus(session, participant);
+    }
+
+    @Transactional(readOnly = true)
+    public Map<String, Object> nextMatch(Long sessionId, Long userId, String guestToken) {
+        GroupSession session = session(sessionId);
+        Participant participant = identify(session, userId, guestToken, Map.of());
+        if (participant == null || participant.voteStatus() == null) throw new BusinessException(ErrorCode.FORBIDDEN);
+        Map<String, Object> result = participantStatus(session, participant);
+        result.put("alertType", "NEXT_UP");
+        result.put("alertPriority", "NORMAL");
+        result.put("message", "다음 경기 예정이에요");
+        result.put("subMessage", "곧 경기 차례가 올 수 있어요. 준비하고 대기해 주세요.");
+        return result;
+    }
+
+    @Transactional(readOnly = true)
+    public Map<String, Object> matchCall(Long sessionId, Long userId, String guestToken) {
+        GroupSession session = session(sessionId);
+        Participant participant = identify(session, userId, guestToken, Map.of());
+        if (participant == null || participant.voteStatus() == null) throw new BusinessException(ErrorCode.FORBIDDEN);
+        Map<String, Object> result = participantStatus(session, participant);
+        result.put("alertType", "CALLING");
+        result.put("alertPriority", "HIGH");
+        result.put("message", "지금 경기 차례예요");
+        result.put("subMessage", "코트로 이동해 주세요.");
+        return result;
+    }
+
+    @Transactional(readOnly = true)
+    public Map<String, Object> currentMatch(Long sessionId, Long userId, String guestToken) {
+        GroupSession session = session(sessionId);
+        Participant participant = identify(session, userId, guestToken, Map.of());
+        if (participant == null || participant.voteStatus() == null) throw new BusinessException(ErrorCode.FORBIDDEN);
+        Map<String, Object> result = participantStatus(session, participant);
+        result.put("message", "현재 경기중이에요");
+        result.put("subMessage", "경기가 끝나면 결과를 입력해 주세요.");
+        return result;
+    }
+
+    @Transactional
+    public Map<String, Object> startCurrentMatch(Long sessionId, Long userId, String guestToken, Map<String, Object> body) {
+        GroupSession session = session(sessionId);
+        Participant participant = identify(session, userId, guestToken, Map.of());
+        if (participant == null || participant.voteStatus() == null) throw new BusinessException(ErrorCode.FORBIDDEN);
+        Long matchId = optionalLong(body, "matchId");
+        if (matchId != null) {
+            MatchRecord match = matchRecords.findByIdAndSessionId(matchId, sessionId)
+                    .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+            match.getPlayers().forEach(player -> members.findByGroupIdAndUserIdAndStatus(session.getGroup().getId(), player.getUser().getId(), GroupMemberStatus.ACTIVE)
+                    .map(member -> attendanceEntries.findBySessionIdAndMemberId(sessionId, member.getId())
+                            .orElseGet(() -> attendanceEntries.save(GroupSessionAttendance.forMember(session, member))))
+                    .ifPresent(GroupSessionAttendance::startPlaying));
+        } else {
+            GroupSessionAttendance entry = attendanceEntry(session, participant);
+            entry.startPlaying();
+        }
+        events.sessions(session.getGroup().getId(), "PARTICIPANT_STATUS_UPDATED");
+        return currentMatch(sessionId, userId, guestToken);
+    }
+
+    @Transactional
+    public Map<String, Object> submitMatchResult(Long sessionId, Long userId, String guestToken, Map<String, Object> body) {
+        GroupSession session = session(sessionId);
+        Participant participant = identify(session, userId, guestToken, Map.of());
+        if (participant == null || participant.voteStatus() == null) throw new BusinessException(ErrorCode.FORBIDDEN);
+
+        Long matchId = longValue(body, "matchId");
+        MatchRecord match = matchRecords.findByIdAndSessionId(matchId, sessionId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+
+        if (match.getEndedAt() != null) {
+            Map<String, Object> response = currentMatch(sessionId, userId, guestToken);
+            response.put("submitted", false);
+            response.put("resultAlreadySubmitted", true);
+            response.put("submittedMatchId", match.getId());
+            return response;
+        }
+
+        Integer myTeamNumber = null;
+        if (participant.member() != null) {
+            Long participantUserId = participant.member().getUser().getId();
+            myTeamNumber = match.getPlayers().stream()
+                    .filter(player -> player.getUser().getId().equals(participantUserId))
+                    .map(MatchPlayer::getTeamNumber)
+                    .findFirst()
+                    .orElse(null);
+        }
+        if (myTeamNumber == null) throw new BusinessException(ErrorCode.FORBIDDEN);
+
+        String result = text(body, "result");
+        if (!result.equals("WIN") && !result.equals("LOSS")) throw new BusinessException(ErrorCode.INVALID_REQUEST);
+        int myScore = optionalInteger(body, "myScore", result.equals("WIN") ? 1 : 0);
+        int opponentScore = optionalInteger(body, "opponentScore", result.equals("WIN") ? 0 : 1);
+        if (myScore < 0 || opponentScore < 0 || myScore == opponentScore) throw new BusinessException(ErrorCode.INVALID_REQUEST);
+        if ((result.equals("WIN") && myScore <= opponentScore) || (result.equals("LOSS") && myScore >= opponentScore)) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST);
+        }
+
+        if (myTeamNumber == 1) match.confirmResult(myScore, opponentScore);
+        else match.confirmResult(opponentScore, myScore);
+
+        match.getPlayers().forEach(player -> members.findByGroupIdAndUserIdAndStatus(session.getGroup().getId(), player.getUser().getId(), GroupMemberStatus.ACTIVE)
+                .flatMap(member -> attendanceEntries.findBySessionIdAndMemberId(sessionId, member.getId()))
+                .ifPresent(GroupSessionAttendance::arrive));
+        events.sessions(session.getGroup().getId(), "MATCH_RESULT_SUBMITTED");
+
+        Map<String, Object> response = currentMatch(sessionId, userId, guestToken);
+        response.put("submitted", true);
+        response.put("resultAlreadySubmitted", false);
+        response.put("submittedMatchId", match.getId());
+        response.put("submittedResult", result);
+        response.put("submittedScore", Map.of("myScore", myScore, "opponentScore", opponentScore));
+        return response;
+    }
+
+    @Transactional(readOnly = true)
+    public Map<String, Object> myReport(Long sessionId, Long userId, String guestToken) {
+        GroupSession session = session(sessionId);
+        Participant participant = identify(session, userId, guestToken, Map.of());
+        if (participant == null || participant.voteStatus() == null) throw new BusinessException(ErrorCode.FORBIDDEN);
+
         Map<String, Object> result = sessionMap(session);
         putParticipant(session, result, participant);
+        boolean guest = participant.guest() != null;
+        result.put("guestRecordLimited", guest);
+        result.put("canOpenFullRecord", userId != null && isOperator(session, userId));
 
-        GroupSessionAttendance attendance = participant.member() != null
-                ? attendanceEntries.findBySessionIdAndMemberId(session.getId(), participant.member().getId()).orElse(null)
-                : attendanceEntries.findBySessionIdAndGuestId(session.getId(), participant.guest().getId()).orElse(null);
-
-        result.put("expectedArrivalAt", attendance == null ? null : attendance.getExpectedArrivalAt());
-        result.put("lateReason", attendance == null ? null : attendance.getLateReason());
-        result.put("arrivedAt", attendance == null ? null : attendance.getArrivedAt());
-        result.put("gameStatus", "WAITING");
-        result.put("nextMatch", null);
-        result.put("todayStats", Map.of("games", 0, "wins", 0, "losses", 0));
+        List<Map<String, Object>> records = new ArrayList<>();
+        int wins = 0;
+        int pointsFor = 0;
+        int pointsAgainst = 0;
+        if (!guest && participant.member() != null) {
+            Long userIdValue = participant.member().getUser().getId();
+            for (MatchPlayer player : matchPlayers.findUserSessionMatchRecords(userIdValue, sessionId)) {
+                MatchRecord match = player.getMatch();
+                int myScore = player.getTeamNumber() == 1 ? match.getTeamAScore() : match.getTeamBScore();
+                int opponentScore = player.getTeamNumber() == 1 ? match.getTeamBScore() : match.getTeamAScore();
+                boolean win = myScore > opponentScore;
+                if (win) wins++;
+                pointsFor += myScore;
+                pointsAgainst += opponentScore;
+                records.add(matchMap(player, myScore, opponentScore, win));
+            }
+        }
+        int games = records.size();
+        Map<String, Object> summary = new LinkedHashMap<>();
+        summary.put("games", games);
+        summary.put("wins", wins);
+        summary.put("losses", Math.max(0, games - wins));
+        summary.put("winRate", games == 0 ? null : Math.round(wins * 100.0 / games));
+        summary.put("pointsFor", pointsFor);
+        summary.put("pointsAgainst", pointsAgainst);
+        summary.put("doublesMmrDelta", 0);
+        summary.put("mixedMmrDelta", 0);
+        result.put("summary", summary);
+        result.put("matches", records);
         return result;
+    }
+
+    private boolean isOperator(GroupSession session, Long userId) {
+        User user = users.findById(userId).orElse(null);
+        if (user != null && user.getRole() == UserRole.ADMIN) return true;
+        return members.findByGroupIdAndUserIdAndStatus(session.getGroup().getId(), userId, GroupMemberStatus.ACTIVE)
+                .map(member -> member.getRole() != GroupMemberRole.MEMBER)
+                .orElse(false);
     }
 
     private Map<String, Object> preview(GroupSession session, Long userId, String guestToken) {
@@ -274,11 +444,75 @@ public class SessionEntryService {
         return map;
     }
 
+    private Map<String, Object> participantStatus(GroupSession session, Participant participant) {
+        Map<String, Object> result = sessionMap(session);
+        putParticipant(session, result, participant);
+
+        GroupSessionAttendance attendance = participant.member() != null
+                ? attendanceEntries.findBySessionIdAndMemberId(session.getId(), participant.member().getId()).orElse(null)
+                : attendanceEntries.findBySessionIdAndGuestId(session.getId(), participant.guest().getId()).orElse(null);
+
+        SessionPlayStatus playStatus = attendance == null || attendance.getPlayStatus() == null ? SessionPlayStatus.WAITING : attendance.getPlayStatus();
+        Map<String, Object> todayStats = new LinkedHashMap<>();
+        todayStats.put("games", 0);
+        todayStats.put("wins", 0);
+        todayStats.put("losses", 0);
+        todayStats.put("pointsFor", 0);
+        todayStats.put("pointsAgainst", 0);
+        todayStats.put("doublesMmrDelta", 0);
+        todayStats.put("mixedMmrDelta", 0);
+
+        result.put("playStatus", playStatus);
+        result.put("gameStatus", playStatus);
+        result.put("nextMatch", null);
+        result.put("currentMatch", null);
+        result.put("nextPrompt", null);
+        result.put("todayStats", todayStats);
+        result.put("lastUpdatedAt", LocalDateTime.now());
+        result.put("realtimeConnected", true);
+        result.put("guestRecordLimited", participant.guest() != null);
+        return result;
+    }
+
+    private Map<String, Object> matchMap(MatchPlayer player, int myScore, int opponentScore, boolean win) {
+        MatchRecord match = player.getMatch();
+        List<String> opponents = match.getPlayers().stream()
+                .filter(item -> item.getTeamNumber() != player.getTeamNumber())
+                .map(item -> item.getUser().getName())
+                .toList();
+        String partner = match.getPlayers().stream()
+                .filter(item -> item.getTeamNumber() == player.getTeamNumber())
+                .filter(item -> !item.getUser().getId().equals(player.getUser().getId()))
+                .map(item -> item.getUser().getName())
+                .findFirst().orElse(null);
+
+        Map<String, Object> map = new LinkedHashMap<>();
+        map.put("matchId", match.getId());
+        map.put("court", null);
+        map.put("matchType", match.getMatchType().name());
+        map.put("partner", partner);
+        map.put("opponents", opponents);
+        map.put("myScore", myScore);
+        map.put("opponentScore", opponentScore);
+        map.put("result", win ? "WIN" : "LOSS");
+        map.put("status", match.isInvalidated() ? "RESULT_UPDATED" : "RESULT_ENTERED");
+        map.put("mmrType", null);
+        map.put("mmrBefore", null);
+        map.put("mmrAfter", null);
+        map.put("mmrDelta", 0);
+        map.put("completedAt", match.getEndedAt());
+        map.put("resultUpdated", match.isInvalidated());
+        return map;
+    }
+
     private void putParticipant(GroupSession session, Map<String, Object> map, Participant participant) {
         map.put("registered", participant != null && participant.voteStatus() != null);
         if (participant == null) { map.put("participantType", "UNKNOWN"); return; }
         map.put("participantType", participant.member() != null ? "MEMBER" : "GUEST");
         map.put("name", participant.member() != null ? participant.member().getUser().getName() : participant.guest().getName());
+        map.put("grade", participant.member() != null ? participant.member().getUser().getGrade() : participant.guest().getGrade());
+        map.put("gender", participant.member() != null ? participant.member().getUser().getGender() : participant.guest().getGender());
+        map.put("ageGroup", participant.member() != null ? participant.member().getUser().getAgeGroup() : participant.guest().getAgeGroup());
         map.put("voteStatus", participant.voteStatus());
         GroupSessionAttendance attendance = participant.member() != null
                 ? attendanceEntries.findBySessionIdAndMemberId(session.getId(), participant.member().getId()).orElse(null)
@@ -351,5 +585,17 @@ public class SessionEntryService {
     private static String text(Map<String, Object> body, String key) { Object value = body.get(key); if (value == null || String.valueOf(value).isBlank()) throw new BusinessException(ErrorCode.INVALID_REQUEST); return String.valueOf(value).trim(); }
     private static String optionalText(Map<String, Object> body, String key, int max) { String value = String.valueOf(body.getOrDefault(key, "")).trim(); if (value.length() > max) throw new BusinessException(ErrorCode.INVALID_REQUEST); return value.isBlank() ? null : value; }
     private static int integer(Map<String, Object> body, String key) { try { return Integer.parseInt(String.valueOf(body.get(key))); } catch (RuntimeException exception) { throw new BusinessException(ErrorCode.INVALID_REQUEST); } }
+    private static int optionalInteger(Map<String, Object> body, String key, int fallback) {
+        Object value = body.get(key);
+        if (value == null || String.valueOf(value).isBlank()) return fallback;
+        try { return Integer.parseInt(String.valueOf(value)); } catch (RuntimeException exception) { throw new BusinessException(ErrorCode.INVALID_REQUEST); }
+    }
+    private static Long longValue(Map<String, Object> body, String key) { try { return Long.valueOf(String.valueOf(body.get(key))); } catch (RuntimeException exception) { throw new BusinessException(ErrorCode.INVALID_REQUEST); } }
+    private static Long optionalLong(Map<String, Object> body, String key) {
+        if (body == null) return null;
+        Object value = body.get(key);
+        if (value == null || String.valueOf(value).isBlank()) return null;
+        try { return Long.valueOf(String.valueOf(value)); } catch (RuntimeException exception) { throw new BusinessException(ErrorCode.INVALID_REQUEST); }
+    }
     private static <T extends Enum<T>> T enumValue(Class<T> type, String value) { try { return Enum.valueOf(type, value); } catch (RuntimeException exception) { throw new BusinessException(ErrorCode.INVALID_REQUEST); } }
 }
