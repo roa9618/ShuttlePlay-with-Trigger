@@ -8,6 +8,10 @@ import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.repository.query.Param;
+import jakarta.persistence.LockModeType;
 
 public interface GroupSessionRepository extends JpaRepository<GroupSession, Long> {
     boolean existsByEntryCode(String entryCode);
@@ -36,6 +40,11 @@ public interface GroupSessionRepository extends JpaRepository<GroupSession, Long
     @EntityGraph(attributePaths = {"group"})
     Optional<GroupSession> findByIdAndIsDeletedFalse(Long id);
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @EntityGraph(attributePaths = {"group"})
+    @Query("select session from GroupSession session where session.id = :sessionId and session.isDeleted = false")
+    Optional<GroupSession> findLockedByIdAndIsDeletedFalse(@Param("sessionId") Long sessionId);
+
     List<GroupSession> findAllByGroupIdAndStartsAtBetweenAndIsDeletedFalse(Long groupId, LocalDateTime from, LocalDateTime to);
 
     List<GroupSession> findAllByGroupIdAndStartsAtBetweenAndStatusAndIsDeletedFalse(
@@ -43,6 +52,17 @@ public interface GroupSessionRepository extends JpaRepository<GroupSession, Long
 
     List<GroupSession> findAllByGroupIdAndStartsAtBetweenAndStatusInAndIsDeletedFalse(
             Long groupId, LocalDateTime from, LocalDateTime to, Collection<GroupSessionStatus> statuses);
+
+    @Query("""
+            select session from GroupSession session
+            where session.group.id = :groupId
+              and session.startsAt <= :now
+              and (session.endsAt is null or session.endsAt >= :now)
+              and session.status in :statuses
+              and session.isDeleted = false
+            """)
+    List<GroupSession> findCurrentSessions(@Param("groupId") Long groupId, @Param("now") LocalDateTime now,
+                                           @Param("statuses") Collection<GroupSessionStatus> statuses);
 
     List<GroupSession> findTop3ByGroupIdAndStatusAndIsDeletedFalseOrderByStartsAtDesc(Long groupId, GroupSessionStatus status);
 
@@ -55,4 +75,8 @@ public interface GroupSessionRepository extends JpaRepository<GroupSession, Long
 
     @EntityGraph(attributePaths = {"group"})
     List<GroupSession> findAllByStartsAtBetweenAndIsDeletedFalse(LocalDateTime from, LocalDateTime to);
+
+    @EntityGraph(attributePaths = {"group"})
+    List<GroupSession> findAllByStartsAtBetweenAndStatusInAndIsDeletedFalse(
+            LocalDateTime from, LocalDateTime to, Collection<GroupSessionStatus> statuses);
 }

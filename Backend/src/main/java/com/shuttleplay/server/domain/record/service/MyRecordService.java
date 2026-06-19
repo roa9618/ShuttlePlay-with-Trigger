@@ -202,9 +202,10 @@ public class MyRecordService {
         int blowoutWin = (int) matches.stream().filter(item -> scoreGap(item) >= 7 && won(item)).count();
         int blowoutLoss = (int) matches.stream().filter(item -> scoreGap(item) >= 7 && !won(item)).count();
         int fun = (int) matches.stream().filter(item -> item.getMatch().getPlayStyle() == PlayStyle.FUN).count();
+        int competitive = (int) matches.stream().filter(item -> item.getMatch().getPlayStyle() == PlayStyle.COMPETITIVE).count();
         return new MyRecordSummaryResponse.PlayStyleStats(restCount == 0 ? 0 : Math.round((double) totalRest / restCount),
                 rate(consecutive, restCount), rate(close, matches.size()), rate(blowoutWin, matches.size()),
-                rate(blowoutLoss, matches.size()), rate(fun, matches.size()), rate(matches.size() - fun, matches.size()), matches.size() >= 3);
+                rate(blowoutLoss, matches.size()), rate(fun, matches.size()), rate(competitive, matches.size()), matches.size() >= 3);
     }
 
     private List<MyRecordSummaryResponse.GroupStats> groupStats(List<MatchPlayer> matches, List<SessionAttendance> attendance) {

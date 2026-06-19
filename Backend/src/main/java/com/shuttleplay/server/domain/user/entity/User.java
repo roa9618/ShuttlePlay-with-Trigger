@@ -264,4 +264,9 @@ public class User extends BaseEntity {
     public boolean isActive() {
         return this.status == UserStatus.ACTIVE && !isDeleted();
     }
+
+    public void applyDoublesMmr(int delta) { this.doublesMmr = Math.max(0, this.doublesMmr + delta); }
+    public void applyMixedMmr(int delta) { this.mixedMmr = Math.max(0, this.mixedMmr + delta); }
+    public void setDoublesMmr(int value) { this.doublesMmr = Math.max(0, value); }
+    public void setMixedMmr(int value) { this.mixedMmr = Math.max(0, value); }
 }
