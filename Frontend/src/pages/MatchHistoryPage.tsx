@@ -7,7 +7,7 @@ import { recordApi, type MatchRecordItem, type MatchRecordPageResponse, type MyR
 import { sessionPath } from '../utils/publicId';
 import { styles } from './RecordDetailPage.styles';
 
-const typeLabels: Record<string, string> = { MENS_DOUBLES: '남자 복식', WOMENS_DOUBLES: '여자 복식', MIXED_DOUBLES: '혼합 복식', ANY: '자유 복식' };
+const typeLabels: Record<string, string> = { MENS_DOUBLES: '남자 복식', WOMENS_DOUBLES: '여자 복식', SAME_GENDER_DOUBLES: '동일 성별 복식', MIXED_DOUBLES: '혼합 복식', ANY: '자유 복식' };
 const PAGE_SIZE = 10;
 
 export default function MatchHistoryPage() {

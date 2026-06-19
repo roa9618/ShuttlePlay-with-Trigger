@@ -22,7 +22,7 @@ const playStatusLabel: Record<ParticipantPlayStatus, { title: string; descriptio
 
 const genderLabel: Record<string, string> = { MALE: '남성', FEMALE: '여성' };
 const ageLabel: Record<string, string> = { TEENS: '10대', TWENTIES: '20대', THIRTIES: '30대', FORTIES: '40대', FIFTIES: '50대', SIXTIES_PLUS: '60대 이상' };
-const matchTypeLabel: Record<string, string> = { MENS_DOUBLES: '남복', WOMENS_DOUBLES: '여복', MIXED_DOUBLES: '혼복', ANY: '자유 매칭' };
+const matchTypeLabel: Record<string, string> = { MENS_DOUBLES: '남복', WOMENS_DOUBLES: '여복', SAME_GENDER_DOUBLES: '동일 성별 복식', MIXED_DOUBLES: '혼복', ANY: '자유 매칭' };
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' }).format(new Date(value));
