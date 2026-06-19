@@ -52,6 +52,7 @@ public class SessionOperationService {
                              int blockedCount, long maxProjectedLoad, long totalProjectedLoad,
                              double teamMmrGap, int partnerDuplicates, long totalGames) {}
     private record ResultScores(int teamA, int teamB, boolean scoreEntered) {}
+    private enum AffiliationStrategy { MIX_AFFILIATIONS, SAME_AFFILIATION, IGNORE }
 
     @Transactional
     public Map<String, Object> dashboard(Long userId, Long sessionId) {
@@ -196,6 +197,7 @@ public class SessionOperationService {
         session.startOperation();
         MatchType type = enumValue(MatchType.class, body.get("matchType"), MatchType.ANY);
         PlayStyle style = enumValue(PlayStyle.class, body.get("playStyle"), PlayStyle.FUN);
+        AffiliationStrategy affiliationStrategy = affiliationStrategy(session, body);
         int requestedValue = intValue(body.get("courtCount"), intValue(body.get("count"), session.getCourtCount()));
         int requested = Math.max(1, Math.min(requestedValue, session.getCourtCount()));
         Set<Long> excluded = longSet(body.containsKey("excludedParticipantIds") ? body.get("excludedParticipantIds") : body.get("excludedAttendanceIds"));
@@ -231,8 +233,8 @@ public class SessionOperationService {
         Map<String, Integer> partnerHistory = pairHistory(sessionId, true);
         Map<String, Integer> opponentHistory = pairHistory(sessionId, false);
         Map<Long, Long> scheduledCounts = scheduledCounts(sessionId);
-        List<Candidate> candidates = candidates(eligible, type, style, relationList, partnerHistory, opponentHistory, gameCounts, scheduledCounts, forced, false);
-        if (candidates.isEmpty()) candidates = candidates(eligible, type, style, relationList, partnerHistory, opponentHistory, gameCounts, scheduledCounts, forced, true);
+        List<Candidate> candidates = candidates(eligible, type, style, relationList, partnerHistory, opponentHistory, gameCounts, scheduledCounts, forced, affiliationStrategy, false);
+        if (candidates.isEmpty()) candidates = candidates(eligible, type, style, relationList, partnerHistory, opponentHistory, gameCounts, scheduledCounts, forced, affiliationStrategy, true);
         candidates.sort(Comparator.comparingInt(Candidate::forcedCount).reversed()
                 .thenComparingLong(Candidate::maxProjectedLoad)
                 .thenComparingLong(Candidate::totalProjectedLoad)
@@ -251,6 +253,7 @@ public class SessionOperationService {
             selected.add(candidate); selectedIds.addAll(ids);
             if (selected.size() == requested) break;
         }
+        if (type == MatchType.SAME_GENDER_DOUBLES) selected = interleaveSameGender(selected);
         if (selected.isEmpty()) return Map.of("generatedCount", 0, "queues", List.of(), "lowQuality", false,
                 "message", "현재 조건에서 만들 수 있는 후보가 없어요. 참가자 상태를 확인해 주세요.");
 
@@ -272,6 +275,111 @@ public class SessionOperationService {
         result.put("lowQuality", lowQuality);
         result.put("message", lowQuality ? "가능한 최선의 후보를 만들었지만 일부 조합의 균형을 확인해 주세요." : "경기 후보를 만들었어요.");
         return result;
+    }
+
+    @Transactional
+    public Map<String, Object> generatePlan(Long userId, Long sessionId, Map<String, Object> body) {
+        GroupSession session = operatorOperationSession(userId, sessionId);
+        session.startOperation();
+        MatchType type = enumValue(MatchType.class, body.get("matchType"), MatchType.ANY);
+        PlayStyle style = enumValue(PlayStyle.class, body.get("playStyle"), PlayStyle.FUN);
+        AffiliationStrategy affiliationStrategy = affiliationStrategy(session, body);
+        int targetGames = Math.max(1, Math.min(20, intValue(body.get("targetGamesPerParticipant"), 1)));
+        Set<Long> excluded = longSet(body.containsKey("excludedParticipantIds") ? body.get("excludedParticipantIds") : body.get("excludedAttendanceIds"));
+        Set<Long> forced = longSet(body.containsKey("forcedParticipantIds") ? body.get("forcedParticipantIds") : body.get("forcedAttendanceIds"));
+
+        List<GroupSessionAttendance> eligible = attendances.findAllBySessionIdOrderByIdAsc(sessionId).stream()
+                .filter(item -> item.getStatus() == SessionAttendanceStatus.ARRIVED)
+                .filter(item -> item.getPlayStatus() != SessionPlayStatus.RESTING
+                        && item.getPlayStatus() != SessionPlayStatus.LEFT && item.getPlayStatus() != SessionPlayStatus.ABSENT)
+                .filter(item -> !excluded.contains(item.getId()))
+                .toList();
+        if (eligible.size() < 4) return planResult(List.of(), eligible, Map.of(), Map.of(), targetGames,
+                "경기 가능한 참가자가 4명 이상이어야 전체 대진표를 만들 수 있어요.");
+
+        Map<Long, Long> gameCounts = completedGameCounts(sessionId);
+        Map<Long, Long> plannedCounts = new HashMap<>(scheduledCounts(sessionId));
+        Map<Long, Long> baselineCounts = mergeCounts(gameCounts, plannedCounts);
+        Map<Long, Long> requiredCounts = eligible.stream().collect(Collectors.toMap(
+                GroupSessionAttendance::getId,
+                item -> baselineCounts.getOrDefault(item.getId(), 0L) + targetGames));
+        Map<String, Integer> partnerHistory = new HashMap<>(pairHistory(sessionId, true));
+        Map<String, Integer> opponentHistory = new HashMap<>(pairHistory(sessionId, false));
+        List<SessionParticipantRelation> relationList = relations.findAllBySessionIdAndIsDeletedFalseOrderByIdAsc(sessionId);
+        List<Candidate> selected = new ArrayList<>();
+        int safetyLimit = Math.max(1, eligible.size() * targetGames);
+        Gender nextSameGender = Gender.MALE;
+        int batchCapacity = Math.max(1, session.getCourtCount() - session.disabledCourtNumbers().size());
+        List<SessionMatchQueue> waitingQueues = activeQueues(sessionId).stream()
+                .filter(queue -> queue.getStatus() == SessionQueueStatus.WAITING).toList();
+        int existingBatchSize = waitingQueues.size() % batchCapacity;
+        Set<Long> batchAttendanceIds = waitingQueues.stream()
+                .skip(waitingQueues.size() - existingBatchSize)
+                .flatMap(queue -> queue.getPlayers().stream())
+                .map(player -> player.getAttendance().getId())
+                .collect(Collectors.toSet());
+        int batchMatchCount = existingBatchSize;
+
+        while (selected.size() < safetyLimit && eligible.stream().anyMatch(item -> projectedGames(item, gameCounts, plannedCounts) < requiredCounts.get(item.getId()))) {
+            List<Candidate> available = candidates(eligible, type, style, relationList, partnerHistory, opponentHistory,
+                    gameCounts, plannedCounts, forced, affiliationStrategy, true);
+            List<Candidate> nonOverlapping = available.stream()
+                    .filter(candidate -> candidatePlayers(candidate).stream().noneMatch(item -> batchAttendanceIds.contains(item.getId())))
+                    .toList();
+            if (nextPlanCandidate(nonOverlapping, gameCounts, plannedCounts, requiredCounts).isPresent()) available = nonOverlapping;
+            else if (batchMatchCount > 0) {
+                batchAttendanceIds.clear();
+                batchMatchCount = 0;
+            }
+            if (type == MatchType.SAME_GENDER_DOUBLES) {
+                Gender preferredGender = nextSameGender;
+                List<Candidate> preferred = available.stream()
+                        .filter(candidate -> gender(candidate.teamA().get(0)) == preferredGender)
+                        .toList();
+                if (nextPlanCandidate(preferred, gameCounts, plannedCounts, requiredCounts).isPresent()) available = preferred;
+            }
+            Optional<Candidate> next = nextPlanCandidate(available, gameCounts, plannedCounts, requiredCounts);
+            if (next.isEmpty() && type != MatchType.ANY) {
+                available = candidates(eligible, MatchType.ANY, style, relationList, partnerHistory, opponentHistory,
+                        gameCounts, plannedCounts, forced, affiliationStrategy, true);
+                next = nextPlanCandidate(available, gameCounts, plannedCounts, requiredCounts);
+            }
+            if (next.isEmpty()) break;
+            Candidate candidate = next.get();
+            selected.add(candidate);
+            if (type == MatchType.SAME_GENDER_DOUBLES) {
+                Gender selectedGender = gender(candidate.teamA().get(0));
+                nextSameGender = selectedGender == Gender.MALE ? Gender.FEMALE : Gender.MALE;
+            }
+            candidatePlayers(candidate).forEach(item -> plannedCounts.merge(item.getId(), 1L, Long::sum));
+            candidatePlayers(candidate).forEach(item -> batchAttendanceIds.add(item.getId()));
+            batchMatchCount++;
+            if (batchMatchCount >= batchCapacity) {
+                batchAttendanceIds.clear();
+                batchMatchCount = 0;
+            }
+            addPairHistory(candidate.teamA(), candidate.teamB(), partnerHistory, opponentHistory);
+        }
+
+        Map<Long, Long> finalCounts = mergeCounts(gameCounts, plannedCounts);
+        boolean incomplete = eligible.stream().anyMatch(item -> finalCounts.getOrDefault(item.getId(), 0L) < requiredCounts.get(item.getId()));
+        if (incomplete) throw new BusinessException(ErrorCode.INVALID_REQUEST);
+
+        int nextOrder = activeQueues(sessionId).stream().mapToInt(SessionMatchQueue::getQueueOrder).max().orElse(0) + 1;
+        List<SessionMatchQueue> created = new ArrayList<>();
+        for (Candidate candidate : selected) {
+            MatchType queueType = resolvedPlanMatchType(candidate, type);
+            List<String> explanations = new ArrayList<>(candidate.explanations());
+            if (queueType != type) explanations.add("모든 참가자의 보장 경기 수를 채우기 위해 경기 유형을 유연하게 적용했어요.");
+            SessionMatchQueue queue = SessionMatchQueue.create(session, nextOrder++, queueType, style, candidate.score(), explanations);
+            for (int index = 0; index < 2; index++) queue.addPlayer(candidate.teamA().get(index), 1, index + 1);
+            for (int index = 0; index < 2; index++) queue.addPlayer(candidate.teamB().get(index), 2, index + 1);
+            created.add(queues.save(queue));
+        }
+        refreshNextWindow(session);
+        publish(session, "MATCH_QUEUE_UPDATED");
+        return planResult(created, eligible, baselineCounts, finalCounts, targetGames,
+                "경기 가능한 참가자 모두에게 " + targetGames + "경기 이상을 추가한 전체 대진표를 만들었어요.");
     }
 
     @Transactional(readOnly = true)
@@ -332,6 +440,7 @@ public class SessionOperationService {
     @Transactional
     public Map<String, Object> assignEmptyCourts(Long userId, Long sessionId) {
         GroupSession session = operatorOperationSession(userId, sessionId);
+        session.startMatchAssignment();
         List<MatchRecord> assigned = assignToEmptyCourts(session, Set.of());
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("assignedCount", assigned.size());
@@ -537,8 +646,8 @@ public class SessionOperationService {
         GroupSession session = operatorOperationSession(userId, sessionId);
         Map<String, Object> result = sessionMap(session);
         result.put("currentMatches", currentMatches(sessionId).stream().map(this::publicMatchMap).toList());
-        result.put("nextMatches", nextWindowQueues(session).stream().filter(queue -> queue.getStatus() == SessionQueueStatus.WAITING)
-                .map(this::publicQueueMap).toList());
+        result.put("nextMatches", activeQueues(sessionId).stream().filter(queue -> queue.getStatus() == SessionQueueStatus.WAITING)
+                .limit(Math.max(1, session.getCourtCount())).map(this::publicQueueMap).toList());
         result.put("lastUpdatedAt", LocalDateTime.now());
         return result;
     }
@@ -787,11 +896,13 @@ public class SessionOperationService {
     }
 
     private void autoCallNext(GroupSession session, Integer court, Set<Long> excludedAttendanceIds) {
+        if (!session.isMatchAssignmentStarted()) return;
         List<MatchRecord> assigned = assignToEmptyCourts(session, excludedAttendanceIds);
         if (assigned.isEmpty() && currentMatches(session.getId()).isEmpty()) assignToEmptyCourts(session, Set.of());
     }
 
     private void autoAssignEmptyCourts(GroupSession session) {
+        if (!session.isMatchAssignmentStarted()) return;
         assignToEmptyCourts(session, Set.of());
     }
 
@@ -852,7 +963,8 @@ public class SessionOperationService {
     private List<Candidate> candidates(List<GroupSessionAttendance> eligible, MatchType type, PlayStyle style,
                                        List<SessionParticipantRelation> relationList, Map<String, Integer> partnerHistory,
                                        Map<String, Integer> opponentHistory, Map<Long, Long> gameCounts,
-                                       Map<Long, Long> scheduledCounts, Set<Long> forced, boolean allowConsecutivePlay) {
+                                       Map<Long, Long> scheduledCounts, Set<Long> forced,
+                                       AffiliationStrategy affiliationStrategy, boolean allowConsecutivePlay) {
         List<Candidate> result = new ArrayList<>();
         for (int a = 0; a < eligible.size() - 3; a++) for (int b = a + 1; b < eligible.size() - 2; b++)
             for (int c = b + 1; c < eligible.size() - 1; c++) for (int d = c + 1; d < eligible.size(); d++) {
@@ -864,11 +976,141 @@ public class SessionOperationService {
                     List<GroupSessionAttendance> teamA = List.of(group.get(split[0]), group.get(split[1]));
                     List<GroupSessionAttendance> teamB = List.of(group.get(split[2]), group.get(split[3]));
                     if (!matchesPreferredType(teamA, teamB, type)) continue;
-                    Candidate candidate = score(teamA, teamB, type, style, relationList, partnerHistory, opponentHistory, gameCounts, scheduledCounts, forced);
+                    Candidate candidate = applyAffiliationStrategy(
+                            score(teamA, teamB, type, style, relationList, partnerHistory, opponentHistory, gameCounts, scheduledCounts, forced),
+                            affiliationStrategy);
                     if (best == null || candidate.score() > best.score()) best = candidate;
                 }
                 if (best != null) result.add(best);
             }
+        return result;
+    }
+
+    private Candidate applyAffiliationStrategy(Candidate candidate, AffiliationStrategy strategy) {
+        if (strategy == AffiliationStrategy.IGNORE) return candidate;
+        int matchedPairs = 0;
+        int differentPairs = 0;
+        for (List<GroupSessionAttendance> team : List.of(candidate.teamA(), candidate.teamB())) {
+            String first = affiliation(team.get(0));
+            String second = affiliation(team.get(1));
+            if (first == null || second == null) continue;
+            matchedPairs++;
+            if (!first.equalsIgnoreCase(second)) differentPairs++;
+        }
+        if (matchedPairs == 0) return candidate;
+        int preferred = strategy == AffiliationStrategy.MIX_AFFILIATIONS ? differentPairs : matchedPairs - differentPairs;
+        int unpreferred = matchedPairs - preferred;
+        double adjustedScore = candidate.score() + preferred * 35 - unpreferred * 35;
+        List<String> explanations = new ArrayList<>(candidate.explanations());
+        if (preferred > 0) explanations.add(strategy == AffiliationStrategy.MIX_AFFILIATIONS
+                ? "서로 다른 소속이 파트너가 되도록 구성했어요."
+                : "같은 소속이 파트너가 되도록 구성했어요.");
+        return new Candidate(candidate.teamA(), candidate.teamB(), Math.max(0, Math.round(adjustedScore * 10.0) / 10.0),
+                explanations, candidate.forcedCount(), candidate.longRestCount(), candidate.blockedCount(),
+                candidate.maxProjectedLoad(), candidate.totalProjectedLoad(), candidate.teamMmrGap(),
+                candidate.partnerDuplicates(), candidate.totalGames());
+    }
+
+    private AffiliationStrategy affiliationStrategy(GroupSession session, Map<String, Object> body) {
+        if (session.getSessionType() != GroupSessionType.EXCHANGE) return AffiliationStrategy.IGNORE;
+        return enumValue(AffiliationStrategy.class, body.get("affiliationStrategy"), AffiliationStrategy.IGNORE);
+    }
+
+    private String affiliation(GroupSessionAttendance attendance) {
+        return attendance.getGuest() == null ? null : attendance.getGuest().getAffiliation();
+    }
+
+    private long projectedGames(GroupSessionAttendance attendance, Map<Long, Long> gameCounts, Map<Long, Long> plannedCounts) {
+        return gameCounts.getOrDefault(attendance.getId(), 0L) + plannedCounts.getOrDefault(attendance.getId(), 0L);
+    }
+
+    private Optional<Candidate> nextPlanCandidate(List<Candidate> candidates, Map<Long, Long> gameCounts,
+                                                   Map<Long, Long> plannedCounts, Map<Long, Long> requiredCounts) {
+        return candidates.stream()
+                .filter(candidate -> candidatePlayers(candidate).stream()
+                        .anyMatch(item -> projectedGames(item, gameCounts, plannedCounts) < requiredCounts.get(item.getId())))
+                .min(Comparator.comparingInt((Candidate candidate) -> deficitCount(candidate, gameCounts, plannedCounts, requiredCounts)).reversed()
+                        .thenComparing(Comparator.comparingLong((Candidate candidate) -> deficitSum(candidate, gameCounts, plannedCounts, requiredCounts)).reversed())
+                        .thenComparing(Comparator.comparingDouble((Candidate candidate) -> planQuality(candidate, gameCounts, plannedCounts, requiredCounts)).reversed())
+                        .thenComparingInt(Candidate::partnerDuplicates));
+    }
+
+    private double planQuality(Candidate candidate, Map<Long, Long> gameCounts,
+                               Map<Long, Long> plannedCounts, Map<Long, Long> requiredCounts) {
+        long fillerExcess = candidatePlayers(candidate).stream()
+                .mapToLong(item -> Math.max(0, projectedGames(item, gameCounts, plannedCounts) - requiredCounts.get(item.getId()) + 1))
+                .sum();
+        long projectedLoad = candidatePlayers(candidate).stream()
+                .mapToLong(item -> projectedGames(item, gameCounts, plannedCounts))
+                .sum();
+        return candidate.score()
+                - fillerExcess * 25
+                - projectedLoad * 3
+                - candidate.teamMmrGap() * 0.08
+                - candidate.partnerDuplicates() * 40;
+    }
+
+    private int deficitCount(Candidate candidate, Map<Long, Long> gameCounts, Map<Long, Long> plannedCounts, Map<Long, Long> requiredCounts) {
+        return (int) candidatePlayers(candidate).stream().filter(item -> projectedGames(item, gameCounts, plannedCounts) < requiredCounts.get(item.getId())).count();
+    }
+
+    private long deficitSum(Candidate candidate, Map<Long, Long> gameCounts, Map<Long, Long> plannedCounts, Map<Long, Long> requiredCounts) {
+        return candidatePlayers(candidate).stream().mapToLong(item -> Math.max(0, requiredCounts.get(item.getId()) - projectedGames(item, gameCounts, plannedCounts))).sum();
+    }
+
+    private MatchType resolvedPlanMatchType(Candidate candidate, MatchType requested) {
+        if (matchesPreferredType(candidate.teamA(), candidate.teamB(), requested)) return requested;
+        long men = candidatePlayers(candidate).stream().filter(item -> gender(item) == Gender.MALE).count();
+        if (men == 4) return MatchType.MENS_DOUBLES;
+        if (men == 0) return MatchType.WOMENS_DOUBLES;
+        if (men == 2 && isMixedTeams(candidate.teamA(), candidate.teamB())) return MatchType.MIXED_DOUBLES;
+        return MatchType.ANY;
+    }
+
+    private List<Candidate> interleaveSameGender(List<Candidate> candidates) {
+        Deque<Candidate> men = candidates.stream().filter(candidate -> gender(candidate.teamA().get(0)) == Gender.MALE)
+                .collect(Collectors.toCollection(ArrayDeque::new));
+        Deque<Candidate> women = candidates.stream().filter(candidate -> gender(candidate.teamA().get(0)) == Gender.FEMALE)
+                .collect(Collectors.toCollection(ArrayDeque::new));
+        List<Candidate> result = new ArrayList<>();
+        boolean takeMen = true;
+        while (!men.isEmpty() || !women.isEmpty()) {
+            Deque<Candidate> preferred = takeMen ? men : women;
+            Deque<Candidate> fallback = takeMen ? women : men;
+            if (!preferred.isEmpty()) result.add(preferred.removeFirst());
+            else if (!fallback.isEmpty()) result.add(fallback.removeFirst());
+            takeMen = !takeMen;
+        }
+        return result;
+    }
+
+    private void addPairHistory(List<GroupSessionAttendance> teamA, List<GroupSessionAttendance> teamB,
+                                Map<String, Integer> partners, Map<String, Integer> opponents) {
+        partners.merge(pairKey(teamA.get(0).getId(), teamA.get(1).getId()), 1, Integer::sum);
+        partners.merge(pairKey(teamB.get(0).getId(), teamB.get(1).getId()), 1, Integer::sum);
+        for (GroupSessionAttendance left : teamA) for (GroupSessionAttendance right : teamB)
+            opponents.merge(pairKey(left.getId(), right.getId()), 1, Integer::sum);
+    }
+
+    private Map<Long, Long> mergeCounts(Map<Long, Long> completed, Map<Long, Long> planned) {
+        Map<Long, Long> result = new HashMap<>(completed);
+        planned.forEach((id, count) -> result.merge(id, count, Long::sum));
+        return result;
+    }
+
+    private Map<String, Object> planResult(List<SessionMatchQueue> created, List<GroupSessionAttendance> eligible,
+                                           Map<Long, Long> baselineCounts, Map<Long, Long> projectedCounts,
+                                           int targetGames, String message) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("generatedCount", created.size());
+        result.put("queues", created.stream().map(this::queueMap).toList());
+        result.put("targetGamesPerParticipant", targetGames);
+        result.put("participantPlans", eligible.stream().map(item -> Map.of(
+                "attendanceId", item.getId(), "name", name(item),
+                "projectedGames", projectedCounts.getOrDefault(item.getId(), 0L),
+                "addedGames", projectedCounts.getOrDefault(item.getId(), 0L) - baselineCounts.getOrDefault(item.getId(), 0L),
+                "targetReached", projectedCounts.getOrDefault(item.getId(), 0L) - baselineCounts.getOrDefault(item.getId(), 0L) >= targetGames)).toList());
+        result.put("message", message);
         return result;
     }
 
@@ -938,8 +1180,8 @@ public class SessionOperationService {
     }
 
     private int teamInternalPenalty(List<GroupSessionAttendance> team, MatchType type) { return matchingPolicy.teamInternalPenalty(Math.abs(mmr(team.get(0), type) - mmr(team.get(1), type))); }
-    private int typeMismatchPenalty(List<GroupSessionAttendance> all, MatchType type, double teamGap) { long men = all.stream().filter(item -> gender(item) == Gender.MALE).count(); if (type == MatchType.ANY) return 0; boolean close = teamGap <= 100; if ((type == MatchType.MIXED_DOUBLES && men == 2) || (type == MatchType.MENS_DOUBLES && men >= 3) || (type == MatchType.WOMENS_DOUBLES && men <= 1)) return close ? 5 : 20; return 20; }
-    private boolean matchesPreferredType(List<GroupSessionAttendance> teamA, List<GroupSessionAttendance> teamB, MatchType type) { if (type == MatchType.ANY) return !isGenderSplitMismatch(teamA, teamB); long men = candidatePlayers(teamA, teamB).stream().filter(item -> gender(item) == Gender.MALE).count(); if (type == MatchType.MENS_DOUBLES) return men == 4; if (type == MatchType.WOMENS_DOUBLES) return men == 0; return men == 2 && teamA.stream().filter(item -> gender(item) == Gender.MALE).count() == 1 && teamB.stream().filter(item -> gender(item) == Gender.MALE).count() == 1; }
+    private int typeMismatchPenalty(List<GroupSessionAttendance> all, MatchType type, double teamGap) { long men = all.stream().filter(item -> gender(item) == Gender.MALE).count(); if (type == MatchType.ANY) return 0; boolean close = teamGap <= 100; if ((type == MatchType.MIXED_DOUBLES && men == 2) || (type == MatchType.SAME_GENDER_DOUBLES && (men == 0 || men == 4)) || (type == MatchType.MENS_DOUBLES && men >= 3) || (type == MatchType.WOMENS_DOUBLES && men <= 1)) return close ? 5 : 20; return 20; }
+    private boolean matchesPreferredType(List<GroupSessionAttendance> teamA, List<GroupSessionAttendance> teamB, MatchType type) { if (type == MatchType.ANY) return !isGenderSplitMismatch(teamA, teamB); long men = candidatePlayers(teamA, teamB).stream().filter(item -> gender(item) == Gender.MALE).count(); if (type == MatchType.SAME_GENDER_DOUBLES) return men == 0 || men == 4; if (type == MatchType.MENS_DOUBLES) return men == 4; if (type == MatchType.WOMENS_DOUBLES) return men == 0; return men == 2 && teamA.stream().filter(item -> gender(item) == Gender.MALE).count() == 1 && teamB.stream().filter(item -> gender(item) == Gender.MALE).count() == 1; }
     private void validateMatchType(MatchType type, List<GroupSessionAttendance> teamA, List<GroupSessionAttendance> teamB) { if (!matchesPreferredType(teamA, teamB, type)) throw new BusinessException(ErrorCode.INVALID_REQUEST); }
     private boolean unavailableForCall(GroupSessionAttendance attendance) { return attendance.getStatus() != SessionAttendanceStatus.ARRIVED || attendance.getPlayStatus() == SessionPlayStatus.PLAYING || attendance.getPlayStatus() == SessionPlayStatus.CALLING || attendance.getPlayStatus() == SessionPlayStatus.RESTING || attendance.getPlayStatus() == SessionPlayStatus.LEFT || attendance.getPlayStatus() == SessionPlayStatus.ABSENT; }
     private boolean isMixedTeams(List<GroupSessionAttendance> teamA, List<GroupSessionAttendance> teamB) { return teamA.stream().filter(item -> gender(item) == Gender.MALE).count() == 1 && teamB.stream().filter(item -> gender(item) == Gender.MALE).count() == 1; }
@@ -1089,7 +1331,7 @@ public class SessionOperationService {
         Map<String, Object> map = new LinkedHashMap<>();
         map.put("sessionId", session.getId()); map.put("groupId", session.getGroup().getId()); map.put("groupName", session.getGroup().getName());
         map.put("title", session.getTitle()); map.put("startsAt", session.getStartsAt()); map.put("endsAt", session.getEndsAt());
-        map.put("place", session.getPlace()); map.put("courtCount", session.getCourtCount()); map.put("disabledCourtNumbers", session.disabledCourtNumbers()); map.put("status", session.getStatus()); map.put("entryCode", session.getEntryCode());
+        map.put("place", session.getPlace()); map.put("sessionType", session.getSessionType()); map.put("courtCount", session.getCourtCount()); map.put("disabledCourtNumbers", session.disabledCourtNumbers()); map.put("status", session.getStatus()); map.put("entryCode", session.getEntryCode()); map.put("matchAssignmentStarted", session.isMatchAssignmentStarted());
         return map;
     }
 
@@ -1099,6 +1341,7 @@ public class SessionOperationService {
         map.put("gender", attendance.getMember() != null ? attendance.getMember().getUser().getGender() : attendance.getGuest().getGender());
         map.put("ageGroup", attendance.getMember() != null ? attendance.getMember().getUser().getAgeGroup() : attendance.getGuest().getAgeGroup());
         map.put("grade", attendance.getMember() != null ? attendance.getMember().getUser().getGrade() : attendance.getGuest().getGrade());
+        map.put("affiliation", attendance.getGuest() == null ? null : attendance.getGuest().getAffiliation());
         map.put("doublesMmr", attendance.currentDoublesMmr(fallbackMmr(attendance, MmrType.DOUBLES)));
         map.put("mixedMmr", attendance.currentMixedMmr(fallbackMmr(attendance, MmrType.MIXED)));
         map.put("attendanceStatus", attendance.getStatus()); map.put("playStatus", attendance.getPlayStatus()); map.put("games", games);

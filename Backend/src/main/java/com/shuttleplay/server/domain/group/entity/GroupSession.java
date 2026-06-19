@@ -82,6 +82,9 @@ public class GroupSession extends BaseEntity {
     @Column(name = "entry_code", unique = true, length = 8)
     private String entryCode;
 
+    @Column(name = "match_assignment_started", nullable = false)
+    private boolean matchAssignmentStarted;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private GroupSessionStatus status;
@@ -112,6 +115,7 @@ public class GroupSession extends BaseEntity {
         session.guestLinkAllowed = guestLinkAllowed;
         session.guestAllowed = guestAllowed;
         session.attendanceCount = 0;
+        session.matchAssignmentStarted = false;
         session.status = votingAllowed ? GroupSessionStatus.ATTENDANCE_OPEN : GroupSessionStatus.CREATED;
         return session;
     }
@@ -129,6 +133,7 @@ public class GroupSession extends BaseEntity {
     }
 
     public void startOperation() { this.status = GroupSessionStatus.IN_PROGRESS; }
+    public void startMatchAssignment() { this.matchAssignmentStarted = true; }
     public void closeOperation() { this.status = GroupSessionStatus.CLOSED; }
 
     public Set<Integer> disabledCourtNumbers() {
