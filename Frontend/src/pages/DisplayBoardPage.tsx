@@ -26,30 +26,30 @@ export default function DisplayBoardPage() {
 
   if (!data) return <div className="flex min-h-screen items-center justify-center bg-[#120b1f] text-2xl font-bold text-white">경기판을 불러오고 있어요.</div>;
 
-  return <div className="min-h-screen min-w-[1180px] bg-[#120b1f] px-10 py-8 text-white">
-    <header className="grid grid-cols-[1fr_auto_1fr] items-center border-b border-white/15 pb-6">
+  return <div className="flex h-screen min-w-[1180px] flex-col overflow-hidden bg-[#120b1f] px-12 py-10 text-white">
+    <header className="grid shrink-0 grid-cols-[1fr_auto_1fr] items-center border-b border-white/15 pb-7">
       <Logo size="md" />
       <div className="text-center"><h1 className="text-4xl font-black">{data.groupName}</h1><p className="mt-2 text-xl text-white/70">{data.title}</p></div>
       <div className="justify-self-end text-right"><p className="flex items-center justify-end gap-2 text-xl font-bold"><Clock3 className="h-5 w-5" />{now.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</p><p className={`mt-2 flex items-center gap-2 font-bold ${connected ? 'text-emerald-400' : 'text-red-400'}`}><Wifi className="h-5 w-5" />{connected ? '실시간 연결 중' : '연결이 불안정해요'}</p></div>
     </header>
-    <main className="mt-8">
+    <main className="flex min-h-0 flex-1 flex-col justify-center gap-10">
       <h2 className="text-3xl font-black">현재 경기</h2>
-      <div className={`mt-5 grid gap-5 ${data.courtCount <= 3 ? 'grid-cols-3' : 'grid-cols-4'}`}>
+      <div className={`grid gap-8 ${data.courtCount <= 3 ? 'grid-cols-3' : 'grid-cols-4'}`}>
         {Array.from({ length: data.courtCount }, (_, index) => {
           const court = index + 1;
           const disabled = data.disabledCourtNumbers.includes(court);
           const match = data.currentMatches.find(item => item.courtNumber === court);
-          return <section key={court} className={`min-h-64 rounded-3xl border-2 p-6 ${disabled ? 'border-red-400/50 bg-red-400/5' : match?.status === 'CALLING' ? 'border-amber-400 bg-amber-400/10' : 'border-[#a855f7] bg-white/5'}`}>
+          return <section key={court} className={`min-h-[260px] rounded-3xl border-2 p-7 ${disabled ? 'border-red-400/50 bg-red-400/5' : match?.status === 'CALLING' ? 'border-amber-400 bg-amber-400/10' : 'border-[#a855f7] bg-white/5'}`}>
             <div className="flex items-center justify-between"><h3 className="text-3xl font-black">{court}코트</h3>{disabled ? <span className="rounded-full bg-red-400 px-4 py-2 font-black text-black">사용 중지</span> : match && <span className={`rounded-full px-4 py-2 font-black ${match.status === 'CALLING' ? 'bg-amber-400 text-black' : 'bg-[#a855f7]'}`}>{match.status === 'CALLING' ? '지금 입장' : '경기 중'}</span>}</div>
             {disabled ? <div className="mt-16 text-center text-red-300"><Ban className="mx-auto h-10 w-10" /><p className="mt-3 text-2xl font-bold">사용하지 않는 코트</p></div> : match ? <div className="mt-7 text-center"><p className="text-2xl font-black">{match.teams[0]?.players.map(player => player.name).join(' · ')}</p><p className="my-4 text-lg font-black text-white/50">VS</p><p className="text-2xl font-black">{match.teams[1]?.players.map(player => player.name).join(' · ')}</p></div> : <p className="mt-20 text-center text-2xl font-bold text-white/40">비어 있음</p>}
           </section>;
         })}
       </div>
-      <section className="mt-8 grid grid-cols-[minmax(0,1fr)_190px] items-center gap-6 rounded-3xl border border-white/15 bg-white/5 p-6">
-        <div><h2 className="text-3xl font-black text-amber-300">다음 경기</h2><div className="mt-5 grid grid-cols-3 gap-4">{data.nextMatches.slice(0, data.courtCount).map(queue => <div key={queue.queueId} className="rounded-2xl bg-white/10 p-5"><p className="text-lg font-black text-amber-300">다음 {queue.queueOrder}번째</p><p className="mt-3 text-xl font-black">{queue.teams[0]?.players.map(player => player.name).join(' · ')}</p><p className="my-2 font-bold text-white/40">VS</p><p className="text-xl font-black">{queue.teams[1]?.players.map(player => player.name).join(' · ')}</p></div>)}</div></div>
-        <div className="flex w-[190px] flex-col items-center justify-center self-center justify-self-center text-center">{qrUrl && <img src={qrUrl} alt="일정 참여 QR 코드" className="block h-40 w-40 rounded-xl bg-white p-1" />}<p className="mt-3 w-40 text-center text-xl font-black tracking-[0.08em]">{data.entryCode ?? '-'}</p></div>
+      <section className="grid min-h-[230px] grid-cols-[minmax(0,1fr)_210px] items-center gap-10 rounded-3xl border border-white/15 bg-white/5 p-8">
+        <div><h2 className="text-3xl font-black text-amber-300">다음 경기</h2><div className="mt-7 grid grid-cols-3 gap-6">{data.nextMatches.slice(0, data.courtCount).map(queue => <div key={queue.queueId} className="rounded-2xl bg-white/10 p-6"><p className="text-lg font-black text-amber-300">다음 {queue.queueOrder}번째</p><p className="mt-3 text-xl font-black">{queue.teams[0]?.players.map(player => player.name).join(' · ')}</p><p className="my-3 font-bold text-white/40">VS</p><p className="text-xl font-black">{queue.teams[1]?.players.map(player => player.name).join(' · ')}</p></div>)}</div></div>
+        <div className="flex w-[210px] flex-col items-center justify-center self-center justify-self-center text-center">{qrUrl && <img src={qrUrl} alt="일정 참여 QR 코드" className="block h-40 w-40 rounded-xl bg-white p-1" />}<p className="mt-4 w-40 text-center text-xl font-black tracking-[0.08em]">{data.entryCode ?? '-'}</p></div>
       </section>
     </main>
-    <footer className="mt-7 flex items-center justify-between text-lg font-bold text-white/60"><span>QR로 접속해 내 경기 순서를 확인하세요.</span><span>개인 화면에서 내 경기 순서를 확인해 주세요.</span><span>{new Date(data.lastUpdatedAt).toLocaleTimeString('ko-KR')} 갱신</span></footer>
+    <footer className="flex shrink-0 items-center justify-between pt-7 text-lg font-bold text-white/60"><span>QR로 접속해 내 경기 순서를 확인하세요.</span><span>개인 화면에서 내 경기 순서를 확인해 주세요.</span><span>{new Date(data.lastUpdatedAt).toLocaleTimeString('ko-KR')} 갱신</span></footer>
   </div>;
 }
