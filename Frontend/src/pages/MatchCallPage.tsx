@@ -61,6 +61,10 @@ export default function MatchCallPage() {
   }, [data?.groupId, data?.sessionId, isDemo, load]);
   useEffect(() => {
     if (!data || isDemo) return undefined;
+    if (data.playStatus === 'PLAYING' && data.currentMatch) {
+      navigate(sessionPath(id, '/current-match'), { replace: true });
+      return undefined;
+    }
     if ((data.playStatus !== 'CALLING' && data.playStatus !== 'PLAYING') || (!data.currentMatch && !data.nextMatch)) {
       navigate(sessionPath(id, '/status'), { replace: true });
       return undefined;

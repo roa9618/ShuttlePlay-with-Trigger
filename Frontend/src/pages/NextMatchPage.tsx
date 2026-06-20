@@ -60,7 +60,8 @@ export default function NextMatchPage() {
   }, [data?.groupId, data?.sessionId, isDemo, load]);
   useEffect(() => {
     if (!data || isDemo) return;
-    if (data.playStatus === 'PLAYING' || data.playStatus === 'CALLING') navigate(sessionPath(id, '/match-call'), { replace: true });
+    if (data.playStatus === 'PLAYING' && data.currentMatch) navigate(sessionPath(id, '/current-match'), { replace: true });
+    else if (data.playStatus === 'CALLING') navigate(sessionPath(id, '/match-call'), { replace: true });
     else if (data.playStatus !== 'NEXT_UP' || !data.nextMatch) navigate(sessionPath(id, '/status'), { replace: true });
   }, [data, id, isDemo, navigate]);
 
