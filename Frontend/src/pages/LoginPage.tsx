@@ -70,7 +70,7 @@ export default function LoginPage() {
     email: '',
     password: '',
   });
-  const [rememberLogin, setRememberLogin] = useState(false);
+  const [rememberLogin, setRememberLogin] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fieldFeedback, setFieldFeedback] = useState<{
     field: FeedbackField;

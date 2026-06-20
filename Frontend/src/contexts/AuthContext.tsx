@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { ApiClientError, apiClient } from '../utils/apiClient';
 import { logoutAuth } from '../utils/authApi';
 import {
@@ -79,6 +79,7 @@ function toSessionFromAuthResponse(response: AuthSessionResponse): AuthSession {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<AuthSession | null>(() => getAuthSession());
   const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const lastResumeRefreshAtRef = useRef(0);
 
   const clearSession = useCallback(() => {
     endAuthSession();
@@ -87,7 +88,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refreshSession = useCallback(async () => {
     try {
-      setIsAuthLoading(true);
+      if (!getAuthSession()) {
+        setIsAuthLoading(true);
+      }
 
       if (!getAuthAccessToken()) {
         const authSession = await apiClient.post<AuthSessionResponse>('/auth/session');
@@ -152,6 +155,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     refreshSession();
+  }, [refreshSession]);
+
+  useEffect(() => {
+    const resumeSession = () => {
+      if (document.visibilityState !== 'visible' || !navigator.onLine) return;
+
+      const now = Date.now();
+      if (now - lastResumeRefreshAtRef.current < 1_000) return;
+      lastResumeRefreshAtRef.current = now;
+
+      void refreshSession();
+    };
+
+    document.addEventListener('visibilitychange', resumeSession);
+    window.addEventListener('pageshow', resumeSession);
+    window.addEventListener('focus', resumeSession);
+    window.addEventListener('online', resumeSession);
+
+    return () => {
+      document.removeEventListener('visibilitychange', resumeSession);
+      window.removeEventListener('pageshow', resumeSession);
+      window.removeEventListener('focus', resumeSession);
+      window.removeEventListener('online', resumeSession);
+    };
   }, [refreshSession]);
 
   useEffect(() => {
