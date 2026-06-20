@@ -23,7 +23,13 @@ export function connectNotificationSocket() {
     connectHeaders: {
       Authorization: `Bearer ${accessToken}`,
     },
-    reconnectDelay: 5000,
+    reconnectDelay: 2000,
+    beforeConnect: () => {
+      const latestToken = getAuthAccessToken();
+      if (client) {
+        client.connectHeaders = latestToken ? { Authorization: `Bearer ${latestToken}` } : {};
+      }
+    },
     onConnect: () => {
       void loadNotifications();
       client?.subscribe('/user/queue/notifications', message => {

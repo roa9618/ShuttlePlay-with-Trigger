@@ -52,6 +52,8 @@ type TokenReissueResponse = {
   user: LoginUserResponse;
 };
 
+let tokenReissuePromise: Promise<{ accessToken: string } | null> | null = null;
+
 export class ApiClientError extends Error {
   status: number;
   code?: string;
@@ -132,7 +134,7 @@ function unwrapResponseData<T>(parsedResponse: unknown, status: number): T {
   return parsedResponse.data;
 }
 
-async function requestTokenReissue() {
+async function performTokenReissue() {
   const response = await fetch(buildApiUrl('/auth/session'), {
     method: 'POST',
     credentials: 'include',
@@ -161,6 +163,17 @@ async function requestTokenReissue() {
   updateAuthSession(nextSession);
 
   return nextTokens;
+}
+
+async function requestTokenReissue() {
+  if (!tokenReissuePromise) {
+    tokenReissuePromise = performTokenReissue()
+      .finally(() => {
+        tokenReissuePromise = null;
+      });
+  }
+
+  return tokenReissuePromise;
 }
 
 async function executeRequest<T>(

@@ -55,9 +55,13 @@ export function connectSessionEntrySocket(
   const client = new Client({
     brokerURL: `${API_ORIGIN.replace(/^http/, 'ws')}/ws`,
     connectHeaders: token ? { Authorization: `Bearer ${token}` } : {},
-    reconnectDelay: 5000,
+    reconnectDelay: 2000,
     heartbeatIncoming: 10000,
     heartbeatOutgoing: 10000,
+    beforeConnect: () => {
+      const latestToken = getAuthAccessToken();
+      client.connectHeaders = latestToken ? { Authorization: `Bearer ${latestToken}` } : {};
+    },
     onConnect: () => {
       onStatus?.(true);
       subscriptions.forEach(subscription => subscription.unsubscribe());
@@ -72,11 +76,26 @@ export function connectSessionEntrySocket(
     onDisconnect: () => onStatus?.(false),
   });
 
+  const handleResume = () => {
+    if (document.visibilityState !== 'visible' || !navigator.onLine || disposed) return;
+    requestRefresh();
+    if (!client.active) client.activate();
+  };
+
+  document.addEventListener('visibilitychange', handleResume);
+  window.addEventListener('pageshow', handleResume);
+  window.addEventListener('focus', handleResume);
+  window.addEventListener('online', handleResume);
+
   client.activate();
 
   return () => {
     disposed = true;
     if (refreshTimer !== null) window.clearTimeout(refreshTimer);
+    document.removeEventListener('visibilitychange', handleResume);
+    window.removeEventListener('pageshow', handleResume);
+    window.removeEventListener('focus', handleResume);
+    window.removeEventListener('online', handleResume);
     subscriptions.forEach(subscription => subscription.unsubscribe());
     onStatus?.(false);
     void client.deactivate();
