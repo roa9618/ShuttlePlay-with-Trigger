@@ -65,7 +65,7 @@ export default function LoginPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { setSessionFromStorage } = useAuth();
+  const { refreshSession, setSessionFromStorage } = useAuth();
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -211,6 +211,7 @@ export default function LoginPage() {
       }, rememberLogin);
 
       setSessionFromStorage();
+      await refreshSession();
       broadcastAuthLogin();
 
       const returnPath = getReturnPath();
