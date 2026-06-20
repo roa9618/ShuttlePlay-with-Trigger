@@ -319,6 +319,8 @@ public class SessionOperationService {
                 .map(player -> player.getAttendance().getId())
                 .collect(Collectors.toSet());
         int batchMatchCount = existingBatchSize;
+        int currentBatchIndex = waitingQueues.size() / batchCapacity;
+        Map<Long, Integer> lastPlannedBatchIndexes = lastPlannedBatchIndexes(sessionId, batchCapacity);
 
         while (selected.size() < safetyLimit && eligible.stream().anyMatch(item -> projectedGames(item, gameCounts, plannedCounts) < requiredCounts.get(item.getId()))) {
             List<Candidate> available = candidates(eligible, type, style, relationList, partnerHistory, opponentHistory,
@@ -326,23 +328,30 @@ public class SessionOperationService {
             List<Candidate> nonOverlapping = available.stream()
                     .filter(candidate -> candidatePlayers(candidate).stream().noneMatch(item -> batchAttendanceIds.contains(item.getId())))
                     .toList();
-            if (nextPlanCandidate(nonOverlapping, gameCounts, plannedCounts, requiredCounts).isPresent()) available = nonOverlapping;
+            if (nextPlanCandidate(nonOverlapping, gameCounts, plannedCounts, requiredCounts, lastPlannedBatchIndexes, currentBatchIndex).isPresent()) available = nonOverlapping;
             else if (batchMatchCount > 0) {
                 batchAttendanceIds.clear();
                 batchMatchCount = 0;
+                currentBatchIndex++;
             }
+            int batchIndexSnapshot = currentBatchIndex;
+            List<Candidate> rested = available.stream()
+                    .filter(candidate -> candidatePlayers(candidate).stream()
+                            .noneMatch(item -> recentlyPlanned(lastPlannedBatchIndexes, item.getId(), batchIndexSnapshot)))
+                    .toList();
+            if (nextPlanCandidate(rested, gameCounts, plannedCounts, requiredCounts, lastPlannedBatchIndexes, batchIndexSnapshot).isPresent()) available = rested;
             if (type == MatchType.SAME_GENDER_DOUBLES) {
                 Gender preferredGender = nextSameGender;
                 List<Candidate> preferred = available.stream()
                         .filter(candidate -> gender(candidate.teamA().get(0)) == preferredGender)
                         .toList();
-                if (nextPlanCandidate(preferred, gameCounts, plannedCounts, requiredCounts).isPresent()) available = preferred;
+                if (nextPlanCandidate(preferred, gameCounts, plannedCounts, requiredCounts, lastPlannedBatchIndexes, currentBatchIndex).isPresent()) available = preferred;
             }
-            Optional<Candidate> next = nextPlanCandidate(available, gameCounts, plannedCounts, requiredCounts);
+            Optional<Candidate> next = nextPlanCandidate(available, gameCounts, plannedCounts, requiredCounts, lastPlannedBatchIndexes, currentBatchIndex);
             if (next.isEmpty() && type != MatchType.ANY) {
                 available = candidates(eligible, MatchType.ANY, style, relationList, partnerHistory, opponentHistory,
                         gameCounts, plannedCounts, forced, affiliationStrategy, true);
-                next = nextPlanCandidate(available, gameCounts, plannedCounts, requiredCounts);
+                next = nextPlanCandidate(available, gameCounts, plannedCounts, requiredCounts, lastPlannedBatchIndexes, currentBatchIndex);
             }
             if (next.isEmpty()) break;
             Candidate candidate = next.get();
@@ -353,10 +362,13 @@ public class SessionOperationService {
             }
             candidatePlayers(candidate).forEach(item -> plannedCounts.merge(item.getId(), 1L, Long::sum));
             candidatePlayers(candidate).forEach(item -> batchAttendanceIds.add(item.getId()));
+            int selectedBatchIndex = currentBatchIndex;
+            candidatePlayers(candidate).forEach(item -> lastPlannedBatchIndexes.put(item.getId(), selectedBatchIndex));
             batchMatchCount++;
             if (batchMatchCount >= batchCapacity) {
                 batchAttendanceIds.clear();
                 batchMatchCount = 0;
+                currentBatchIndex++;
             }
             addPairHistory(candidate.teamA(), candidate.teamB(), partnerHistory, opponentHistory);
         }
@@ -1041,13 +1053,41 @@ public class SessionOperationService {
 
     private Optional<Candidate> nextPlanCandidate(List<Candidate> candidates, Map<Long, Long> gameCounts,
                                                    Map<Long, Long> plannedCounts, Map<Long, Long> requiredCounts) {
+        return nextPlanCandidate(candidates, gameCounts, plannedCounts, requiredCounts, Map.of(), 0);
+    }
+
+    private Optional<Candidate> nextPlanCandidate(List<Candidate> candidates, Map<Long, Long> gameCounts,
+                                                   Map<Long, Long> plannedCounts, Map<Long, Long> requiredCounts,
+                                                   Map<Long, Integer> lastPlannedBatchIndexes, int currentBatchIndex) {
         return candidates.stream()
                 .filter(candidate -> candidatePlayers(candidate).stream()
                         .anyMatch(item -> projectedGames(item, gameCounts, plannedCounts) < requiredCounts.get(item.getId())))
                 .min(Comparator.comparingInt((Candidate candidate) -> deficitCount(candidate, gameCounts, plannedCounts, requiredCounts)).reversed()
                         .thenComparing(Comparator.comparingLong((Candidate candidate) -> deficitSum(candidate, gameCounts, plannedCounts, requiredCounts)).reversed())
+                        .thenComparing(Comparator.comparingDouble((Candidate candidate) -> restTimingQuality(candidate, lastPlannedBatchIndexes, currentBatchIndex)).reversed())
                         .thenComparing(Comparator.comparingDouble((Candidate candidate) -> planQuality(candidate, gameCounts, plannedCounts, requiredCounts)).reversed())
                         .thenComparingInt(Candidate::partnerDuplicates));
+    }
+
+    private double restTimingQuality(Candidate candidate, Map<Long, Integer> lastPlannedBatchIndexes, int currentBatchIndex) {
+        if (lastPlannedBatchIndexes.isEmpty()) return 0;
+        List<Integer> gaps = candidatePlayers(candidate).stream()
+                .map(item -> restBatchGap(lastPlannedBatchIndexes, item.getId(), currentBatchIndex))
+                .toList();
+        int minGap = gaps.stream().mapToInt(Integer::intValue).min().orElse(4);
+        double averageGap = gaps.stream().mapToInt(Integer::intValue).average().orElse(4);
+        long recentlyPlayed = gaps.stream().filter(gap -> gap <= 1).count();
+        return Math.min(4, minGap) * 35 + Math.min(4, averageGap) * 15 - recentlyPlayed * 220;
+    }
+
+    private boolean recentlyPlanned(Map<Long, Integer> lastPlannedBatchIndexes, Long attendanceId, int currentBatchIndex) {
+        return restBatchGap(lastPlannedBatchIndexes, attendanceId, currentBatchIndex) <= 1;
+    }
+
+    private int restBatchGap(Map<Long, Integer> lastPlannedBatchIndexes, Long attendanceId, int currentBatchIndex) {
+        Integer lastBatchIndex = lastPlannedBatchIndexes.get(attendanceId);
+        if (lastBatchIndex == null) return 4;
+        return currentBatchIndex - lastBatchIndex;
     }
 
     private double planQuality(Candidate candidate, Map<Long, Long> gameCounts,
@@ -1256,6 +1296,39 @@ public class SessionOperationService {
         activeQueues(sessionId).stream().filter(queue -> queue.getStatus() == SessionQueueStatus.WAITING)
                 .flatMap(queue -> queue.getPlayers().stream()).map(SessionMatchQueuePlayer::getAttendance)
                 .forEach(attendance -> result.merge(attendance.getId(), 1L, Long::sum));
+        return result;
+    }
+
+    private Map<Long, Integer> lastPlannedBatchIndexes(Long sessionId, int batchCapacity) {
+        Map<Long, Integer> result = new HashMap<>();
+        List<MatchRecord> completedMatches = matches.findAllBySessionIdAndIsDeletedFalseOrderByPlayedAtAsc(sessionId).stream()
+                .filter(match -> match.getOperationStatus() == MatchOperationStatus.RESULT_ENTERED)
+                .sorted(Comparator.comparing(match -> match.getEndedAt() == null ? match.getResultConfirmedAt() : match.getEndedAt()))
+                .toList();
+        int completedBatchCount = (int) Math.ceil(completedMatches.size() / (double) Math.max(1, batchCapacity));
+        for (int index = 0; index < completedMatches.size(); index++) {
+            int batchIndex = index / Math.max(1, batchCapacity) - completedBatchCount;
+            completedMatches.get(index).getPlayers().stream()
+                    .map(MatchPlayer::getAttendance).filter(Objects::nonNull)
+                    .forEach(attendance -> result.merge(attendance.getId(), batchIndex, Math::max));
+        }
+        currentMatches(sessionId).stream().flatMap(match -> match.getPlayers().stream())
+                .map(MatchPlayer::getAttendance).filter(Objects::nonNull)
+                .forEach(attendance -> result.put(attendance.getId(), -1));
+        activeQueues(sessionId).stream()
+                .filter(queue -> queue.getStatus() == SessionQueueStatus.CALLING)
+                .flatMap(queue -> queue.getPlayers().stream())
+                .map(SessionMatchQueuePlayer::getAttendance)
+                .forEach(attendance -> result.put(attendance.getId(), -1));
+        List<SessionMatchQueue> waitingQueues = activeQueues(sessionId).stream()
+                .filter(queue -> queue.getStatus() == SessionQueueStatus.WAITING)
+                .toList();
+        for (int index = 0; index < waitingQueues.size(); index++) {
+            int batchIndex = index / Math.max(1, batchCapacity);
+            waitingQueues.get(index).getPlayers().stream()
+                    .map(SessionMatchQueuePlayer::getAttendance)
+                    .forEach(attendance -> result.put(attendance.getId(), batchIndex));
+        }
         return result;
     }
 
