@@ -13,6 +13,7 @@ type WebPushConfig = {
 };
 
 const AUTO_PERMISSION_REQUEST_KEY = 'shuttleplay-push-permission-requested';
+const PARTICIPANT_PERMISSION_REQUEST_KEY = 'shuttleplay-participant-push-permission-requested';
 
 function isSupported() {
   return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
@@ -164,6 +165,27 @@ export async function requestSystemNotificationsAfterLogin() {
   await enableSystemNotifications(true);
 }
 
+export async function requestSystemNotificationsFromParticipantStatus() {
+  if (!isSupported()) {
+    return 'unsupported' as const;
+  }
+
+  if (Notification.permission === 'granted') {
+    return enableSystemNotifications(false);
+  }
+
+  if (
+    Notification.permission !== 'default'
+    || window.sessionStorage.getItem(PARTICIPANT_PERMISSION_REQUEST_KEY)
+  ) {
+    return Notification.permission === 'denied' ? 'denied' as const : 'unsubscribed' as const;
+  }
+
+  window.sessionStorage.setItem(PARTICIPANT_PERMISSION_REQUEST_KEY, 'true');
+  return enableSystemNotifications(true);
+}
+
 export function clearSystemNotificationLoginRequest() {
   window.sessionStorage.removeItem(AUTO_PERMISSION_REQUEST_KEY);
+  window.sessionStorage.removeItem(PARTICIPANT_PERMISSION_REQUEST_KEY);
 }
