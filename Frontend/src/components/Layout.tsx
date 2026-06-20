@@ -4,6 +4,7 @@ import DesktopSidebar from './DesktopSidebar';
 import Footer from './Footer';
 import Logo from './Logo';
 import NotificationToastStack from './NotificationToastStack';
+import { getParticipantResumePath, isParticipantLivePath, saveParticipantResume } from '../utils/participantResume';
 import { styles } from './Layout.styles';
 
 const defaultDocumentTitle = '셔틀플레이 | 배드민턴 모임 관리';
@@ -12,27 +13,14 @@ type RouteHandle = {
   title?: string;
 };
 
-const PARTICIPANT_RESUME_KEY = 'shuttleplay-participant-resume';
-const PARTICIPANT_RESUME_MAX_AGE = 6 * 60 * 60 * 1000;
-const participantLivePath = /^\/sessions\/((?!demo)[^/]+)\/(status|next-match|match-call|current-match|match-result)$/;
-
-type ParticipantResume = {
-  path: string;
-  savedAt: number;
-};
-
 export default function Layout() {
   const location = useLocation();
   const matches = useMatches();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (participantLivePath.test(location.pathname)) {
-      const resume: ParticipantResume = {
-        path: `${location.pathname}${location.search}`,
-        savedAt: Date.now(),
-      };
-      window.localStorage.setItem(PARTICIPANT_RESUME_KEY, JSON.stringify(resume));
+    if (isParticipantLivePath(location.pathname)) {
+      saveParticipantResume(`${location.pathname}${location.search}`);
       return;
     }
 
@@ -41,16 +29,8 @@ export default function Layout() {
     const requestedResume = new URLSearchParams(location.search).get('resume') === 'participant';
     if (location.pathname !== '/' || (!standalone && !requestedResume)) return;
 
-    try {
-      const resume = JSON.parse(window.localStorage.getItem(PARTICIPANT_RESUME_KEY) ?? '') as ParticipantResume;
-      if (!participantLivePath.test(resume.path.split('?')[0]) || Date.now() - resume.savedAt > PARTICIPANT_RESUME_MAX_AGE) {
-        window.localStorage.removeItem(PARTICIPANT_RESUME_KEY);
-        return;
-      }
-      navigate(resume.path, { replace: true });
-    } catch {
-      window.localStorage.removeItem(PARTICIPANT_RESUME_KEY);
-    }
+    const resumePath = getParticipantResumePath();
+    if (resumePath) navigate(resumePath, { replace: true });
   }, [location.pathname, location.search, navigate]);
 
   useEffect(() => {

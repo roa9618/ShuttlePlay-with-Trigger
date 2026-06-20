@@ -42,12 +42,13 @@ export default function GroupJoinPage() {
   const { groupId } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
-  const { session } = useAuth();
+  const { session, isAuthLoading } = useAuth();
   const [state, setState] = useState<JoinState>({ status: 'loading' });
   const requestedRef = useRef(false);
   const numericGroupId = Number(decodePublicId(groupId));
 
   useEffect(() => {
+    if (isAuthLoading) return;
     if (requestedRef.current) return;
     requestedRef.current = true;
 
@@ -77,7 +78,7 @@ export default function GroupJoinPage() {
           : '가입 정보를 불러오는 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.';
         setState({ status: 'error', message });
       });
-  }, [location.hash, location.pathname, location.search, navigate, numericGroupId, session?.profileCompleted]);
+  }, [isAuthLoading, location.hash, location.pathname, location.search, navigate, numericGroupId, session?.profileCompleted]);
 
   const handleJoin = async () => {
     if (state.status !== 'ready') return;

@@ -5,6 +5,7 @@ import { Button } from '../components/ui/button';
 import { ApiClientError } from '../utils/apiClient';
 import { setAuthRedirectPath } from '../utils/authSession';
 import { sessionPath } from '../utils/publicId';
+import { requestSystemNotificationsFromParticipantStatus } from '../utils/pushNotification';
 import { sessionEntryApi, type SessionEntryParticipantStatus, type ParticipantPlayStatus } from '../utils/sessionEntryApi';
 import { scheduleSessionAutoStart } from '../utils/sessionEntryAutoStart';
 import { connectSessionEntrySocket } from '../utils/sessionEntrySocket';
@@ -120,6 +121,11 @@ export default function ParticipantStatusPage() {
   }, [id, isDemo, navigate]);
 
   useEffect(() => { void loadStatus(); }, [loadStatus]);
+
+  useEffect(() => {
+    if (!status?.loggedIn || isDemo) return;
+    void requestSystemNotificationsFromParticipantStatus().catch(() => {});
+  }, [isDemo, status?.loggedIn]);
 
   useEffect(() => {
     if (!status?.groupId || !status.sessionId || isDemo) return undefined;
