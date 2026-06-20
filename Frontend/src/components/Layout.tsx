@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Outlet, useLocation, useMatches } from 'react-router-dom';
+import { Outlet, useLocation, useMatches, useNavigate } from 'react-router-dom';
 import DesktopSidebar from './DesktopSidebar';
 import Footer from './Footer';
 import Logo from './Logo';
@@ -12,9 +12,46 @@ type RouteHandle = {
   title?: string;
 };
 
+const PARTICIPANT_RESUME_KEY = 'shuttleplay-participant-resume';
+const PARTICIPANT_RESUME_MAX_AGE = 6 * 60 * 60 * 1000;
+const participantLivePath = /^\/sessions\/((?!demo)[^/]+)\/(status|next-match|match-call|current-match|match-result)$/;
+
+type ParticipantResume = {
+  path: string;
+  savedAt: number;
+};
+
 export default function Layout() {
   const location = useLocation();
   const matches = useMatches();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (participantLivePath.test(location.pathname)) {
+      const resume: ParticipantResume = {
+        path: `${location.pathname}${location.search}`,
+        savedAt: Date.now(),
+      };
+      window.localStorage.setItem(PARTICIPANT_RESUME_KEY, JSON.stringify(resume));
+      return;
+    }
+
+    const standalone = window.matchMedia('(display-mode: standalone)').matches
+      || Boolean((window.navigator as Navigator & { standalone?: boolean }).standalone);
+    const requestedResume = new URLSearchParams(location.search).get('resume') === 'participant';
+    if (location.pathname !== '/' || (!standalone && !requestedResume)) return;
+
+    try {
+      const resume = JSON.parse(window.localStorage.getItem(PARTICIPANT_RESUME_KEY) ?? '') as ParticipantResume;
+      if (!participantLivePath.test(resume.path.split('?')[0]) || Date.now() - resume.savedAt > PARTICIPANT_RESUME_MAX_AGE) {
+        window.localStorage.removeItem(PARTICIPANT_RESUME_KEY);
+        return;
+      }
+      navigate(resume.path, { replace: true });
+    } catch {
+      window.localStorage.removeItem(PARTICIPANT_RESUME_KEY);
+    }
+  }, [location.pathname, location.search, navigate]);
 
   useEffect(() => {
     const currentTitle = [...matches]

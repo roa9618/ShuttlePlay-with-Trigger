@@ -4,7 +4,7 @@
   "short_name": "셔틀플레이",
   "description": "배드민턴 모임을 더 쉽게 운영하는 경기 매칭 플랫폼",
   "lang": "ko-KR",
-  "start_url": "/",
+  "start_url": "/?resume=participant",
   "scope": "/",
   "categories": ["sports", "productivity"],
   "display_override": ["standalone", "minimal-ui", "browser"],
