@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import Logo from '../components/Logo';
 import ShuttlecockIcon from '../components/ShuttlecockIcon';
 import { Badge } from '../components/ui/badge';
@@ -7,13 +7,15 @@ import { Button } from '../components/ui/button';
 import { Calendar, ChevronDown, ChevronRight, ClipboardCheck, Download, LogIn, LogOut, QrCode, Settings, UserPlus, Users } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getAuthAccessToken, getAuthSession, setAuthRedirectPath } from '../utils/authSession';
+import { getParticipantResumePath } from '../utils/participantResume';
 import { usePwaInstall } from '../utils/usePwaInstall';
 import { styles } from './HomePage.styles';
 
 export default function HomePage() {
+  const location = useLocation();
   const navigate = useNavigate();
   const { install, isInstalled, installGuide } = usePwaInstall();
-  const { session, isAuthenticated, setSessionFromStorage, logout } = useAuth();
+  const { session, isAuthenticated, isAuthLoading, refreshSession, setSessionFromStorage, logout } = useAuth();
   const [toastMessage, setToastMessage] = useState('');
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -54,6 +56,31 @@ export default function HomePage() {
       setSessionFromStorage();
     }
   }, [session, setSessionFromStorage]);
+
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    if (!searchParams.has('profileCompleted')) return;
+
+    let canceled = false;
+
+    const restoreOAuthSession = async () => {
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const nextSession = await refreshSession();
+        if (canceled || nextSession) break;
+        await new Promise(resolve => window.setTimeout(resolve, 500));
+      }
+
+      if (!canceled) {
+        navigate(location.pathname, { replace: true });
+      }
+    };
+
+    void restoreOAuthSession();
+
+    return () => {
+      canceled = true;
+    };
+  }, [location.pathname, location.search, navigate, refreshSession]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -126,6 +153,10 @@ export default function HomePage() {
         from: path,
       },
     });
+  };
+
+  const handleJoinNavigation = () => {
+    navigate(getParticipantResumePath() ?? '/session-entry');
   };
 
   const handleProfileNavigation = (path: string) => {
@@ -218,6 +249,12 @@ export default function HomePage() {
                 </div>
               )}
             </div>
+          ) : isAuthLoading ? (
+            <div className = {styles.row}>
+              <Button variant = "ghost" className = {styles.loginButton} disabled>
+                로그인 확인 중
+              </Button>
+            </div>
           ) : (
             <div className = {styles.row}>
               <Link to = "/login?redirect=%2F" onClick = {() => setAuthRedirectPath('/')}>
@@ -292,7 +329,7 @@ export default function HomePage() {
               }
 
               return (
-                <Link key = {action.title} to = {action.path} className = {styles.cardLink}>
+                <button key = {action.title} type = "button" className = {styles.cardButton} onClick = {handleJoinNavigation}>
                   <div className = {styles.actionCard(action.tone)}>
                     <div className = {styles.betweenRow}>
                       <div className = {styles.row2}>
@@ -310,7 +347,7 @@ export default function HomePage() {
                       <ChevronRight className = {styles.chevronRightIcon} />
                     </div>
                   </div>
-                </Link>
+                </button>
               );
             })}
           </div>
