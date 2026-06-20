@@ -50,7 +50,7 @@ public class SessionOperationService {
     private record Candidate(List<GroupSessionAttendance> teamA, List<GroupSessionAttendance> teamB,
                              double score, List<String> explanations, int forcedCount, int longRestCount,
                              int blockedCount, long maxProjectedLoad, long totalProjectedLoad,
-                             double teamMmrGap, int partnerDuplicates, long totalGames) {}
+                             double teamMmrGap, int partnerDuplicates, int duplicateEncounters, long totalGames) {}
     private record ResultScores(int teamA, int teamB, boolean scoreEntered) {}
     private enum AffiliationStrategy { MIX_AFFILIATIONS, SAME_AFFILIATION, IGNORE }
 
@@ -1035,7 +1035,7 @@ public class SessionOperationService {
         return new Candidate(candidate.teamA(), candidate.teamB(), Math.max(0, Math.round(adjustedScore * 10.0) / 10.0),
                 explanations, candidate.forcedCount(), candidate.longRestCount(), candidate.blockedCount(),
                 candidate.maxProjectedLoad(), candidate.totalProjectedLoad(), candidate.teamMmrGap(),
-                candidate.partnerDuplicates(), candidate.totalGames());
+                candidate.partnerDuplicates(), candidate.duplicateEncounters(), candidate.totalGames());
     }
 
     private AffiliationStrategy affiliationStrategy(GroupSession session, Map<String, Object> body) {
@@ -1064,6 +1064,7 @@ public class SessionOperationService {
                         .anyMatch(item -> projectedGames(item, gameCounts, plannedCounts) < requiredCounts.get(item.getId())))
                 .min(Comparator.comparingInt((Candidate candidate) -> deficitCount(candidate, gameCounts, plannedCounts, requiredCounts)).reversed()
                         .thenComparing(Comparator.comparingLong((Candidate candidate) -> deficitSum(candidate, gameCounts, plannedCounts, requiredCounts)).reversed())
+                        .thenComparingInt(Candidate::duplicateEncounters)
                         .thenComparing(Comparator.comparingDouble((Candidate candidate) -> restTimingQuality(candidate, lastPlannedBatchIndexes, currentBatchIndex)).reversed())
                         .thenComparing(Comparator.comparingDouble((Candidate candidate) -> planQuality(candidate, gameCounts, plannedCounts, requiredCounts)).reversed())
                         .thenComparingInt(Candidate::partnerDuplicates));
@@ -1102,7 +1103,8 @@ public class SessionOperationService {
                 - fillerExcess * 25
                 - projectedLoad * 3
                 - candidate.teamMmrGap() * 0.08
-                - candidate.partnerDuplicates() * 40;
+                - candidate.partnerDuplicates() * 40
+                - candidate.duplicateEncounters() * 60;
     }
 
     private int deficitCount(Candidate candidate, Map<Long, Long> gameCounts, Map<Long, Long> plannedCounts, Map<Long, Long> requiredCounts) {
@@ -1208,11 +1210,15 @@ public class SessionOperationService {
         if (isGenderSplitMismatch(teamA, teamB)) score -= matchingPolicy.mixedSplitPenalty();
         score += relationScore(teamA, teamB, relations);
         int partnerDuplicates = pairCount(teamA.get(0), teamA.get(1), partners) + pairCount(teamB.get(0), teamB.get(1), partners);
+        int opponentDuplicates = 0;
         double duplicateWeight = style == PlayStyle.FUN ? 1.35 : 1.0;
         score -= matchingPolicy.duplicatePartnerPenalty(pairCount(teamA.get(0), teamA.get(1), partners)) * duplicateWeight;
         score -= matchingPolicy.duplicatePartnerPenalty(pairCount(teamB.get(0), teamB.get(1), partners)) * duplicateWeight;
-        for (GroupSessionAttendance left : teamA) for (GroupSessionAttendance right : teamB)
-            score -= matchingPolicy.duplicateOpponentPenalty(pairCount(left, right, opponents)) * duplicateWeight;
+        for (GroupSessionAttendance left : teamA) for (GroupSessionAttendance right : teamB) {
+            int duplicateCount = pairCount(left, right, opponents);
+            opponentDuplicates += duplicateCount;
+            score -= matchingPolicy.duplicateOpponentPenalty(duplicateCount) * duplicateWeight;
+        }
         int forcedCount = (int) all.stream().filter(item -> forced.contains(item.getId())).count();
         int blockedCount = (int) all.stream().filter(this::unavailableForCall).count();
         score += forcedCount * 60;
@@ -1227,7 +1233,7 @@ public class SessionOperationService {
         if (relationScore(teamA, teamB, relations) != 0) explanations.add("고정·회피 조합 설정을 반영했어요.");
         return new Candidate(teamA, teamB, Math.max(0, Math.round(score * 10.0) / 10.0), explanations,
                 forcedCount, longRestCount, blockedCount, maxProjectedLoad, totalProjectedLoad,
-                teamGap, partnerDuplicates, games.stream().mapToLong(Long::longValue).sum());
+                teamGap, partnerDuplicates, partnerDuplicates + opponentDuplicates, games.stream().mapToLong(Long::longValue).sum());
     }
 
     private double adjustedSkill(GroupSessionAttendance attendance, MatchType type) {
